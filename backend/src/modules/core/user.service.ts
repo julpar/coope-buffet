@@ -54,10 +54,21 @@ export class UserService {
     return this.getUserById(userId);
   }
 
-  async createAdmin(nickname: string): Promise<User> {
+  async createAdmin(nickname: string, password?: string): Promise<User> {
     const exists = await this.adminExists();
     if (exists) throw new Error('admin already exists');
-    const token = this.genToken();
+    // Allow manual password as the permanent token (admin wants to manually set it on first setup)
+    // If provided, trim and validate a bit; store as `perm:<password>`
+    let token: string;
+    const pwd = (password || '').trim();
+    if (pwd) {
+      if (pwd.length < 6) throw new Error('password too short (min 6)');
+      // restrict to URL-safe basic characters to avoid confusion when sharing tokens
+      if (!/^[A-Za-z0-9._-]+$/.test(pwd)) throw new Error('password contains invalid characters');
+      token = `perm:${pwd}`;
+    } else {
+      token = this.genToken();
+    }
     const user: User = { id: 'admin', nickname: nickname || 'Admin', roles: ['ADMIN'], token };
     await this.redisSvc.redis.hmset(this.userKey(user.id), {
       nickname: user.nickname,

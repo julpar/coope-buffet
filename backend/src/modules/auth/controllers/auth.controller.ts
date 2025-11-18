@@ -20,8 +20,11 @@ export class AuthController {
 
   @Post('init-admin')
   @Public()
-  async initAdmin(@Body() body: { nickname?: string }, @Res({ passthrough: true }) res: Response) {
-    const user = await this.users.createAdmin((body?.nickname || '').trim());
+  async initAdmin(
+    @Body() body: { nickname?: string; password?: string },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const user = await this.users.createAdmin((body?.nickname || '').trim(), (body?.password || '').trim());
     // Set timeless cookie
     this.setSessionCookie(res, user.token);
     return { ok: true, user: { id: user.id, nickname: user.nickname, roles: user.roles } };
