@@ -12,7 +12,7 @@ Project Layout
 - backend/ → NestJS app (API + middleware; no static serving in prod)
 - app-customer/ → Customer-facing Vue app (minimal placeholder + soft-offline overlay)
 - app-staff/ → Staff dashboard Vue app (minimal placeholder)
-- Dockerfile → Multi-stage build for backend only (port 3000)
+- backend/Dockerfile → Multi-stage build for backend only (port 3000)
 - app-customer/Dockerfile → Builds customer SPA and serves via Nginx
 - app-staff/Dockerfile → Builds staff SPA and serves via Nginx
 - docker-compose.yml → Redis + backend + two Nginx static servers
@@ -93,3 +93,55 @@ Next Steps (roadmap excerpt)
 - Menu, cart, stock validation flows in customer app
 - MercadoPago Checkout Pro integration and webhook/ACK handling
 - Staff dashboards (cashier, stock manager, fulfillment, global operations)
+
+Backend folder structure
+
+The backend is organized by serving area (customer vs. staff) and shared core services. Use this as a guide when adding new features.
+
+```
+backend/
+  src/
+    app.module.ts               # Root module, wires serving-area modules
+    main.ts                     # Nest bootstrap + global middlewares
+
+    common/
+      middleware/
+        platform-status.middleware.ts   # Customer-facing hard-offline gate
+
+    modules/
+      core/                    # Shared providers/services
+        core.module.ts
+        redis.service.ts
+        menu.service.ts
+
+      customer/
+        customer.module.ts
+        controllers/
+          app.controller.ts     # /api/health, /api/platform/status
+          menu.controller.ts    # /api/menu (public menu)
+
+      staff/
+        staff.module.ts
+        controllers/
+          staff.controller.ts   # /api/staff/menu/* (categories/items CRUD)
+
+    # Backward-compat re-exports (maintained temporarily to avoid breaking imports):
+    # - core.module.ts → re-exports modules/core/core.module
+    # - customer.module.ts → re-exports modules/customer/customer.module
+    # - staff.module.ts → re-exports modules/staff/staff.module
+    # - app.controller.ts → re-exports modules/customer/controllers/app.controller
+    # - menu.controller.ts → re-exports modules/customer/controllers/menu.controller
+    # - staff.controller.ts → re-exports modules/staff/controllers/staff.controller
+    # - redis.service.ts → re-exports modules/core/redis.service
+    # - menu.service.ts → re-exports modules/core/menu.service
+```
+
+Guidelines
+- Customer-facing endpoints: add controllers under `modules/customer/controllers` and register them in `CustomerModule`.
+- Staff/admin endpoints: add controllers under `modules/staff/controllers` and register them in `StaffModule`.
+- Shared logic (Redis clients, domain services): place providers in `modules/core` and export them via `CoreModule`.
+- Cross-cutting concerns (global middleware, pipes, interceptors): put under `common/*`.
+- Keep `AppModule` minimal: only import `CustomerModule` and `StaffModule` (or additional serving areas in the future).
+
+Optional improvements
+- If you prefer path aliases (e.g., `@modules/core/menu.service`), add them in `backend/tsconfig.json` under `compilerOptions.paths` and update imports accordingly.
