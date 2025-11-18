@@ -26,22 +26,29 @@ export const isMocked = ref<boolean>(FORCE_MOCK || SESSION_MOCK);
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
   const urlPath = path.startsWith('/') ? path : `/${path}`;
   const url = ABS_BASE + urlPath;
-  // Debug log for verification in browser devtools
-  // eslint-disable-next-line no-console
-  console.debug('[staff-api] request', init?.method || 'GET', url);
-  const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
-    credentials: 'include',
-    ...init,
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
+      credentials: 'include',
+      ...init,
+    });
+  } catch (e) {
+    // Network error or CORS failure → mark offline and rethrow
+    apiOnline.value = false;
+    throw e;
+  }
   if (!res.ok) {
     apiOnline.value = false;
     const text = await res.text().catch(() => '');
-    // eslint-disable-next-line no-console
-    console.warn('[staff-api] response', res.status, res.statusText, text);
     throw new Error(`HTTP ${res.status} ${res.statusText}: ${text}`);
   }
+  // Successful response: consider the API online and, unless forced, exit mock mode
   apiOnline.value = true;
+  if (!FORCE_MOCK) {
+    isMocked.value = false;
+    try { sessionStorage.removeItem('mock-mode'); } catch {}
+  }
   const ct = res.headers.get('content-type') || '';
   if (ct.includes('application/json')) return res.json();
   // @ts-expect-error
@@ -57,7 +64,12 @@ export const getPublicMenu = () => http<MenuResponse>('/menu');
 export async function tryApi<T>(fn: () => Promise<T>, fallback: () => Promise<T> | T): Promise<T> {
   try {
     const res = await fn();
-    // Only flip to false on success to allow mixed conditions; once mocked, stays mocked until reload
+    // Any successful backend call should mark API online and disable mock mode (unless forced)
+    apiOnline.value = true;
+    if (!FORCE_MOCK) {
+      isMocked.value = false;
+      try { sessionStorage.removeItem('mock-mode'); } catch {}
+    }
     return res;
   } catch (_) {
     // Enable mocked mode on any failure
@@ -113,6 +125,15 @@ export const mockApi = {
     saveMock(s);
     return next;
   },
+  async deleteItem(id: string): Promise<{ ok: true }>{
+    const s = loadMock();
+    const idx = s.items.findIndex(i => i.id === id);
+    if (idx >= 0) {
+      s.items.splice(idx, 1);
+      saveMock(s);
+    }
+    return { ok: true };
+  },
   async adjustStock(id: string, delta: number): Promise<{ id: string; stock: number }> {
     const s = loadMock();
     const it = s.items.find(i => i.id === id);
@@ -134,6 +155,8 @@ export const staffApi = {
   upsertItem: (id: string, data: Partial<Item>) =>
     tryApi<Item>(() => http(`/staff/menu/items/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(data) }),
       () => mockApi.upsertItem(id, data)),
+  deleteItem: (id: string) =>
+    tryApi<{ ok: true }>(() => http(`/staff/menu/items/${encodeURIComponent(id)}`, { method: 'DELETE' }), () => mockApi.deleteItem(id)),
   adjustStock: (id: string, delta: number) =>
     tryApi<{ id: string; stock: number }>(
       () => http(`/staff/menu/items/${encodeURIComponent(id)}/stock`, { method: 'POST', body: JSON.stringify({ delta }) }),
@@ -143,8 +166,34 @@ export const staffApi = {
 
 // Auth and Users management
 export type StaffUser = { id: string; nickname: string; roles: string[] };
+
+// Cache auth status for 60 seconds and coalesce concurrent requests
+type AuthStatus = { adminExists: boolean; currentUser: StaffUser | null };
+let _authCached: AuthStatus | null = null;
+let _authCachedAt = 0;
+let _authInFlight: Promise<AuthStatus> | null = null;
+
+async function getAuthStatus(force = false): Promise<AuthStatus> {
+  const now = Date.now();
+  const fresh = now - _authCachedAt < 60_000; // 60 seconds TTL
+  if (!force && _authCached && fresh) return _authCached;
+  if (!force && _authInFlight) return _authInFlight;
+  const p = http<AuthStatus>(`/auth/status`)
+    .then((res) => {
+      _authCached = res;
+      _authCachedAt = Date.now();
+      return res;
+    })
+    .finally(() => {
+      _authInFlight = null;
+    });
+  if (!force) _authInFlight = p;
+  return p;
+}
+
 export const authApi = {
-  status: () => http<{ adminExists: boolean; currentUser: StaffUser | null }>(`/auth/status`),
+  // Returns cached status if fresh (< 60s). Pass { force: true } to bypass cache.
+  status: (opts?: { force?: boolean }) => getAuthStatus(!!opts?.force),
   initAdmin: (nickname: string, password?: string) => http<{ ok: true; user: StaffUser }>(`/auth/init-admin`, {
     method: 'POST',
     body: JSON.stringify({ nickname, password }),

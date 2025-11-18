@@ -18,17 +18,30 @@
             <span class="dot" :class="apiStatusClass"></span>
             <span class="api-text">{{ apiLabel }}</span>
           </div>
-          <n-button tertiary type="primary">
+          <!-- Notifications: full on desktop, icon-only on mobile -->
+          <n-button class="hide-on-mobile" tertiary type="primary">
             <template #icon>
               <n-icon><NotificationsOutline /></n-icon>
             </template>
             Notifications
           </n-button>
-          <n-button text>
+          <n-button class="only-mobile" quaternary circle aria-label="Notificaciones">
+            <template #icon>
+              <n-icon><NotificationsOutline /></n-icon>
+            </template>
+          </n-button>
+
+          <!-- Profile: full on desktop, icon-only on mobile -->
+          <n-button class="hide-on-mobile" text>
             <template #icon>
               <n-icon><PersonOutline /></n-icon>
             </template>
             {{ currentUser?.nickname || 'Perfil' }}
+          </n-button>
+          <n-button class="only-mobile" quaternary circle aria-label="Perfil">
+            <template #icon>
+              <n-icon><PersonOutline /></n-icon>
+            </template>
           </n-button>
         </div>
       </n-layout-header>
@@ -102,7 +115,6 @@ import {
   MenuOutline,
   BarChartOutline,
   ListOutline,
-  CubeOutline,
   RestaurantOutline,
   PersonOutline,
   NotificationsOutline
@@ -119,7 +131,6 @@ const renderIcon = (icon: any) => () => h(NIcon, null, { default: () => h(icon) 
 const menuOptions = [
   { label: 'Dashboard', key: '/', icon: renderIcon(BarChartOutline) },
   { label: 'Órdenes', key: '/orders', icon: renderIcon(ListOutline) },
-  { label: 'Inventario', key: '/inventory', icon: renderIcon(CubeOutline) },
   { label: 'Menú', key: '/menu', icon: renderIcon(RestaurantOutline) },
   { label: 'Usuarios', key: '/users', icon: renderIcon(PersonOutline) },
 ];
@@ -166,9 +177,9 @@ const adminPassword = ref('');
 const savingAdmin = ref(false);
 const canCreateAdmin = computed(() => !!adminNickname.value && (adminPassword.value?.length || 0) >= 6);
 
-async function loadAuth() {
+async function loadAuth(force = false) {
   try {
-    const st = await authApi.status();
+    const st = await authApi.status(force ? { force: true } : undefined as any);
     adminExists.value = st.adminExists;
     currentUser.value = st.currentUser;
   } catch {
@@ -183,7 +194,7 @@ async function createAdmin() {
   savingAdmin.value = true;
   try {
     await authApi.initAdmin(adminNickname.value, adminPassword.value);
-    await loadAuth();
+    await loadAuth(true);
   } catch (e) {
     // eslint-disable-next-line no-alert
     alert('Error creando admin: ' + (e as any)?.message);
@@ -223,7 +234,7 @@ async function handlePermFromUrl() {
 
 onMounted(async () => {
   await handlePermFromUrl();
-  await loadAuth();
+  await loadAuth(true);
   // Setup responsive detection
   const updateIsMobile = () => {
     isMobile.value = window.matchMedia('(max-width: 768px)').matches;
@@ -258,7 +269,7 @@ onBeforeUnmount(() => {
   backdrop-filter: saturate(180%) blur(8px);
 }
 .brand { display:flex; gap:10px; align-items:center; font-weight:600; }
-.header-actions { display:flex; align-items:center; gap:8px; }
+.header-actions { display:flex; align-items:center; gap:8px; min-width: 0; }
 .api-indicator { display:flex; align-items:center; gap:6px; padding: 4px 8px; border-radius: 999px; background: rgba(0,0,0,0.04); font-size:12px; }
 .api-indicator .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
 .api-indicator .dot.online { background:#1b5e20; }
@@ -297,7 +308,12 @@ onBeforeUnmount(() => {
 
 /* Responsive helpers */
 .only-mobile { display: none; }
+.hide-on-mobile { display: inline-flex; }
 @media (max-width: 768px) {
   .only-mobile { display: inline-flex; }
+  .hide-on-mobile { display: none; }
+  .header-actions { gap: 4px; }
+  .api-indicator { padding: 2px 6px; gap: 4px; }
+  .api-indicator .api-text { display: none; }
 }
 </style>

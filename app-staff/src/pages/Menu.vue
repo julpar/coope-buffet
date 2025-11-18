@@ -6,26 +6,81 @@
           <n-icon size="16"><SearchOutline /></n-icon>
         </template>
       </n-input>
-      <n-button type="primary" tertiary @click="refresh" :loading="loading">
+      <n-button type="primary" @click="openCreate">
         <template #icon><n-icon><AddOutline /></n-icon></template>
+        Nuevo plato
+      </n-button>
+      <n-button tertiary @click="refresh" :loading="loading">
+        <template #icon><n-icon><RefreshOutline /></n-icon></template>
         Refrescar
       </n-button>
     </div>
-    <n-data-table :columns="columns" :data="filtered" :loading="loading" :bordered="true" />
+    <div class="table-wrap">
+      <n-data-table :columns="columns" :data="filtered" :loading="loading" :bordered="true" :scroll-x="760" />
+    </div>
+
+    <!-- Add/Edit item modal -->
+    <n-modal v-model:show="showEditor" preset="card" :title="editorTitle" style="max-width:520px; width:92vw;">
+      <div class="form">
+        <n-form :model="form" label-placement="top">
+          <div class="row">
+            <n-form-item label="ID" path="id">
+              <n-input v-model:value="form.id" placeholder="ID corto (ej. A7F2C)" :disabled="isEditing" />
+            </n-form-item>
+            <n-form-item label="Categoría" path="categoryId">
+              <n-select v-model:value="form.categoryId" :options="categoryOptions" placeholder="Categoría" />
+            </n-form-item>
+          </div>
+          <n-form-item label="Nombre" path="name">
+            <n-input v-model:value="form.name" placeholder="Nombre del plato" />
+          </n-form-item>
+          <div class="row">
+            <n-form-item label="Precio" path="price">
+              <n-input-number v-model:value="form.price" :min="0" :step="10" placeholder="0" />
+            </n-form-item>
+            <n-form-item label="Stock" path="stock">
+              <n-input-number v-model:value="form.stock" :min="0" :step="1" placeholder="0" />
+            </n-form-item>
+          </div>
+          <div class="row">
+            <n-form-item label="Umbral de bajo stock" path="lowStockThreshold">
+              <n-input-number v-model:value="form.lowStockThreshold" :min="0" :step="1" placeholder="0" />
+            </n-form-item>
+            <n-form-item label="Sin TACC" path="isGlutenFree">
+              <n-switch v-model:value="form.isGlutenFree" />
+            </n-form-item>
+          </div>
+          <n-form-item label="Activo" path="active">
+            <n-switch v-model:value="form.active" />
+          </n-form-item>
+        </n-form>
+      </div>
+      <template #action>
+        <div style="display:flex; gap:8px; justify-content:flex-end;">
+          <n-button @click="showEditor = false">Cancelar</n-button>
+          <n-button type="primary" :loading="saving" @click="saveItem">Guardar</n-button>
+        </div>
+      </template>
+    </n-modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { h, computed, ref, onMounted } from 'vue';
 import { NTag, NButton, NIcon, useMessage, type DataTableColumns } from 'naive-ui';
-import { AddOutline, CreateOutline, CopyOutline, SearchOutline, RefreshOutline } from '@vicons/ionicons5';
-import type { Item } from '../types';
-import { getStaffItems } from '../lib/api';
+import { AddOutline, CreateOutline, CopyOutline, TrashOutline, SearchOutline, RefreshOutline } from '@vicons/ionicons5';
+import type { Item, Category } from '../types';
+import { staffApi, getStaffItems } from '../lib/api';
 
 const q = ref('');
 const loading = ref(false);
 const items = ref<Item[]>([]);
 const message = useMessage();
+const categories = ref<Category[]>([]);
+const showEditor = ref(false);
+const saving = ref(false);
+const editing = ref<Item | null>(null);
+const form = ref<Partial<Item & { id: string }>>({ id: '', name: '', categoryId: '', price: 0, stock: 0, lowStockThreshold: 0, isGlutenFree: false, active: true });
 
 function availabilityOf(it: Item): 'in-stock' | 'limited' | 'sold-out' {
   const stock = it.stock ?? 0;
@@ -44,7 +99,7 @@ const rows = computed(() => items.value.map(it => ({
 const filtered = computed(() => rows.value.filter(r => !q.value || r.name.toLowerCase().includes(q.value.toLowerCase())));
 
 const columns: DataTableColumns<any> = [
-  { title: 'Plato', key: 'name' },
+  { title: 'Plato', key: 'name', minWidth: 200, ellipsis: true },
   { title: 'Precio', key: 'priceFmt', width: 140 },
   { title: 'Stock', key: 'stock', width: 100 },
   { title: 'Disponible', key: 'availability', width: 160, render: (row: any) => {
@@ -53,9 +108,10 @@ const columns: DataTableColumns<any> = [
       return h(NTag, { type: t }, { default: () => label });
     }
   },
-  { title: 'Acciones', key: 'actions', width: 220, render: (row: any) => h('div', { style: 'display:flex; gap:8px' }, [
-      h(NButton, { quaternary: true, size: 'small' }, { default: () => 'Editar', icon: () => h('i', { class: 'n-icon' }, h(CreateOutline)) }),
-      h(NButton, { quaternary: true, size: 'small' }, { default: () => 'Duplicar', icon: () => h('i', { class: 'n-icon' }, h(CopyOutline)) })
+  { title: 'Acciones', key: 'actions', width: 300, render: (row: any) => h('div', { style: 'display:flex; gap:8px; white-space: nowrap;' }, [
+      h(NButton, { quaternary: true, size: 'small', onClick: () => openEdit(row) }, { default: () => 'Editar', icon: () => h('i', { class: 'n-icon' }, h(CreateOutline)) }),
+      h(NButton, { quaternary: true, size: 'small', onClick: () => openDuplicate(row) }, { default: () => 'Duplicar', icon: () => h('i', { class: 'n-icon' }, h(CopyOutline)) }),
+      h(NButton, { quaternary: true, size: 'small', type: 'error', onClick: () => confirmDelete(row) }, { default: () => 'Eliminar', icon: () => h('i', { class: 'n-icon' }, h(TrashOutline)) })
     ])
   }
 ];
@@ -63,7 +119,9 @@ const columns: DataTableColumns<any> = [
 async function refresh() {
   loading.value = true;
   try {
-    items.value = await getStaffItems();
+    const [its, cats] = await Promise.all([getStaffItems(), staffApi.getCategories()]);
+    items.value = its;
+    categories.value = cats;
   } catch (err: any) {
     console.error(err);
     message.error('No se pudo cargar el menú desde el servidor');
@@ -77,10 +135,84 @@ onMounted(refresh);
 function currency(v: number) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(v);
 }
+
+const isEditing = computed(() => !!editing.value);
+const editorTitle = computed(() => (isEditing.value ? 'Editar plato' : 'Nuevo plato'));
+const categoryOptions = computed(() => categories.value.map(c => ({ label: c.name, value: c.id })));
+
+function randomId(len = 5) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let out = '';
+  for (let i = 0; i < len; i++) out += chars[Math.floor(Math.random() * chars.length)];
+  return out;
+}
+
+function openCreate() {
+  editing.value = null;
+  form.value = { id: randomId(), name: '', categoryId: categories.value[0]?.id || 'otros', price: 0, stock: 0, lowStockThreshold: 0, isGlutenFree: false, active: true };
+  showEditor.value = true;
+}
+
+function openEdit(row: Item) {
+  editing.value = row;
+  form.value = { id: row.id, name: row.name, categoryId: row.categoryId, price: row.price, stock: row.stock || 0, lowStockThreshold: row.lowStockThreshold || 0, isGlutenFree: !!row.isGlutenFree, active: row.active !== false };
+  showEditor.value = true;
+}
+
+function openDuplicate(row: Item) {
+  editing.value = null;
+  form.value = { id: randomId(), name: row.name + ' (copia)', categoryId: row.categoryId, price: row.price, stock: row.stock || 0, lowStockThreshold: row.lowStockThreshold || 0, isGlutenFree: !!row.isGlutenFree, active: row.active !== false };
+  showEditor.value = true;
+}
+
+async function saveItem() {
+  if (!form.value.id || !form.value.name || !form.value.categoryId) {
+    message.warning('Complete ID, Nombre y Categoría');
+    return;
+  }
+  saving.value = true;
+  try {
+    await staffApi.upsertItem(form.value.id!, {
+      name: form.value.name,
+      categoryId: form.value.categoryId!,
+      price: Number(form.value.price || 0),
+      stock: Number(form.value.stock || 0),
+      lowStockThreshold: Number(form.value.lowStockThreshold || 0),
+      isGlutenFree: !!form.value.isGlutenFree,
+      active: form.value.active !== false,
+    });
+    message.success(isEditing.value ? 'Plato actualizado' : 'Plato creado');
+    showEditor.value = false;
+    await refresh();
+  } catch (err: any) {
+    console.error(err);
+    message.error('No se pudo guardar el plato');
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function confirmDelete(row: Item) {
+  if (!window.confirm(`¿Eliminar "${row.name}"? Esta acción no se puede deshacer.`)) return;
+  try {
+    await staffApi.deleteItem(row.id);
+    message.success('Plato eliminado');
+    await refresh();
+  } catch (err: any) {
+    console.error(err);
+    message.error('No se pudo eliminar el plato');
+  }
+}
 </script>
 
 <style scoped>
 .page { display:flex; flex-direction:column; gap:12px; }
 .toolbar { display:flex; gap:8px; align-items:center; }
 .grow { flex:1; }
+.table-wrap { overflow-x: auto; }
+/* Prevent header letters stacking vertically when space is tight */
+:deep(.n-data-table-th) { white-space: nowrap; }
+.form { display:flex; flex-direction:column; gap:8px; }
+.row { display:flex; gap:8px; }
+.row > * { flex:1; }
 </style>

@@ -12,7 +12,9 @@
       </n-button>
     </div>
 
-    <n-data-table :columns="columns" :data="filtered" :bordered="true" />
+    <div class="table-wrap">
+      <n-data-table :columns="columns" :data="filtered" :bordered="true" :scroll-x="820" />
+    </div>
 
     <InviteUserModal v-model:show="showCreate" @created="onCreated" />
     <EditUserModal v-model:show="showEdit" :user="editingUser" @saved="onSaved" />
@@ -42,10 +44,10 @@ async function loadUsers() {
 }
 
 const columns: DataTableColumns<StaffUser> = [
-  { title: 'Nombre', key: 'nickname' },
-  { title: 'Roles', key: 'roles', width: 260, render: (row: StaffUser) => h('div', { style: 'display:flex;flex-wrap:wrap;gap:6px' }, row.roles.map(r => h(NTag, { size: 'small' }, { default: () => r }))) },
+  { title: 'Nombre', key: 'nickname', minWidth: 200, ellipsis: true },
+  { title: 'Roles', key: 'roles', minWidth: 240, render: (row: StaffUser) => h('div', { style: 'display:flex;flex-wrap:wrap;gap:6px' }, row.roles.map(r => h(NTag, { size: 'small' }, { default: () => r }))) },
   { title: 'ID', key: 'id', width: 160 },
-  { title: 'Acciones', key: 'actions', width: 260, render: (row: StaffUser) => h('div', { style: 'display:flex; gap:8px' }, [
+  { title: 'Acciones', key: 'actions', width: 220, render: (row: StaffUser) => h('div', { style: 'display:flex; gap:8px; white-space: nowrap;' }, [
       h(NButton, { quaternary: true, size: 'small', onClick: () => editUser(row) }, { default: () => 'Editar' }),
       h(NButton, { quaternary: true, size: 'small', type: 'error', onClick: () => removeUser(row) }, { default: () => 'Eliminar', icon: () => h('i', { class: 'n-icon' }, h(TrashOutline)) })
     ])
@@ -88,4 +90,7 @@ async function removeUser(u: StaffUser) {
 .page { display: flex; flex-direction: column; gap: 12px; }
 .toolbar { display:flex; align-items:center; gap:8px; }
 .grow { flex: 1; }
+.table-wrap { overflow-x: auto; }
+/* Keep table headers in one line on small screens to avoid vertical letter stacking */
+:deep(.n-data-table-th) { white-space: nowrap; }
 </style>
