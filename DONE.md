@@ -6,26 +6,25 @@ This file tracks implementation progress against SPECS.md, decisions, and next s
 
 ## Scope for this iteration
 
-- Focus: API (per user update)
-- Goal: Provide initial Redis-backed Menu and Inventory endpoints to support the customer app and staff tools.
+- Focus: Staff webapp features (frontend only — no backend changes)
+- Goal: Implement the remaining staff webapp features outlined in SPECS.md with a frontend that can run now against mocks and seamlessly switch to the backend when it’s ready.
 
 ## What’s done
 
-1) Backend structure and health
-- Existing health and platform status endpoints kept intact under `GET /api/health` and `GET /api/platform/status`.
+1) Staff Webapp (app-staff) — UI, navigation, and core tools
+   - App shell with mobile-first layout and top navigation: Dashboard, Órdenes, Inventario, Menú, Usuarios.
+   - Vue Router configured and pages created:
+     - Dashboard: order counters (recibidas, preparando, listas, pendiente cash) and low-stock highlights.
+     - Órdenes: simple order board with status progression (awaiting-cash → received → preparing → ready → completed), cancel/complete actions.
+     - Inventario: list items with current stock, quick stock adjust buttons (-5/-1/+1/+5), inline low-stock threshold editing with persistence.
+     - Menú: CRUD (upsert) for categorías and items (name, category, price, GF, active), and list with availability indicators.
+     - Usuarios: placeholder explaining upcoming roles and permissions (Stock manager, Cashier, Platform Admin).
+   - API client (`app-staff/src/lib/api.ts`) that targets `/api` by default and maps to the staff endpoints defined in DONE.md (Categories/Items/Stock). Supports a local mock fallback backed by `localStorage` to allow immediate use without the backend.
+   - Minimal state for orders (`app-staff/src/store/orders.ts`) with `localStorage` seed to simulate real flows while backend is under construction.
+   - Vite config includes Vue plugin and a dev proxy for `/api` so the app can switch to the live backend by running it on port 3000.
 
-2) Menu and Inventory (Redis-based)
-- Data model (Redis):
-  - `menu:categories` — JSON array of `{ id, name, order }`.
-  - `menu:items` — Redis Hash mapping `itemId -> JSON` of `{ id, name, categoryId, price, isGlutenFree?, imageUrl?, stock?, lowStockThreshold?, active? }`.
-- Service: `MenuService` with methods to list/upsert categories and items, adjust stock, and compute a public projection for customers (availability: `in-stock`, `limited`, `sold-out`).
-- Public API: `GET /api/menu` — returns categories with items and a separate `glutenFree` collection derived from items flagged `isGlutenFree`.
-- Staff API (no auth yet; to be secured later):
-  - `GET /api/staff/menu/categories`
-  - `PUT /api/staff/menu/categories/:id` (upsert)
-  - `GET /api/staff/menu/items`
-  - `PUT /api/staff/menu/items/:id` (upsert; requires `categoryId`)
-  - `POST /api/staff/menu/items/:id/stock` with body `{ delta }` to increment/decrement stock (clamped to 0).
+2) Customer/Backend context from previous iteration (unchanged; listed here for continuity only)
+   - Existing public endpoints and Redis models remain as documented; no backend files were modified in this iteration.
 
 3) Wiring
 - `AppModule` updated to register `MenuService`, `MenuController`, and `StaffController`.
@@ -42,9 +41,33 @@ This file tracks implementation progress against SPECS.md, decisions, and next s
   - `MenuController` logs public menu fetch with category/item counts (debug level).
   - `StaffController` logs category/item upserts and stock adjustments (ids, deltas, outcomes).
 
-## How to try it (examples)
+## How to try it (staff webapp)
 
-Assumptions: backend running on port 3000 and Redis reachable via `REDIS_URL` (docker-compose sets it for the app service).
+Local dev (frontend only):
+
+```
+cd app-staff
+npm install
+npm run dev
+```
+
+- Open http://localhost:5174
+- By default, the app uses mock data (localStorage). To use the real backend when it’s available:
+  - Run backend on http://localhost:3000
+  - The dev server proxies `/api` → backend automatically.
+  - Optionally set `VITE_API_BASE` env to a different base URL.
+
+Key interactions to validate:
+- Dashboard shows counters seeded from mock orders and low-stock alerts from mock menu items.
+- Órdenes page lets you advance/cancel/complete orders (updates persist in localStorage).
+- Inventario allows stock adjustments and low-stock threshold updates. When backend is ready, these calls will hit:
+  - `POST /api/staff/menu/items/:id/stock` with `{ delta }`
+  - `PUT  /api/staff/menu/items/:id` with `{ lowStockThreshold }`
+- Menú lets you upsert categorías and items. When backend is ready, these map to:
+  - `PUT /api/staff/menu/categories/:id`
+  - `PUT /api/staff/menu/items/:id`
+
+Backend API examples (reference only; unchanged in this iteration):
 
 Seed a category and item:
 
@@ -103,21 +126,24 @@ Example response shape:
 
 ## Notes & decisions
 
-- Availability labeling follows SPECS: `sold-out` when stock <= 0; `limited` when `stock <= lowStockThreshold` and threshold > 0; otherwise `in-stock`.
-- `active` field lets us hide an item from the public menu without deletion.
-- Category list is kept as a single JSON array to preserve order; items are stored in a hash for efficient per-item updates.
-- Staff endpoints are intentionally simple; they will be protected (auth/roles) in a future step.
-- Logging defaults to `info` level in `docker-compose.yml`. To see debug logs locally set `LOG_LEVEL=debug` and restart the backend. You can also pass a correlation header like `X-Request-Id` to trace a call end-to-end.
+Frontend-only iteration decisions:
+- Do not touch backend (as requested). All functionality is implemented on the SPA with a mock adapter that mirrors the planned API shapes.
+- The SPA’s API base defaults to `/api` and can be overridden via `VITE_API_BASE`. In dev, Vite proxies `/api` to `http://localhost:3000` if available.
+- State is deliberately simple (Vue reactivity + localStorage) to enable quick iteration; can be migrated to Pinia/Vue Query later.
+- UI is mobile-first with light CSS in `App.vue`; no external UI kit to keep build small.
 
-## Next steps (API)
+## Next steps
 
+Staff webapp (frontend):
+1) Fulfillment board per SPECS (columns, drag-and-drop, timers) and real-time updates (Socket.io) — pending backend events.
+2) Cash operations view for orders pending cash collection, with receipt print/QR flow.
+3) Platform status admin controls (soft/hard offline toggles) once the endpoint exists.
+4) Auth and role-based access (guard routes/components when backend auth is ready).
+5) Polish UI (filters, search, pagination) and accessibility pass.
+
+Backend (reference — unchanged here):
 1) Cart/stock validation endpoints
-   - Accept a cart payload, validate availability and return normalized items/prices and warnings.
-2) Order flow skeleton
-   - Create order with reserved stock (pending) and finalize on payment confirmation; revert on failure.
-3) MercadoPago integration scaffold
-   - Create preference endpoint; webhook handler with idempotency and signature verification.
-4) Admin/staff auth and role checks
-   - Protect `/api/staff/*` with role-based access.
-5) Platform status admin endpoint
-   - Mutations for `platform:status`, `platform:offline_message`, `platform:offline_until`.
+2) Order flow (reserve/finalize/revert on payment)
+3) MercadoPago integration + webhook
+4) Admin/staff auth and roles
+5) Platform status mutations
