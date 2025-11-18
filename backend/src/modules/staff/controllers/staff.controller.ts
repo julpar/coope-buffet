@@ -2,7 +2,7 @@ import { Body, Controller, Get, Logger, Param, Post, Put, Req } from '@nestjs/co
 import type { Request } from 'express';
 import { MenuService, Category, MenuItem } from '../../core/menu.service';
 
-@Controller('api/staff/menu')
+@Controller('staff/menu')
 export class StaffController {
   private readonly logger = new Logger('StaffController');
   constructor(private readonly menu: MenuService) {}

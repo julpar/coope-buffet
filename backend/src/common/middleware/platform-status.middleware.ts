@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import Redis from 'ioredis';
+import { API_PREFIX } from '../constants';
 
 // Lightweight Redis client for middleware-only usage (separate from Nest DI)
 const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
@@ -21,9 +22,10 @@ type PlatformStatus = 'online' | 'soft-offline' | 'hard-offline';
 
 export function platformStatusMiddleware() {
   return async (req: Request, res: Response, next: NextFunction) => {
-    // Only enforce for customer-facing routes; allow API/auth/staff always
+    // Only enforce for customer-facing routes; allow staff and auth always
     const path = req.path;
-    if (path.startsWith('/api') || path.startsWith('/auth') || path.startsWith('/staff')) {
+    // Bypass for staff/admin tools (versioned) and auth endpoints (non-versioned)
+    if (path.startsWith(`${API_PREFIX}/staff`) || path.startsWith('/auth')) {
       return next();
     }
 

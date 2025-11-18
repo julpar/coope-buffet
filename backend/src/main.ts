@@ -5,6 +5,7 @@ import { AppModule } from './app.module';
 import { json, urlencoded } from 'express';
 import cookieParser from 'cookie-parser';
 import { platformStatusMiddleware } from './common/middleware/platform-status.middleware';
+import { API_VERSION } from './common/constants';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { cors: true });
@@ -12,6 +13,9 @@ async function bootstrap() {
   app.use(cookieParser());
   app.use(json({ limit: '1mb' }));
   app.use(urlencoded({ extended: true }));
+
+  // Global API prefix, e.g., /v1
+  app.setGlobalPrefix(API_VERSION);
 
   // Platform status enforcement for customer-facing routes
   app.use(platformStatusMiddleware());
