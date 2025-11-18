@@ -4,6 +4,12 @@
     <n-layout class="layout">
       <n-layout-header v-if="ready && (adminExists && currentUser)" bordered class="header">
         <div class="brand">
+          <!-- Mobile menu trigger -->
+          <n-button class="only-mobile" quaternary circle @click="drawerOpen = true" aria-label="Abrir menú">
+            <template #icon>
+              <n-icon><MenuOutline /></n-icon>
+            </template>
+          </n-button>
           <n-icon size="22"><StorefrontOutline /></n-icon>
           <span>Buffet · Staff</span>
         </div>
@@ -61,7 +67,8 @@
 
       <!-- Full app layout once authenticated -->
       <n-layout v-else has-sider>
-        <n-layout-sider :collapsed="collapsed" show-trigger bordered collapse-mode="width" :collapsed-width="64" width="220">
+        <!-- Desktop/tablet: keep sider; Mobile: hide sider and use drawer -->
+        <n-layout-sider v-if="!isMobile" :collapsed="collapsed" show-trigger bordered collapse-mode="width" :collapsed-width="64" width="220">
           <n-menu :value="$route.path" :options="menuOptions" @update:value="onMenu" :collapsed="collapsed" />
           <div class="aside-footer">
             <div class="aside-toggle">
@@ -73,6 +80,13 @@
         <n-layout-content class="main">
           <RouterView />
         </n-layout-content>
+
+        <!-- Mobile drawer menu -->
+        <n-drawer v-model:show="drawerOpen" placement="left" :width="260">
+          <n-drawer-content title="Menú">
+            <n-menu :value="$route.path" :options="menuOptions" @update:value="onMenu" />
+          </n-drawer-content>
+        </n-drawer>
       </n-layout>
     </n-layout>
   </n-config-provider>
@@ -80,11 +94,12 @@
 </template>
 
 <script setup lang="ts">
-import { h, ref, computed, onMounted, watch } from 'vue';
+import { h, ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { NIcon, type GlobalThemeOverrides } from 'naive-ui';
 import {
   StorefrontOutline,
+  MenuOutline,
   BarChartOutline,
   ListOutline,
   CubeOutline,
@@ -96,6 +111,8 @@ import { isMocked as apiIsMocked, API_BASE, apiOnline, authApi, type StaffUser }
 
 const router = useRouter();
 const collapsed = ref(false);
+const drawerOpen = ref(false);
+const isMobile = ref(false);
 
 const renderIcon = (icon: any) => () => h(NIcon, null, { default: () => h(icon) });
 
@@ -109,6 +126,8 @@ const menuOptions = [
 
 const onMenu = (path: string) => {
   if (path !== router.currentRoute.value.path) router.push(path);
+  // Close drawer on mobile navigation
+  if (isMobile.value) drawerOpen.value = false;
 };
 
 const themeOverrides: GlobalThemeOverrides = {
@@ -205,11 +224,27 @@ async function handlePermFromUrl() {
 onMounted(async () => {
   await handlePermFromUrl();
   await loadAuth();
+  // Setup responsive detection
+  const updateIsMobile = () => {
+    isMobile.value = window.matchMedia('(max-width: 768px)').matches;
+  };
+  updateIsMobile();
+  window.addEventListener('resize', updateIsMobile);
+  // Store cleanup handler on instance via global to remove later
+  (cleanupFns as any).push(() => window.removeEventListener('resize', updateIsMobile));
 });
 
 // Refresh auth status on route changes so header/layout reacts after QR login
 watch(() => router.currentRoute.value.fullPath, async () => {
   await loadAuth();
+});
+
+// Simple cleanup registry to avoid leaking listeners
+const cleanupFns: Array<() => void> = [];
+onBeforeUnmount(() => {
+  cleanupFns.forEach((fn) => {
+    try { fn(); } catch {}
+  });
 });
 </script>
 
@@ -259,4 +294,10 @@ watch(() => router.currentRoute.value.fullPath, async () => {
 .setup-card { background:#fff; border:1px solid rgba(0,0,0,.08); border-radius:12px; padding:20px; max-width:480px; width:100%; display:flex; gap:12px; flex-direction:column; }
 .setup-card h2 { margin:0 0 4px; }
 .setup-card .hint { font-size:12px; color:#666; margin:0; }
+
+/* Responsive helpers */
+.only-mobile { display: none; }
+@media (max-width: 768px) {
+  .only-mobile { display: inline-flex; }
+}
 </style>
