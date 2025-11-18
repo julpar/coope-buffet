@@ -74,6 +74,11 @@ export class MenuService {
     await this.redisSvc.redis.hset(this.ITEM_KEY, item.id, JSON.stringify(item));
   }
 
+  async deleteItem(id: string): Promise<boolean> {
+    const removed = await this.redisSvc.redis.hdel(this.ITEM_KEY, id);
+    return removed > 0;
+  }
+
   async adjustStock(itemId: string, delta: number): Promise<MenuItem | null> {
     const item = await this.getItem(itemId);
     if (!item) return null;

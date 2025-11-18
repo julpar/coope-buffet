@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Logger, Param, Post, Put, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Logger, Param, Post, Put, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import { MenuService, Category, MenuItem } from '../../core/menu.service';
+import { MENU_CATEGORIES } from '../../core/menu.constants';
 import { Roles } from '../../../common/auth/auth.decorators';
 
 @Controller('staff/menu')
@@ -12,7 +13,8 @@ export class StaffController {
   // Categories
   @Get('categories')
   async listCategories() {
-    return this.menu.listCategories();
+    // Return hardcoded categories from project constant as requested
+    return MENU_CATEGORIES;
   }
 
   @Put('categories/:id')
@@ -40,15 +42,20 @@ export class StaffController {
       // Keep error shape simple; frontend treats non-2xx as error
       throw new Error('categoryId is required');
     }
+    // Coerce numeric fields defensively to handle strings/nulls from clients
+    const toNum = (v: unknown, def = 0) => {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : def;
+    };
     const item: MenuItem = {
       id,
       name: body.name ?? id,
       categoryId: body.categoryId,
-      price: typeof body.price === 'number' ? body.price : 0,
+      price: toNum(body.price, 0),
       isGlutenFree: !!body.isGlutenFree,
       imageUrl: body.imageUrl,
-      stock: typeof body.stock === 'number' ? body.stock : 0,
-      lowStockThreshold: typeof body.lowStockThreshold === 'number' ? body.lowStockThreshold : 0,
+      stock: toNum(body.stock, 0),
+      lowStockThreshold: toNum(body.lowStockThreshold, 0),
       active: body.active !== false,
     };
     await this.menu.upsertItem(item);
@@ -73,5 +80,14 @@ export class StaffController {
     );
     // Frontend expects { id, stock }
     return { id: updated.id, stock: updated.stock ?? 0 };
+  }
+
+  @Delete('items/:id')
+  async deleteItem(@Param('id') id: string, @Req() req: Request) {
+    const existed = await this.menu.deleteItem(id);
+    this.logger.log(
+      `delete item id=${id} existed=${existed} rid=${(req as any).id ?? '-'}`,
+    );
+    return { ok: true };
   }
 }
