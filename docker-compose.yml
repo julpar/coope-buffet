@@ -39,6 +39,9 @@ services:
     depends_on:
       - app
     restart: unless-stopped
+    environment:
+      - API_BASE_URL=http://app:3000
+      - API_VERSION=v1
     ports:
       - "8081:80"
 
