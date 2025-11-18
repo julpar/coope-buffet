@@ -1,40 +1,27 @@
 <template>
   <div class="page">
     <div class="toolbar">
-      <el-input v-model="q" placeholder="Buscar orden..." clearable prefix-icon="Search" class="grow" />
-      <el-select v-model="status" placeholder="Estado" style="width:160px">
-        <el-option label="Todas" value="" />
-        <el-option label="Pendiente" value="pending" />
-        <el-option label="Preparando" value="preparing" />
-        <el-option label="Lista" value="ready" />
-        <el-option label="Entregada" value="delivered" />
-      </el-select>
-      <el-button type="primary" :icon="Refresh" @click="refresh">Actualizar</el-button>
+      <n-input v-model:value="q" placeholder="Buscar orden..." clearable class="grow">
+        <template #prefix>
+          <n-icon size="16"><SearchOutline /></n-icon>
+        </template>
+      </n-input>
+      <n-select v-model:value="status" :options="statusOptions" placeholder="Estado" style="width:160px" />
+      <n-button type="primary" tertiary @click="refresh">
+        <template #icon><n-icon><RefreshOutline /></n-icon></template>
+        Actualizar
+      </n-button>
     </div>
 
-    <el-table :data="filtered" border style="width: 100%">
-      <el-table-column prop="id" label="#" width="90" />
-      <el-table-column prop="customer" label="Cliente" />
-      <el-table-column prop="items" label="Items" />
-      <el-table-column prop="total" label="Total" />
-      <el-table-column prop="status" label="Estado" width="140">
-        <template #default="{ row }">
-          <el-tag :type="tagType(row.status)">{{ label(row.status) }}</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="Acciones" width="180">
-        <template #default="{ row }">
-          <el-button size="small" @click="advance(row)" :disabled="row.status==='delivered'">Avanzar</el-button>
-          <el-button size="small" type="danger" text>Cancelar</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+    <n-data-table :columns="columns" :data="filtered" :bordered="true" />
   </div>
+  
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { Refresh, Search } from '@element-plus/icons-vue';
+import { h, computed, ref } from 'vue';
+import { NTag, NButton, NIcon, type DataTableColumns } from 'naive-ui';
+import { RefreshOutline, SearchOutline, PlayForwardOutline, CloseOutline } from '@vicons/ionicons5';
 
 type Status = '' | 'pending' | 'preparing' | 'ready' | 'delivered'
 const q = ref('');
@@ -46,13 +33,40 @@ const rows = ref([
   { id: 1242, customer: 'Martin', items: 4, total: '$12.700', status: 'delivered' },
 ]);
 
+const statusOptions = [
+  { label: 'Todas', value: '' },
+  { label: 'Pendiente', value: 'pending' },
+  { label: 'Preparando', value: 'preparing' },
+  { label: 'Lista', value: 'ready' },
+  { label: 'Entregada', value: 'delivered' }
+];
+
 const filtered = computed(() => rows.value.filter(r =>
   (!status.value || r.status === status.value) &&
   (!q.value || `${r.id} ${r.customer}`.toLowerCase().includes(q.value.toLowerCase()))
 ));
 
-const tagType = (s: string) => ({ pending: 'warning', preparing: 'info', ready: 'success', delivered: '' } as any)[s] || '';
 const label = (s: string) => ({ pending: 'Pendiente', preparing: 'Preparando', ready: 'Lista', delivered: 'Entregada' } as any)[s] || s;
+const tagType = (s: string) => ({ pending: 'warning', preparing: 'info', ready: 'success', delivered: 'default' } as any)[s] || 'default';
+
+const columns: DataTableColumns<any> = [
+  { title: '#', key: 'id', width: 90 },
+  { title: 'Cliente', key: 'customer' },
+  { title: 'Items', key: 'items' },
+  { title: 'Total', key: 'total' },
+  { title: 'Estado', key: 'status', width: 160, render: (row: any) => h(NTag, { type: tagType(row.status) }, { default: () => label(row.status) }) },
+  { title: 'Acciones', key: 'actions', width: 200, render: (row: any) => h('div', { style: 'display:flex; gap:8px' }, [
+      h(NButton, { size: 'small', tertiary: true, disabled: row.status==='delivered', onClick: () => advance(row) }, {
+        icon: () => h(NIcon, null, { default: () => h(PlayForwardOutline) }),
+        default: () => 'Avanzar'
+      }),
+      h(NButton, { size: 'small', quaternary: true, type: 'error' }, {
+        icon: () => h(NIcon, null, { default: () => h(CloseOutline) }),
+        default: () => 'Cancelar'
+      })
+    ])
+  }
+];
 
 const refresh = () => {/* TODO: fetch */};
 const advance = (row: any) => {

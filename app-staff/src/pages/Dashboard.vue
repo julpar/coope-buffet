@@ -1,49 +1,47 @@
 <template>
   <div class="grid">
-    <el-card shadow="hover" class="tile">
+    <n-card class="tile" :bordered="true">
       <template #header>
-        <div class="tile-header"><el-icon><DataAnalysis/></el-icon><span>Hoy</span></div>
+        <div class="tile-header"><n-icon><BarChartOutline /></n-icon><span>Hoy</span></div>
       </template>
       <div class="kpi">
         <div class="kpi-value">{{ currency( revenueToday ) }}</div>
         <div class="kpi-sub">Ingresos</div>
       </div>
-    </el-card>
-    <el-card shadow="hover" class="tile">
+    </n-card>
+    <n-card class="tile" :bordered="true">
       <template #header>
-        <div class="tile-header"><el-icon><List/></el-icon><span>Órdenes</span></div>
+        <div class="tile-header"><n-icon><ListOutline /></n-icon><span>Órdenes</span></div>
       </template>
       <div class="kpi">
         <div class="kpi-value">{{ ordersToday }}</div>
         <div class="kpi-sub">Procesadas</div>
       </div>
-    </el-card>
-    <el-card shadow="hover" class="tile">
+    </n-card>
+    <n-card class="tile" :bordered="true">
       <template #header>
-        <div class="tile-header"><el-icon><User/></el-icon><span>Usuarios activos</span></div>
+        <div class="tile-header"><n-icon><PersonOutline /></n-icon><span>Usuarios activos</span></div>
       </template>
       <div class="kpi">
         <div class="kpi-value">{{ activeUsers }}</div>
         <div class="kpi-sub">Staff conectado</div>
       </div>
-    </el-card>
+    </n-card>
   </div>
 
-  <el-card class="mt">
+  <n-card class="mt" :bordered="true">
     <template #header>
-      <div class="tile-header"><el-icon><TrendCharts/></el-icon><span>Actividad reciente</span></div>
+      <div class="tile-header"><n-icon><TrendingUpOutline /></n-icon><span>Actividad reciente</span></div>
     </template>
-    <el-table :data="recent" size="small" stripe>
-      <el-table-column prop="time" label="Hora" width="120" />
-      <el-table-column prop="event" label="Evento" />
-      <el-table-column prop="actor" label="Usuario" width="160" />
-    </el-table>
-  </el-card>
+    <n-data-table :columns="columns" :data="recent" size="small" :bordered="false" />
+  </n-card>
+  
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { DataAnalysis, List, User, TrendCharts } from '@element-plus/icons-vue';
+import { h, ref } from 'vue';
+import { NIcon, type DataTableColumns } from 'naive-ui';
+import { BarChartOutline, ListOutline, PersonOutline, TrendingUpOutline } from '@vicons/ionicons5';
 
 const revenueToday = ref(235000);
 const ordersToday = ref(57);
@@ -54,6 +52,12 @@ const recent = ref([
   { time: '09:33', event: 'Orden #1244 entregada', actor: 'Luis' },
 ]);
 
+const columns: DataTableColumns<any> = [
+  { title: 'Hora', key: 'time', width: 120 },
+  { title: 'Evento', key: 'event' },
+  { title: 'Usuario', key: 'actor', width: 160 }
+];
+
 const currency = (v: number) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(v);
 </script>
 
@@ -62,6 +66,6 @@ const currency = (v: number) => new Intl.NumberFormat('es-AR', { style: 'currenc
 .tile-header { display:flex; align-items:center; gap:8px; font-weight:600; }
 .kpi { display:flex; flex-direction:column; align-items:flex-start; gap:2px; }
 .kpi-value { font-size: 28px; font-weight: 700; }
-.kpi-sub { color: var(--el-text-color-secondary); }
+.kpi-sub { color: rgba(0,0,0,.45); }
 .mt { margin-top: 12px; }
 </style>

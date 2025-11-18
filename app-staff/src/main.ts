@@ -2,20 +2,30 @@ import { createApp } from 'vue';
 import App from './App.vue';
 import router from './router';
 
-// Element Plus UI framework
-import ElementPlus from 'element-plus';
-import 'element-plus/dist/index.css';
-import * as Icons from '@element-plus/icons-vue';
+// Register a subset of Naive UI components globally
+import { create, NConfigProvider, NLayout, NLayoutHeader, NLayoutSider, NLayoutContent, NMenu, NSwitch, NButton, NIcon, NCard, NDataTable, NInput, NSelect, NTag } from 'naive-ui';
 
 const app = createApp(App);
 
-// Register Element Plus
-app.use(ElementPlus);
+const naive = create({
+  components: [
+    NConfigProvider,
+    NLayout,
+    NLayoutHeader,
+    NLayoutSider,
+    NLayoutContent,
+    NMenu,
+    NSwitch,
+    NButton,
+    NIcon,
+    NCard,
+    NDataTable,
+    NInput,
+    NSelect,
+    NTag
+  ]
+});
 
-// Register all Element Plus icons globally (lightweight tree of SVG components)
-for (const [name, component] of Object.entries(Icons)) {
-  app.component(name, component as any);
-}
-
+app.use(naive);
 app.use(router);
 app.mount('#app');

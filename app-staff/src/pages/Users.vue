@@ -1,30 +1,24 @@
 <template>
   <div class="page">
     <div class="toolbar">
-      <el-input v-model="q" placeholder="Buscar usuario..." clearable prefix-icon="Search" class="grow" />
-      <el-button type="primary" :icon="Plus">Invitar</el-button>
+      <n-input v-model:value="q" placeholder="Buscar usuario..." clearable class="grow">
+        <template #prefix>
+          <n-icon size="16"><SearchOutline /></n-icon>
+        </template>
+      </n-input>
+      <n-button type="primary" tertiary>
+        <template #icon><n-icon><PersonAddOutline /></n-icon></template>
+        Invitar
+      </n-button>
     </div>
-    <el-table :data="filtered" stripe>
-      <el-table-column prop="name" label="Nombre" />
-      <el-table-column prop="role" label="Rol" width="160" />
-      <el-table-column prop="status" label="Estado" width="140">
-        <template #default="{ row }">
-          <el-tag :type="row.status==='activo' ? 'success' : 'warning'">{{ row.status }}</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="Acciones" width="180">
-        <template #default>
-          <el-button size="small" text :icon="Edit">Editar</el-button>
-          <el-button size="small" text type="danger" :icon="Delete">Eliminar</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+    <n-data-table :columns="columns" :data="filtered" :bordered="true" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { Plus, Edit, Delete, Search } from '@element-plus/icons-vue';
+import { h, computed, ref } from 'vue';
+import { NTag, NButton, type DataTableColumns } from 'naive-ui';
+import { PersonAddOutline, CreateOutline, TrashOutline, SearchOutline } from '@vicons/ionicons5';
 
 const q = ref('');
 const rows = ref([
@@ -33,6 +27,17 @@ const rows = ref([
   { name: 'Sofía', role: 'Administrador', status: 'activo' },
 ]);
 const filtered = computed(() => rows.value.filter(r => !q.value || r.name.toLowerCase().includes(q.value.toLowerCase())));
+
+const columns: DataTableColumns<any> = [
+  { title: 'Nombre', key: 'name' },
+  { title: 'Rol', key: 'role', width: 160 },
+  { title: 'Estado', key: 'status', width: 140, render: (row: any) => h(NTag, { type: row.status === 'activo' ? 'success' : 'warning' }, { default: () => row.status }) },
+  { title: 'Acciones', key: 'actions', width: 200, render: (row: any) => h('div', { style: 'display:flex; gap:8px' }, [
+      h(NButton, { quaternary: true, size: 'small' }, { default: () => 'Editar', icon: () => h('i', { class: 'n-icon' }, h(CreateOutline)) }),
+      h(NButton, { quaternary: true, size: 'small', type: 'error' }, { default: () => 'Eliminar', icon: () => h('i', { class: 'n-icon' }, h(TrashOutline)) })
+    ])
+  }
+];
 </script>
 
 <style scoped>

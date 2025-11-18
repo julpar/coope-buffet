@@ -1,26 +1,24 @@
 <template>
   <div class="page">
     <div class="toolbar">
-      <el-input v-model="q" placeholder="Buscar ingrediente..." clearable prefix-icon="Search" class="grow" />
-      <el-button :icon="Plus" type="primary">Nuevo</el-button>
-    </div>
-    <el-table :data="filtered" stripe>
-      <el-table-column prop="name" label="Ingrediente" />
-      <el-table-column prop="stock" label="Stock" width="120" />
-      <el-table-column prop="unit" label="Unidad" width="120" />
-      <el-table-column label="Acciones" width="180">
-        <template #default="{ row }">
-          <el-button size="small" :icon="Edit" text>Editar</el-button>
-          <el-button size="small" type="danger" :icon="Delete" text>Eliminar</el-button>
+      <n-input v-model:value="q" placeholder="Buscar ingrediente..." clearable class="grow">
+        <template #prefix>
+          <n-icon size="16"><SearchOutline /></n-icon>
         </template>
-      </el-table-column>
-    </el-table>
+      </n-input>
+      <n-button type="primary" tertiary>
+        <template #icon><n-icon><AddOutline /></n-icon></template>
+        Nuevo
+      </n-button>
+    </div>
+    <n-data-table :columns="columns" :data="filtered" :bordered="true" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { Plus, Edit, Delete, Search } from '@element-plus/icons-vue';
+import { h, computed, ref } from 'vue';
+import { NButton, NIcon, type DataTableColumns } from 'naive-ui';
+import { AddOutline, CreateOutline, TrashOutline, SearchOutline } from '@vicons/ionicons5';
 
 const q = ref('');
 const rows = ref([
@@ -31,6 +29,20 @@ const rows = ref([
 const filtered = computed(() => rows.value.filter(r =>
   !q.value || r.name.toLowerCase().includes(q.value.toLowerCase())
 ));
+
+const columns: DataTableColumns<any> = [
+  { title: 'Ingrediente', key: 'name' },
+  { title: 'Stock', key: 'stock', width: 120 },
+  { title: 'Unidad', key: 'unit', width: 120 },
+  {
+    title: 'Acciones', key: 'actions', width: 200, render: (row: any) => (
+      h('div', { style: 'display:flex; gap:8px' }, [
+        h(NButton, { quaternary: true, size: 'small' }, { default: () => 'Editar', icon: () => h(NIcon, null, { default: () => h(CreateOutline) }) }),
+        h(NButton, { quaternary: true, size: 'small', type: 'error' }, { default: () => 'Eliminar', icon: () => h(NIcon, null, { default: () => h(TrashOutline) }) })
+      ])
+    )
+  }
+];
 </script>
 
 <style scoped>
