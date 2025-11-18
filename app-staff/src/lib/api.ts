@@ -1,3 +1,5 @@
+import type { Category, Item, MenuResponse } from '../types';
+import { ref } from 'vue';
 
 // Build absolute API base from environment variables.
 // In dev, defaults to http://localhost:3000 and version v1
