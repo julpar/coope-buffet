@@ -11,7 +11,28 @@ import { makeSessionMiddleware } from './common/middleware/session.middleware';
 import { UserService } from './modules/core/user.service';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, { cors: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Explicit CORS configuration to support local apps (e.g., Vite on :5175) and cookies
+  const allowedOrigins = [
+    'http://localhost:5173', // common Vite default
+    'http://localhost:5174',
+    'http://localhost:5175',
+    'http://localhost:3000',
+  ];
+  app.enableCors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl) or from our whitelist
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    optionsSuccessStatus: 204,
+  });
 
   app.use(cookieParser());
   app.use(json({ limit: '1mb' }));
