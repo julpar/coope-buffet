@@ -19,8 +19,11 @@ services:
       - REDIS_URL=redis://redis:6379
       - MERCADOPAGO_ACCESS_TOKEN=changeme
       - BASE_URL=${BASE_URL}
-    # In production, the API is consumed via Nginx proxy under /api from the web apps.
-    # No need to publish the backend port to the host.
+      - STAFF_BASE_URL=${STAFF_BASE_URL:-http://localhost:8081}
+    # Expose backend to host for local development and for web-staff/browser to reach it directly.
+    # In production behind a reverse proxy you can remove this.
+    ports:
+      - "3000:3000"
 
   web-customer:
     build:
@@ -36,12 +39,13 @@ services:
     build:
       context: .
       dockerfile: app-staff/Dockerfile
+      args:
+        # Make the API URL/version available at build time for Vite (must be prefixed with VITE_)
+        VITE_API_BASE_URL: http://localhost:3000
+        VITE_API_VERSION: v1
     depends_on:
       - app
     restart: unless-stopped
-    environment:
-      - API_BASE_URL=http://app:3000
-      - API_VERSION=v1
     ports:
       - "8081:80"
 
