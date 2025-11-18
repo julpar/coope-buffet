@@ -1,9 +1,21 @@
 import type { Category, Item, MenuResponse } from '../types';
 
-const BASE_URL = (import.meta as any).env?.VITE_API_BASE || '/api';
+// Build absolute API base from environment variables.
+// In dev, defaults to http://localhost:3000 and version v1
+const API_BASE_URL = ((import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:3000') as string;
+const API_VERSION = ((import.meta as any).env?.VITE_API_VERSION || 'v1') as string;
+
+function buildBase(base: string, version: string): string {
+  const trimmedBase = base.replace(/\/$/, '');
+  const trimmedVer = version.replace(/^\//, '');
+  return `${trimmedBase}/${trimmedVer}`;
+}
+
+const ABS_BASE = buildBase(API_BASE_URL, API_VERSION);
 
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(BASE_URL + path, {
+  const urlPath = path.startsWith('/') ? path : `/${path}`;
+  const res = await fetch(ABS_BASE + urlPath, {
     headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
     ...init,
   });

@@ -8,12 +8,8 @@ export default defineConfig({
     port: 5174,
     strictPort: false,
     host: true,
-    proxy: {
-      // Forward API calls to backend during local dev if available
-      '/api': {
-        target: process.env.VITE_API_PROXY_TARGET || 'http://localhost:3000',
-        changeOrigin: true,
-      },
-    },
+    // Note: No API proxying. Frontend should call the full API URL directly
+    // using environment like VITE_API_BASE_URL (e.g., http://localhost:3000)
+    // and VITE_API_VERSION (e.g., v1) within the application code.
   },
 });
