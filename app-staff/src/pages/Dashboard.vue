@@ -1,59 +1,67 @@
 <template>
-  <div class="row">
-    <section class="col card">
-      <h3 style="margin:0 0 8px">Órdenes</h3>
-      <div class="row">
-        <div class="col">
-          <strong>{{ counters.awaitingCash }}</strong>
-          <div class="muted">Pendiente (cash)</div>
-        </div>
-        <div class="col">
-          <strong>{{ counters.received }}</strong>
-          <div class="muted">Recibidas</div>
-        </div>
-        <div class="col">
-          <strong>{{ counters.preparing }}</strong>
-          <div class="muted">Preparando</div>
-        </div>
-        <div class="col">
-          <strong>{{ counters.ready }}</strong>
-          <div class="muted">Listas</div>
-        </div>
-      </div>
-      <RouterLink class="btn" style="margin-top:12px" to="/orders">Ir a órdenes →</RouterLink>
-    </section>
-
-    <section class="col card">
-      <h3 style="margin:0 0 8px">Stock</h3>
-      <div v-if="loading" class="muted">Cargando…</div>
-      <template v-else>
-        <div v-if="low.length === 0" class="muted">Sin alertas de stock bajo</div>
-        <ul v-else>
-          <li v-for="it in low" :key="it.id">
-            {{ it.name }} — stock: <strong>{{ it.stock ?? 0 }}</strong>
-            <RouterLink class="btn ghost" style="margin-left:8px" to="/inventory">Ajustar</RouterLink>
-          </li>
-        </ul>
+  <div class="grid">
+    <el-card shadow="hover" class="tile">
+      <template #header>
+        <div class="tile-header"><el-icon><DataAnalysis/></el-icon><span>Hoy</span></div>
       </template>
-    </section>
+      <div class="kpi">
+        <div class="kpi-value">{{ currency( revenueToday ) }}</div>
+        <div class="kpi-sub">Ingresos</div>
+      </div>
+    </el-card>
+    <el-card shadow="hover" class="tile">
+      <template #header>
+        <div class="tile-header"><el-icon><List/></el-icon><span>Órdenes</span></div>
+      </template>
+      <div class="kpi">
+        <div class="kpi-value">{{ ordersToday }}</div>
+        <div class="kpi-sub">Procesadas</div>
+      </div>
+    </el-card>
+    <el-card shadow="hover" class="tile">
+      <template #header>
+        <div class="tile-header"><el-icon><User/></el-icon><span>Usuarios activos</span></div>
+      </template>
+      <div class="kpi">
+        <div class="kpi-value">{{ activeUsers }}</div>
+        <div class="kpi-sub">Staff conectado</div>
+      </div>
+    </el-card>
   </div>
+
+  <el-card class="mt">
+    <template #header>
+      <div class="tile-header"><el-icon><TrendCharts/></el-icon><span>Actividad reciente</span></div>
+    </template>
+    <el-table :data="recent" size="small" stripe>
+      <el-table-column prop="time" label="Hora" width="120" />
+      <el-table-column prop="event" label="Evento" />
+      <el-table-column prop="actor" label="Usuario" width="160" />
+    </el-table>
+  </el-card>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue';
-import { useOrders } from '../store/orders';
-import { getStaffItems, tryApi, mockApi } from '../lib/api';
-import type { Item } from '../types';
+import { ref } from 'vue';
+import { DataAnalysis, List, User, TrendCharts } from '@element-plus/icons-vue';
 
-const { counters } = useOrders();
-const loading = ref(true);
-const items = ref<Item[]>([]);
+const revenueToday = ref(235000);
+const ordersToday = ref(57);
+const activeUsers = ref(6);
+const recent = ref([
+  { time: '10:02', event: 'Orden #1245 aceptada', actor: 'Ana' },
+  { time: '09:51', event: 'Ingrediente "Tomate" repuesto', actor: 'Juan' },
+  { time: '09:33', event: 'Orden #1244 entregada', actor: 'Luis' },
+]);
 
-onMounted(async () => {
-  loading.value = true;
-  items.value = await tryApi(() => getStaffItems(), () => mockApi.getItems());
-  loading.value = false;
-});
-
-const low = computed(() => items.value.filter(i => (i.stock ?? 0) <= (i.lowStockThreshold ?? 0)));
+const currency = (v: number) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(v);
 </script>
+
+<style scoped>
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.tile-header { display:flex; align-items:center; gap:8px; font-weight:600; }
+.kpi { display:flex; flex-direction:column; align-items:flex-start; gap:2px; }
+.kpi-value { font-size: 28px; font-weight: 700; }
+.kpi-sub { color: var(--el-text-color-secondary); }
+.mt { margin-top: 12px; }
+</style>

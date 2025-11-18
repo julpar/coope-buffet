@@ -1,69 +1,70 @@
 <template>
-  <section class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px">
-      <h3 style="margin:0">Órdenes</h3>
-      <div class="muted">Tap/clic para mover por el flujo</div>
+  <div class="page">
+    <div class="toolbar">
+      <el-input v-model="q" placeholder="Buscar orden..." clearable prefix-icon="Search" class="grow" />
+      <el-select v-model="status" placeholder="Estado" style="width:160px">
+        <el-option label="Todas" value="" />
+        <el-option label="Pendiente" value="pending" />
+        <el-option label="Preparando" value="preparing" />
+        <el-option label="Lista" value="ready" />
+        <el-option label="Entregada" value="delivered" />
+      </el-select>
+      <el-button type="primary" :icon="Refresh" @click="refresh">Actualizar</el-button>
     </div>
-    <table class="table">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Hora</th>
-          <th>Canal</th>
-          <th>Total</th>
-          <th>Estado</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="o in orders" :key="o.id">
-          <td>{{ o.id }}</td>
-          <td>{{ new Date(o.createdAt).toLocaleTimeString() }}</td>
-          <td>{{ o.channel }}</td>
-          <td>${{ o.total }}</td>
-          <td>
-            <span :style="badgeStyle(o.status)">{{ o.status }}</span>
-          </td>
-          <td>
-            <div style="display:flex;gap:6px;flex-wrap:wrap">
-              <button class="btn" @click="advance(o.id, o.status)">Avanzar</button>
-              <button class="btn ghost" @click="setStatus(o.id, 'cancelled')">Cancelar</button>
-              <button class="btn ghost" @click="setStatus(o.id, 'completed')">Completar</button>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </section>
+
+    <el-table :data="filtered" border style="width: 100%">
+      <el-table-column prop="id" label="#" width="90" />
+      <el-table-column prop="customer" label="Cliente" />
+      <el-table-column prop="items" label="Items" />
+      <el-table-column prop="total" label="Total" />
+      <el-table-column prop="status" label="Estado" width="140">
+        <template #default="{ row }">
+          <el-tag :type="tagType(row.status)">{{ label(row.status) }}</el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="Acciones" width="180">
+        <template #default="{ row }">
+          <el-button size="small" @click="advance(row)" :disabled="row.status==='delivered'">Avanzar</el-button>
+          <el-button size="small" type="danger" text>Cancelar</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+  </div>
 </template>
 
 <script setup lang="ts">
-import type { OrderStatus } from '../types';
-import { useOrders } from '../store/orders';
+import { computed, ref } from 'vue';
+import { Refresh, Search } from '@element-plus/icons-vue';
 
-const { orders, setStatus } = useOrders();
+type Status = '' | 'pending' | 'preparing' | 'ready' | 'delivered'
+const q = ref('');
+const status = ref<Status>('');
+const rows = ref([
+  { id: 1245, customer: 'Camila', items: 3, total: '$8.500', status: 'pending' },
+  { id: 1244, customer: 'Diego', items: 1, total: '$2.200', status: 'ready' },
+  { id: 1243, customer: 'Lucía', items: 2, total: '$5.000', status: 'preparing' },
+  { id: 1242, customer: 'Martin', items: 4, total: '$12.700', status: 'delivered' },
+]);
 
-function nextStatus(s: OrderStatus): OrderStatus {
-  switch (s) {
-    case 'awaiting-cash': return 'received';
-    case 'received': return 'preparing';
-    case 'preparing': return 'ready';
-    case 'ready': return 'completed';
-    default: return s;
-  }
-}
-function advance(id: string, s: OrderStatus) { setStatus(id, nextStatus(s)); }
+const filtered = computed(() => rows.value.filter(r =>
+  (!status.value || r.status === status.value) &&
+  (!q.value || `${r.id} ${r.customer}`.toLowerCase().includes(q.value.toLowerCase()))
+));
 
-function badgeStyle(s: OrderStatus) {
-  const map: Record<OrderStatus, string> = {
-    'awaiting-cash': '#795548',
-    'received': '#0288d1',
-    'preparing': '#f9a825',
-    'ready': '#2e7d32',
-    'out': '#6a1b9a',
-    'completed': '#616161',
-    'cancelled': '#b71c1c',
-  };
-  return { background: map[s], color: '#fff', padding: '4px 8px', borderRadius: '999px', fontSize: '12px' };
-}
+const tagType = (s: string) => ({ pending: 'warning', preparing: 'info', ready: 'success', delivered: '' } as any)[s] || '';
+const label = (s: string) => ({ pending: 'Pendiente', preparing: 'Preparando', ready: 'Lista', delivered: 'Entregada' } as any)[s] || s;
+
+const refresh = () => {/* TODO: fetch */};
+const advance = (row: any) => {
+  const order = rows.value.find(r => r.id === row.id);
+  if (!order) return;
+  const step: Record<string, string> = { pending: 'preparing', preparing: 'ready', ready: 'delivered' };
+  order.status = step[order.status] || order.status;
+};
 </script>
+
+<style scoped>
+.page { display: flex; flex-direction: column; gap: 12px; }
+.toolbar { display: flex; gap: 8px; align-items: center; }
+.grow { flex: 1; }
+</style>

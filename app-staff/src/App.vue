@@ -1,64 +1,84 @@
 <template>
-  <div class="app">
-    <header class="app__header">
-      <strong>Buffet · Staff</strong>
-    </header>
-    <nav class="app__nav">
-      <RouterLink to="/" exact-active-class="active">Dashboard</RouterLink>
-      <RouterLink to="/orders" exact-active-class="active">Órdenes</RouterLink>
-      <RouterLink to="/inventory" exact-active-class="active">Inventario</RouterLink>
-      <RouterLink to="/menu" exact-active-class="active">Menú</RouterLink>
-      <RouterLink to="/users" exact-active-class="active">Usuarios</RouterLink>
-    </nav>
-    <main class="app__main">
-      <RouterView />
-    </main>
-  </div>
+  <el-config-provider namespace="el">
+    <el-container class="layout">
+      <el-header height="56px" class="header">
+        <div class="brand">
+          <el-icon><Shop /></el-icon>
+          <span>Buffet · Staff</span>
+        </div>
+        <div class="header-actions">
+          <el-button type="primary" text :icon="Bell">Notifications</el-button>
+          <el-button text :icon="User">Profile</el-button>
+        </div>
+      </el-header>
+      <el-container>
+        <el-aside width="220px" class="aside">
+          <el-menu router :default-active="$route.path" class="menu" :collapse="collapsed">
+            <el-menu-item index="/">
+              <el-icon><DataAnalysis /></el-icon>
+              <span>Dashboard</span>
+            </el-menu-item>
+            <el-menu-item index="/orders">
+              <el-icon><List /></el-icon>
+              <span>Órdenes</span>
+            </el-menu-item>
+            <el-menu-item index="/inventory">
+              <el-icon><Box /></el-icon>
+              <span>Inventario</span>
+            </el-menu-item>
+            <el-menu-item index="/menu">
+              <el-icon><KnifeFork /></el-icon>
+              <span>Menú</span>
+            </el-menu-item>
+            <el-menu-item index="/users">
+              <el-icon><User /></el-icon>
+              <span>Usuarios</span>
+            </el-menu-item>
+          </el-menu>
+          <div class="aside-footer">
+            <el-switch v-model="collapsed" active-text="Compact" inactive-text="Expanded" />
+          </div>
+        </el-aside>
+        <el-main class="main">
+          <RouterView />
+        </el-main>
+      </el-container>
+    </el-container>
+  </el-config-provider>
   
 </template>
 
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { ref } from 'vue';
+import { ElConfigProvider } from 'element-plus';
+import { 
+  Shop, List, Box, KnifeFork, DataAnalysis, User, Bell 
+} from '@element-plus/icons-vue';
+
+const collapsed = ref(false);
+</script>
+
+<style scoped>
+.layout {
+  min-height: 100vh;
+}
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--el-border-color, #e0e0e0);
+  backdrop-filter: saturate(180%) blur(8px);
+}
+.brand { display: flex; gap: 10px; align-items: center; font-weight: 600; }
+.aside { border-right: 1px solid var(--el-border-color, #e0e0e0); display: flex; flex-direction: column; }
+.menu { border-right: none; }
+.aside-footer { margin-top: auto; padding: 12px; border-top: 1px solid var(--el-border-color-light, #ededed); }
+.main { padding: 16px; background: var(--el-bg-color-page, #f6f7f9); }
+</style>
 
 <style>
+/* Basic theme tweak */
 :root {
-  --primary: #0d47a1;
-}
-.app__header {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: var(--primary);
-  color: #fff;
-  padding: 12px 16px;
-}
-.app__nav {
-  display: flex;
-  gap: 12px;
-  padding: 8px 12px;
-  border-bottom: 1px solid #eee;
-  overflow-x: auto;
-}
-.app__nav a { color: #333; text-decoration: none; padding: 6px 10px; border-radius: 6px; }
-.app__nav a.active { background: #e3f2fd; color: var(--primary); font-weight: 600; }
-.app__main { padding: 12px; max-width: 960px; margin: 0 auto; }
-
-.card { background: #fff; border: 1px solid #eee; border-radius: 10px; padding: 12px; box-shadow: 0 1px 2px rgba(0,0,0,.03); }
-.row { display: flex; gap: 12px; flex-wrap: wrap; }
-.col { flex: 1 1 260px; }
-.btn { display:inline-flex; align-items:center; gap:6px; padding:8px 12px; border-radius:8px; border:1px solid #e0e0e0; background:#fafafa; cursor:pointer; }
-.btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
-.btn.ghost { background: transparent; }
-.btn:disabled { opacity: .6; cursor: not-allowed; }
-.input { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #e0e0e0; }
-.table { width:100%; border-collapse: collapse; }
-.table th, .table td { border-bottom: 1px solid #eee; padding: 8px; text-align: left; }
-.muted { opacity: .75; }
-
-@media (prefers-color-scheme: dark) {
-  body { background: #0b0b0b; color: #eaeaea; }
-  .card { background: #141414; border-color: #1e1e1e; }
-  .app__nav { border-color: #1e1e1e; }
-  .input { background: #0f0f0f; color: #eaeaea; border-color: #1e1e1e; }
-  .table th, .table td { border-color: #1e1e1e; }
+  --el-color-primary: #0d47a1; /* deep blue */
 }
 </style>
