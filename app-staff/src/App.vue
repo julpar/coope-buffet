@@ -1,4 +1,5 @@
 <template>
+  <n-message-provider>
   <n-config-provider :theme-overrides="themeOverrides">
     <n-layout class="layout">
       <n-layout-header v-if="ready && (adminExists && currentUser)" bordered class="header">
@@ -7,6 +8,10 @@
           <span>Buffet · Staff</span>
         </div>
         <div class="header-actions">
+          <div class="api-indicator" :title="`API: ${apiBase}`">
+            <span class="dot" :class="apiStatusClass"></span>
+            <span class="api-text">{{ apiLabel }}</span>
+          </div>
           <n-button tertiary type="primary">
             <template #icon>
               <n-icon><NotificationsOutline /></n-icon>
@@ -71,6 +76,7 @@
       </n-layout>
     </n-layout>
   </n-config-provider>
+  </n-message-provider>
 </template>
 
 <script setup lang="ts">
@@ -86,7 +92,7 @@ import {
   PersonOutline,
   NotificationsOutline
 } from '@vicons/ionicons5';
-import { isMocked as apiIsMocked, API_BASE, authApi, type StaffUser } from './lib/api';
+import { isMocked as apiIsMocked, API_BASE, apiOnline, authApi, type StaffUser } from './lib/api';
 
 const router = useRouter();
 const collapsed = ref(false);
@@ -121,6 +127,16 @@ function dismissBanner() {
   bannerDismissed.value = true;
   sessionStorage.setItem('hide-mock-banner', '1');
 }
+
+// API status label and class for visual verification of server hits
+const apiLabel = computed(() => {
+  if (apiOnline.value === null) return 'API?';
+  return apiOnline.value ? 'API online' : 'API offline';
+});
+const apiStatusClass = computed(() => {
+  if (apiOnline.value === null) return 'unknown';
+  return apiOnline.value ? 'online' : 'offline';
+});
 
 // Auth bootstrap
 const ready = ref(false);
@@ -207,6 +223,13 @@ watch(() => router.currentRoute.value.fullPath, async () => {
   backdrop-filter: saturate(180%) blur(8px);
 }
 .brand { display:flex; gap:10px; align-items:center; font-weight:600; }
+.header-actions { display:flex; align-items:center; gap:8px; }
+.api-indicator { display:flex; align-items:center; gap:6px; padding: 4px 8px; border-radius: 999px; background: rgba(0,0,0,0.04); font-size:12px; }
+.api-indicator .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+.api-indicator .dot.online { background:#1b5e20; }
+.api-indicator .dot.offline { background:#b71c1c; }
+.api-indicator .dot.unknown { background:#9e9e9e; }
+.api-indicator .api-text { color:#333; }
 .aside-footer { margin-top: auto; padding: 12px; border-top: 1px solid rgba(0,0,0,.08); }
 .aside-toggle { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:12px; }
 .main { padding: 16px; background: #f6f7f9; }

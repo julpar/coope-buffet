@@ -14,6 +14,8 @@ function buildBase(base: string, version: string): string {
 
 const ABS_BASE = buildBase(API_BASE_URL, API_VERSION);
 export const API_BASE = ABS_BASE;
+// Reactive API online flag: null (unknown), true (reachable), false (errors observed)
+export const apiOnline = ref<boolean | null>(null);
 
 // Reactive flag to indicate whether the app is currently relying on mocked data
 // Initialized from env/session so the banner can render immediately on load.
@@ -23,15 +25,23 @@ export const isMocked = ref<boolean>(FORCE_MOCK || SESSION_MOCK);
 
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
   const urlPath = path.startsWith('/') ? path : `/${path}`;
-  const res = await fetch(ABS_BASE + urlPath, {
+  const url = ABS_BASE + urlPath;
+  // Debug log for verification in browser devtools
+  // eslint-disable-next-line no-console
+  console.debug('[staff-api] request', init?.method || 'GET', url);
+  const res = await fetch(url, {
     headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
     credentials: 'include',
     ...init,
   });
   if (!res.ok) {
+    apiOnline.value = false;
     const text = await res.text().catch(() => '');
+    // eslint-disable-next-line no-console
+    console.warn('[staff-api] response', res.status, res.statusText, text);
     throw new Error(`HTTP ${res.status} ${res.statusText}: ${text}`);
   }
+  apiOnline.value = true;
   const ct = res.headers.get('content-type') || '';
   if (ct.includes('application/json')) return res.json();
   // @ts-expect-error
@@ -52,6 +62,7 @@ export async function tryApi<T>(fn: () => Promise<T>, fallback: () => Promise<T>
   } catch (_) {
     // Enable mocked mode on any failure
     isMocked.value = true;
+    apiOnline.value = false;
     try { sessionStorage.setItem('mock-mode', '1'); } catch {}
     return await fallback();
   }
@@ -164,9 +175,11 @@ if (typeof window !== 'undefined' && !FORCE_MOCK && !SESSION_MOCK) {
   fetch(ABS_BASE + '/menu', { method: 'GET' })
     .then((r) => {
       if (!r.ok) throw new Error('unavailable');
+      apiOnline.value = true;
     })
     .catch(() => {
       isMocked.value = true;
+      apiOnline.value = false;
       try { sessionStorage.setItem('mock-mode', '1'); } catch {}
     });
 }
