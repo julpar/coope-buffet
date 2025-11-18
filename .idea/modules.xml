@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/Buffet Grecia.iml" filepath="$PROJECT_DIR$/Buffet Grecia.iml" />
+      <module fileurl="file://$PROJECT_DIR$/buffet-coope.iml" filepath="$PROJECT_DIR$/buffet-coope.iml" />
     </modules>
   </component>
 </project>
