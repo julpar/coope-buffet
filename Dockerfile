@@ -1,28 +1,27 @@
-# Multi-stage build: backend only (API). Frontends are built in their own images.
+# Monorepo-aware Dockerfile for backend (API)
 FROM node:22-alpine AS builder
-WORKDIR /app
+WORKDIR /repo
 
-# Backend deps
-COPY backend/package.json ./backend/
-RUN cd backend && npm install --production=false
+# 1) Install workspace deps at the root for better caching (uses npm workspaces)
+COPY package.json package-lock.json* turbo.json ./
+COPY backend/package.json backend/package.json
+RUN npm install
 
-# Copy backend sources
+# 2) Copy backend sources only and build
 COPY backend ./backend
+RUN npm run build -w backend
 
-# Build backend (NestJS -> tsc)
-RUN cd backend && npm run build
-
-# Runtime image
+# --- Runtime image (minimal) ---
 FROM node:22-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Install only backend production deps
-COPY backend/package.json ./backend/
+# Install only backend production deps (no need for full workspace deps in runtime)
+COPY backend/package.json ./backend/package.json
 RUN cd backend && npm install --omit=dev
 
-# Copy backend dist only (frontends are built in their own images)
-COPY --from=builder /app/backend/dist ./backend/dist
+# Copy compiled backend dist from builder
+COPY --from=builder /repo/backend/dist ./backend/dist
 
 EXPOSE 3000
 CMD ["node", "backend/dist/main.js"]

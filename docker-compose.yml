@@ -15,22 +15,28 @@ services:
       - REDIS_URL=redis://redis:6379
       - MERCADOPAGO_ACCESS_TOKEN=changeme
       - BASE_URL=${BASE_URL}
+    ports:
+      - "9080:3000"
 
   web-customer:
-    build: ./app-customer
+    build:
+      context: .
+      dockerfile: app-customer/Dockerfile
     depends_on:
       - app
     restart: unless-stopped
     ports:
-      - "8080:80"
+      - "9081:80"
 
   web-staff:
-    build: ./app-staff
+    build:
+      context: .
+      dockerfile: app-staff/Dockerfile
     depends_on:
       - app
     restart: unless-stopped
     ports:
-      - "8081:80"
+      - "9082:80"
 
 volumes:
   redis-data:
