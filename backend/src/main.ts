@@ -4,7 +4,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { json, urlencoded } from 'express';
 import cookieParser from 'cookie-parser';
-import { platformStatusMiddleware } from './platform-status.middleware';
+import { platformStatusMiddleware } from './common/middleware/platform-status.middleware';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { cors: true });
