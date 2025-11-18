@@ -7,6 +7,8 @@ import cookieParser from 'cookie-parser';
 import { platformStatusMiddleware } from './common/middleware/platform-status.middleware';
 import { API_VERSION } from './common/constants';
 import { requestLoggerMiddleware } from './common/middleware/request-logger.middleware';
+import { makeSessionMiddleware } from './common/middleware/session.middleware';
+import { UserService } from './modules/core/user.service';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { cors: true });
@@ -20,6 +22,10 @@ async function bootstrap() {
 
   // Request logger
   app.use(requestLoggerMiddleware());
+
+  // Attach session user from cookie for all routes (after cookies parsed)
+  const userSvc = app.get(UserService);
+  app.use(makeSessionMiddleware(userSvc));
 
   // Platform status enforcement for customer-facing routes
   app.use(platformStatusMiddleware());
