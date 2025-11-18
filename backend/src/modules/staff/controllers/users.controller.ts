@@ -38,6 +38,7 @@ export class UsersController {
     const user = await this.users.createUser(nickname, roles);
     const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host') || ''}`;
     const permToken = user.token.startsWith('perm:') ? user.token.slice(5) : user.token;
+    // Use canonical `token` param; frontend will handle AJAX-based login
     const permUrl = `${baseUrl}/auth/perm?token=${encodeURIComponent(permToken)}`;
     return { user: { id: user.id, nickname: user.nickname, roles: user.roles }, permUrl };
   }

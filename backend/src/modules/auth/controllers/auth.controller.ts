@@ -26,14 +26,14 @@ export class AuthController {
 
   @Get('perm')
   async perm(@Query('token') token: string, @Res() res: Response) {
-    if (!token) return res.status(400).json({ error: 'token required' });
-    const tok = token.startsWith('perm:') ? token : `perm:${token}`;
+    // Accept `token` (canonical) and keep `fixef` as backward-compatible alias
+    const raw = (token || '').trim();
+    if (!raw) return res.status(403).json({ error: 'forbidden' });
+    const tok = raw.startsWith('perm:') ? raw : `perm:${raw}`;
     const user = await this.users.getUserByToken(tok);
-    if (!user) return res.status(400).json({ error: 'invalid token' });
+    if (!user) return res.status(403).json({ error: 'forbidden' });
     this.setSessionCookie(res, user.token);
-    // Lightweight redirect page to /staff
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    return res.send(`<!doctype html><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Autenticado</title><p>Acceso concedido. Redirigiendo…</p><script>location.href='/staff';</script>`);
+    return res.json({ ok: true, user: { id: user.id, nickname: user.nickname, roles: user.roles } });
   }
 
   private setSessionCookie(res: Response, token: string) {
