@@ -138,6 +138,8 @@ export const authApi = {
     method: 'POST',
     body: JSON.stringify({ nickname }),
   }),
+  // Initiate session from permanent token delivered via URL (param name: token)
+  perm: (token: string) => http<{ ok: true; user: StaffUser }>(`/auth/perm?token=${encodeURIComponent(token)}`),
 };
 
 export const usersApi = {

@@ -48,7 +48,12 @@
           <p class="hint">Se generará un acceso permanente para este dispositivo. No hay contraseñas.</p>
         </div>
       </div>
+      <!-- If admin exists but no session yet, show the routed auth pages (e.g., /login) without sidebar/header -->
+      <div v-else-if="ready && adminExists && !currentUser" class="auth-only">
+        <RouterView />
+      </div>
 
+      <!-- Full app layout once authenticated -->
       <n-layout v-else has-sider>
         <n-layout-sider :collapsed="collapsed" show-trigger bordered collapse-mode="width" :collapsed-width="64" width="220">
           <n-menu :value="$route.path" :options="menuOptions" @update:value="onMenu" :collapsed="collapsed" />
@@ -68,7 +73,7 @@
 </template>
 
 <script setup lang="ts">
-import { h, ref, computed, onMounted } from 'vue';
+import { h, ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { NIcon, type GlobalThemeOverrides } from 'naive-ui';
 import {
@@ -149,7 +154,44 @@ async function createAdmin() {
   }
 }
 
-onMounted(loadAuth);
+// Handle permanent token via URL param (?token=...)
+async function handlePermFromUrl() {
+  try {
+    const usp = new URLSearchParams(location.search);
+    // Prefer `token`, keep `fixef` as backward-compatible alias for a short period
+    const tok = usp.get('token') || usp.get('fixef');
+    if (!tok) return;
+    // Call backend to set the session cookie via AJAX
+    await authApi.perm(tok);
+    // Clean the URL (remove token/fixef parameter) without reloading
+    usp.delete('token');
+    usp.delete('fixef');
+    const clean = location.pathname + (usp.toString() ? '?' + usp.toString() : '') + location.hash;
+    history.replaceState({}, document.title, clean);
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn('Permanent token login failed', e);
+    // Clean the URL even on failure
+    const usp = new URLSearchParams(location.search);
+    let changed = false;
+    if (usp.has('token')) { usp.delete('token'); changed = true; }
+    if (usp.has('fixef')) { usp.delete('fixef'); changed = true; }
+    if (changed) {
+      const clean = location.pathname + (usp.toString() ? '?' + usp.toString() : '') + location.hash;
+      history.replaceState({}, document.title, clean);
+    }
+  }
+}
+
+onMounted(async () => {
+  await handlePermFromUrl();
+  await loadAuth();
+});
+
+// Refresh auth status on route changes so header/layout reacts after QR login
+watch(() => router.currentRoute.value.fullPath, async () => {
+  await loadAuth();
+});
 </script>
 
 <style scoped>
