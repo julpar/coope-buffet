@@ -1,4 +1,5 @@
 import type { Category, Item, MenuResponse } from '../types';
+import { ref } from 'vue';
 
 // Build absolute API base from environment variables.
 // In dev, defaults to http://localhost:3000 and version v1
@@ -12,11 +13,19 @@ function buildBase(base: string, version: string): string {
 }
 
 const ABS_BASE = buildBase(API_BASE_URL, API_VERSION);
+export const API_BASE = ABS_BASE;
+
+// Reactive flag to indicate whether the app is currently relying on mocked data
+// Initialized from env/session so the banner can render immediately on load.
+const FORCE_MOCK = ((import.meta as any).env?.VITE_FORCE_MOCK === '1');
+const SESSION_MOCK = typeof window !== 'undefined' && sessionStorage.getItem('mock-mode') === '1';
+export const isMocked = ref<boolean>(FORCE_MOCK || SESSION_MOCK);
 
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
   const urlPath = path.startsWith('/') ? path : `/${path}`;
   const res = await fetch(ABS_BASE + urlPath, {
     headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
+    credentials: 'include',
     ...init,
   });
   if (!res.ok) {
@@ -32,29 +41,18 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
 // Public
 export const getPublicMenu = () => http<MenuResponse>('/menu');
 
-// Staff endpoints (from DONE.md)
-export const getStaffCategories = () => http<Category[]>('/staff/menu/categories');
-export const upsertCategory = (id: string, data: Partial<Category>) => http<Category>(`/staff/menu/categories/${encodeURIComponent(id)}`, {
-  method: 'PUT',
-  body: JSON.stringify(data),
-});
-
-export const getStaffItems = () => http<Item[]>('/staff/menu/items');
-export const upsertItem = (id: string, data: Partial<Item>) => http<Item>(`/staff/menu/items/${encodeURIComponent(id)}`, {
-  method: 'PUT',
-  body: JSON.stringify(data),
-});
-
-export const adjustStock = (id: string, delta: number) => http<{ id: string; stock: number }>(`/staff/menu/items/${encodeURIComponent(id)}/stock`, {
-  method: 'POST',
-  body: JSON.stringify({ delta }),
-});
+// Staff endpoints (from DONE.md) are exposed below via `staffApi` with graceful fallback
 
 // Mock helpers for when backend is not available
 export async function tryApi<T>(fn: () => Promise<T>, fallback: () => Promise<T> | T): Promise<T> {
   try {
-    return await fn();
+    const res = await fn();
+    // Only flip to false on success to allow mixed conditions; once mocked, stays mocked until reload
+    return res;
   } catch (_) {
+    // Enable mocked mode on any failure
+    isMocked.value = true;
+    try { sessionStorage.setItem('mock-mode', '1'); } catch {}
     return await fallback();
   }
 }
@@ -114,3 +112,65 @@ export const mockApi = {
     return { id, stock: cur };
   }
 };
+
+// Staff API with graceful fallback to mock when backend is unavailable
+export const staffApi = {
+  getCategories: () => tryApi<Category[]>(() => http('/staff/menu/categories'), () => mockApi.getCategories()),
+  upsertCategory: (id: string, data: Partial<Category>) =>
+    tryApi<Category>(() => http(`/staff/menu/categories/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(data) }),
+      () => mockApi.upsertCategory(id, data)),
+  getItems: () => tryApi<Item[]>(() => http('/staff/menu/items'), () => mockApi.getItems()),
+  upsertItem: (id: string, data: Partial<Item>) =>
+    tryApi<Item>(() => http(`/staff/menu/items/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(data) }),
+      () => mockApi.upsertItem(id, data)),
+  adjustStock: (id: string, delta: number) =>
+    tryApi<{ id: string; stock: number }>(
+      () => http(`/staff/menu/items/${encodeURIComponent(id)}/stock`, { method: 'POST', body: JSON.stringify({ delta }) }),
+      () => mockApi.adjustStock(id, delta)
+    )
+};
+
+// Auth and Users management
+export type StaffUser = { id: string; nickname: string; roles: string[] };
+export const authApi = {
+  status: () => http<{ adminExists: boolean; currentUser: StaffUser | null }>(`/auth/status`),
+  initAdmin: (nickname: string) => http<{ ok: true; user: StaffUser }>(`/auth/init-admin`, {
+    method: 'POST',
+    body: JSON.stringify({ nickname }),
+  }),
+};
+
+export const usersApi = {
+  list: () => http<StaffUser[]>(`/staff/users`),
+  create: (nickname: string, roles: string[]) =>
+    http<{ user: StaffUser; permUrl: string }>(`/staff/users`, {
+      method: 'POST',
+      body: JSON.stringify({ nickname, roles }),
+    }),
+  update: (id: string, data: Partial<{ nickname: string; roles: string[] }>) =>
+    http<StaffUser>(`/staff/users/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  remove: (id: string) => http<{ ok: true }>(`/staff/users/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+};
+
+// Background probe on startup to eagerly detect backend availability and show the banner early.
+// Skips when forced mock is enabled or when a previous session already detected mock mode.
+if (typeof window !== 'undefined' && !FORCE_MOCK && !SESSION_MOCK) {
+  // Use a lightweight fetch; failures turn on mock mode and persist the flag for the session.
+  fetch(ABS_BASE + '/menu', { method: 'GET' })
+    .then((r) => {
+      if (!r.ok) throw new Error('unavailable');
+    })
+    .catch(() => {
+      isMocked.value = true;
+      try { sessionStorage.setItem('mock-mode', '1'); } catch {}
+    });
+}
+
+// Backwards-compatible named exports expected by some components
+// These simply proxy to the staffApi methods.
+export function getStaffItems() {
+  return staffApi.getItems();
+}
