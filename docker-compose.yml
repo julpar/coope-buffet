@@ -6,6 +6,7 @@ services:
     restart: unless-stopped
     ports:
       - "6379:6379"
+
   app:
     build:
       context: .
@@ -18,8 +19,8 @@ services:
       - REDIS_URL=redis://redis:6379
       - MERCADOPAGO_ACCESS_TOKEN=changeme
       - BASE_URL=${BASE_URL}
-    ports:
-      - "9080:3000"
+    # In production, the API is consumed via Nginx proxy under /api from the web apps.
+    # No need to publish the backend port to the host.
 
   web-customer:
     build:
@@ -29,7 +30,7 @@ services:
       - app
     restart: unless-stopped
     ports:
-      - "9081:80"
+      - "8080:80"
 
   web-staff:
     build:
@@ -39,7 +40,7 @@ services:
       - app
     restart: unless-stopped
     ports:
-      - "9082:80"
+      - "8081:80"
 
 volumes:
   redis-data:
