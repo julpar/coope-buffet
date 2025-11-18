@@ -6,61 +6,59 @@
           <n-icon size="16"><SearchOutline /></n-icon>
         </template>
       </n-input>
-      <n-select v-model:value="status" :options="statusOptions" placeholder="Estado" style="width:160px" />
-      <n-button type="primary" tertiary @click="refresh">
+      <n-select v-model:value="state" :options="stateOptions" placeholder="Estado" style="width:180px" />
+      <n-button type="primary" tertiary :loading="loading" @click="refresh">
         <template #icon><n-icon><RefreshOutline /></n-icon></template>
         Actualizar
       </n-button>
     </div>
 
-    <n-data-table :columns="columns" :data="filtered" :bordered="true" />
+    <n-data-table :columns="columns" :data="filtered" :bordered="true" :loading="loading" />
   </div>
   
 </template>
 
 <script setup lang="ts">
-import { h, computed, ref } from 'vue';
-import { NTag, NButton, NIcon, type DataTableColumns } from 'naive-ui';
+import { h, computed, ref, onMounted } from 'vue';
+import { useMessage, NTag, NButton, NIcon, type DataTableColumns } from 'naive-ui';
 import { RefreshOutline, SearchOutline, PlayForwardOutline, CloseOutline } from '@vicons/ionicons5';
+import { staffApi } from '../lib/api';
 
-type Status = '' | 'pending' | 'preparing' | 'ready' | 'delivered'
+type State = 'pending_payment' | 'paid' | 'fulfilled';
+type Fulfillment = 'received' | 'preparing' | 'ready' | 'completed' | undefined;
 const q = ref('');
-const status = ref<Status>('');
-const rows = ref([
-  { id: 1245, customer: 'Camila', items: 3, total: '$8.500', status: 'pending' },
-  { id: 1244, customer: 'Diego', items: 1, total: '$2.200', status: 'ready' },
-  { id: 1243, customer: 'Lucía', items: 2, total: '$5.000', status: 'preparing' },
-  { id: 1242, customer: 'Martin', items: 4, total: '$12.700', status: 'delivered' },
-]);
+const state = ref<State>('paid');
+const loading = ref(false);
+const msg = useMessage();
+type Row = { id: string; items: number; total: string; fulfillment: Fulfillment; raw: any };
+const rows = ref<Row[]>([]);
 
-const statusOptions = [
-  { label: 'Todas', value: '' },
-  { label: 'Pendiente', value: 'pending' },
-  { label: 'Preparando', value: 'preparing' },
-  { label: 'Lista', value: 'ready' },
-  { label: 'Entregada', value: 'delivered' }
+const peso = (cents: number) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format((cents || 0) / 100);
+
+const stateOptions = [
+  { label: 'Esperando pago', value: 'pending_payment' },
+  { label: 'Pagadas (en preparación)', value: 'paid' },
+  { label: 'Completadas', value: 'fulfilled' },
 ];
 
 const filtered = computed(() => rows.value.filter(r =>
-  (!status.value || r.status === status.value) &&
-  (!q.value || `${r.id} ${r.customer}`.toLowerCase().includes(q.value.toLowerCase()))
+  (!q.value || `${r.id}`.toLowerCase().includes(q.value.toLowerCase()))
 ));
 
-const label = (s: string) => ({ pending: 'Pendiente', preparing: 'Preparando', ready: 'Lista', delivered: 'Entregada' } as any)[s] || s;
-const tagType = (s: string) => ({ pending: 'warning', preparing: 'info', ready: 'success', delivered: 'default' } as any)[s] || 'default';
+const label = (s?: Fulfillment) => ({ received: 'Recibida', preparing: 'Preparando', ready: 'Lista', completed: 'Completada' } as any)[s || ''] || (s || '');
+const tagType = (s?: Fulfillment) => ({ received: 'warning', preparing: 'info', ready: 'success', completed: 'default' } as any)[s || ''] || 'default';
 
-const columns: DataTableColumns<any> = [
-  { title: '#', key: 'id', width: 90 },
-  { title: 'Cliente', key: 'customer' },
-  { title: 'Items', key: 'items' },
-  { title: 'Total', key: 'total' },
-  { title: 'Estado', key: 'status', width: 160, render: (row: any) => h(NTag, { type: tagType(row.status) }, { default: () => label(row.status) }) },
-  { title: 'Acciones', key: 'actions', width: 200, render: (row: any) => h('div', { style: 'display:flex; gap:8px' }, [
-      h(NButton, { size: 'small', tertiary: true, disabled: row.status==='delivered', onClick: () => advance(row) }, {
+const columns: DataTableColumns<Row> = [
+  { title: '#', key: 'id', width: 160 },
+  { title: 'Items', key: 'items', width: 80 },
+  { title: 'Total', key: 'total', width: 120 },
+  { title: 'Estado', key: 'fulfillment', width: 160, render: (row: Row) => h(NTag, { type: tagType(row.fulfillment) }, { default: () => label(row.fulfillment) }) },
+  { title: 'Acciones', key: 'actions', width: 220, render: (row: Row) => h('div', { style: 'display:flex; gap:8px' }, [
+      h(NButton, { size: 'small', tertiary: true, disabled: !canAdvance(row), onClick: () => advance(row) }, {
         icon: () => h(NIcon, null, { default: () => h(PlayForwardOutline) }),
         default: () => 'Avanzar'
       }),
-      h(NButton, { size: 'small', quaternary: true, type: 'error' }, {
+      h(NButton, { size: 'small', quaternary: true, type: 'error', onClick: () => cancel(row) }, {
         icon: () => h(NIcon, null, { default: () => h(CloseOutline) }),
         default: () => 'Cancelar'
       })
@@ -68,13 +66,57 @@ const columns: DataTableColumns<any> = [
   }
 ];
 
-const refresh = () => {/* TODO: fetch */};
-const advance = (row: any) => {
-  const order = rows.value.find(r => r.id === row.id);
-  if (!order) return;
-  const step: Record<string, string> = { pending: 'preparing', preparing: 'ready', ready: 'delivered' };
-  order.status = step[order.status] || order.status;
-};
+async function refresh() {
+  loading.value = true;
+  try {
+    const list = await staffApi.listOrders(state.value);
+    // Map to rows
+    rows.value = (list || []).map((o: any) => ({
+      id: o.id,
+      items: Array.isArray(o.items) ? o.items.reduce((a: number, it: any) => a + (it.qty || 0), 0) : 0,
+      total: peso(o.total || 0),
+      fulfillment: o.fulfillment as Fulfillment,
+      raw: o,
+    }));
+  } catch (err: any) {
+    console.error(err);
+    msg.error('No se pudieron cargar las órdenes');
+  } finally {
+    loading.value = false;
+  }
+}
+
+function canAdvance(row: Row): boolean {
+  if (state.value !== 'paid') return false;
+  // Only advance paid orders
+  return row.fulfillment === 'received' || row.fulfillment === 'preparing' || row.fulfillment === 'ready';
+}
+
+async function advance(row: Row) {
+  if (!canAdvance(row)) return;
+  const map: Record<string, Fulfillment> = { received: 'preparing', preparing: 'ready', ready: 'completed' };
+  const next = map[row.fulfillment || 'received'];
+  try {
+    await staffApi.setOrderFulfillment(row.id, next as any);
+    await refresh();
+  } catch (err: any) {
+    console.error(err);
+    msg.error('No se pudo avanzar la orden');
+  }
+}
+
+async function cancel(row: Row) {
+  if (!window.confirm(`¿Cancelar la orden ${row.id}?`)) return;
+  try {
+    await staffApi.cancelOrder(row.id);
+    await refresh();
+  } catch (err: any) {
+    console.error(err);
+    msg.error('No se pudo cancelar la orden');
+  }
+}
+
+onMounted(() => { refresh(); });
 </script>
 
 <style scoped>

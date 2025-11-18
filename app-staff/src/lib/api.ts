@@ -1,5 +1,3 @@
-import type { Category, Item, MenuResponse } from '../types';
-import { ref } from 'vue';
 
 // Build absolute API base from environment variables.
 // In dev, defaults to http://localhost:3000 and version v1
@@ -161,7 +159,16 @@ export const staffApi = {
     tryApi<{ id: string; stock: number }>(
       () => http(`/staff/menu/items/${encodeURIComponent(id)}/stock`, { method: 'POST', body: JSON.stringify({ delta }) }),
       () => mockApi.adjustStock(id, delta)
-    )
+    ),
+  // Orders (no mock fallback provided on purpose; shows offline banner instead)
+  listOrders: (state: 'pending_payment' | 'paid' | 'fulfilled' = 'paid') =>
+    tryApi<any[]>(() => http(`/staff/orders?state=${encodeURIComponent(state)}`), async () => []),
+  markOrderPaid: (id: string, externalId?: string | null) =>
+    tryApi<any>(() => http(`/staff/orders/${encodeURIComponent(id)}/paid`, { method: 'POST', body: JSON.stringify({ externalId: externalId ?? null }) }), async () => { throw new Error('offline'); }),
+  setOrderFulfillment: (id: string, status: 'received' | 'preparing' | 'ready' | 'completed') =>
+    tryApi<any>(() => http(`/staff/orders/${encodeURIComponent(id)}/fulfillment`, { method: 'POST', body: JSON.stringify({ status }) }), async () => { throw new Error('offline'); }),
+  cancelOrder: (id: string) =>
+    tryApi<any>(() => http(`/staff/orders/${encodeURIComponent(id)}/cancel`, { method: 'POST' }), async () => { throw new Error('offline'); }),
 };
 
 // Auth and Users management
