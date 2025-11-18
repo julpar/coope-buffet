@@ -44,8 +44,9 @@
           <h2>Configuración inicial</h2>
           <p>Crea el usuario administrador para empezar.</p>
           <n-input v-model:value="adminNickname" placeholder="Nombre para Admin (ej. Dire)" />
-          <n-button type="primary" :loading="savingAdmin" :disabled="!adminNickname" @click="createAdmin">Crear administrador</n-button>
-          <p class="hint">Se generará un acceso permanente para este dispositivo. No hay contraseñas.</p>
+          <n-input type="password" v-model:value="adminPassword" placeholder="Contraseña/TOKEN para Admin (mínimo 6 caracteres)" />
+          <n-button type="primary" :loading="savingAdmin" :disabled="!canCreateAdmin" @click="createAdmin">Crear administrador</n-button>
+          <p class="hint">La contraseña definida funcionará como <strong>token permanente</strong> para iniciar sesión en este dispositivo (o por QR). Puedes cambiarla recreando el usuario más adelante.</p>
         </div>
       </div>
       <!-- If admin exists but no session yet, show the routed auth pages (e.g., /login) without sidebar/header -->
@@ -126,7 +127,9 @@ const ready = ref(false);
 const adminExists = ref<boolean>(true);
 const currentUser = ref<StaffUser | null>(null);
 const adminNickname = ref('');
+const adminPassword = ref('');
 const savingAdmin = ref(false);
+const canCreateAdmin = computed(() => !!adminNickname.value && (adminPassword.value?.length || 0) >= 6);
 
 async function loadAuth() {
   try {
@@ -141,10 +144,10 @@ async function loadAuth() {
 }
 
 async function createAdmin() {
-  if (!adminNickname.value) return;
+  if (!canCreateAdmin.value) return;
   savingAdmin.value = true;
   try {
-    await authApi.initAdmin(adminNickname.value);
+    await authApi.initAdmin(adminNickname.value, adminPassword.value);
     await loadAuth();
   } catch (e) {
     // eslint-disable-next-line no-alert

@@ -134,9 +134,9 @@ export const staffApi = {
 export type StaffUser = { id: string; nickname: string; roles: string[] };
 export const authApi = {
   status: () => http<{ adminExists: boolean; currentUser: StaffUser | null }>(`/auth/status`),
-  initAdmin: (nickname: string) => http<{ ok: true; user: StaffUser }>(`/auth/init-admin`, {
+  initAdmin: (nickname: string, password?: string) => http<{ ok: true; user: StaffUser }>(`/auth/init-admin`, {
     method: 'POST',
-    body: JSON.stringify({ nickname }),
+    body: JSON.stringify({ nickname, password }),
   }),
   // Initiate session from permanent token delivered via URL (param name: token)
   perm: (token: string) => http<{ ok: true; user: StaffUser }>(`/auth/perm?token=${encodeURIComponent(token)}`),

@@ -27,9 +27,17 @@
           <n-button type="primary" :loading="creating" :disabled="!nickname" @click="createUser">Crear</n-button>
         </div>
         <div v-if="permUrl" class="perm">
-          <div class="perm-title">URL de acceso (escanea para iniciar sesión):</div>
-          <n-input value="{{ permUrl }}" readonly />
-          <a :href="permUrl" target="_blank" rel="noopener">Abrir enlace</a>
+          <div class="perm-title">URL de acceso (escanea o comparte para iniciar sesión):</div>
+          <n-input :value="permUrl" readonly />
+          <div class="perm-actions">
+            <n-button size="small" @click="copyPerm">Copiar enlace</n-button>
+            <n-button size="small" tertiary tag="a" :href="permUrl" target="_blank">Abrir</n-button>
+            <n-button v-if="canShare" size="small" @click="sharePerm">Compartir</n-button>
+          </div>
+          <div class="qr-wrap">
+            <img :src="qrSrc" alt="QR de acceso" class="qr" />
+            <div class="qr-hint">Escanea con la cámara del dispositivo para iniciar sesión.</div>
+          </div>
         </div>
       </div>
     </n-modal>
@@ -38,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import { h, computed, ref, onMounted } from 'vue';
+import { h, computed, ref, onMounted, watch } from 'vue';
 import { NTag, NButton, useMessage, type DataTableColumns } from 'naive-ui';
 import { PersonAddOutline, CreateOutline, TrashOutline, SearchOutline } from '@vicons/ionicons5';
 import { usersApi, type StaffUser } from '../lib/api';
@@ -75,12 +83,16 @@ const roles = ref<string[]>([]);
 const roleOptions = ['ADMIN', 'STOCK', 'CASHIER', 'ORDER_FULFILLER'];
 const creating = ref(false);
 const permUrl = ref('');
+const qrSrc = ref('');
+const canShare = (typeof navigator !== 'undefined' && 'share' in navigator) as boolean;
 
 async function createUser() {
   creating.value = true;
   try {
     const res = await usersApi.create(nickname.value, roles.value);
     permUrl.value = res.permUrl;
+    // Generate QR via lightweight remote generator (no extra deps). If you prefer fully offline, replace with a local QR util.
+    qrSrc.value = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(permUrl.value)}`;
     nickname.value = '';
     roles.value = [];
     await loadUsers();
@@ -89,6 +101,27 @@ async function createUser() {
     message.error('No se pudo crear el usuario');
   } finally {
     creating.value = false;
+  }
+}
+
+function copyPerm() {
+  if (!permUrl.value) return;
+  navigator.clipboard?.writeText(permUrl.value).then(() => message.success('Enlace copiado')).catch(() => message.warning('No se pudo copiar'));
+}
+
+async function sharePerm() {
+  try {
+    if (!permUrl.value) return;
+    // Try Web Share API
+    // @ts-ignore
+    if (navigator.share) {
+      // @ts-ignore
+      await navigator.share({ title: 'Acceso permanente', text: 'Escanea o abre este enlace para iniciar sesión', url: permUrl.value });
+    } else {
+      copyPerm();
+    }
+  } catch {
+    // ignore
   }
 }
 
@@ -112,6 +145,10 @@ async function removeUser(u: StaffUser) {
 .actions { display:flex; justify-content:flex-end; gap:8px; }
 .roles { display:flex; flex-wrap:wrap; gap:8px; }
 .role { display:flex; align-items:center; gap:6px; font-size: 13px; }
-.perm { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+.perm { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
 .perm-title { font-size: 12px; color:#666; }
+.perm-actions { display:flex; gap:8px; align-items:center; }
+.qr-wrap { display:flex; flex-direction:column; align-items:flex-start; gap:6px; margin-top:8px; }
+.qr { width: 240px; height: 240px; border: 1px solid #eee; border-radius: 6px; background: #fff; }
+.qr-hint { font-size: 12px; color:#666; }
 </style>
