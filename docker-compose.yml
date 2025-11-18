@@ -6,7 +6,9 @@ services:
     restart: unless-stopped
 
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     depends_on:
       - redis
     restart: unless-stopped
