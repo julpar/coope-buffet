@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, BadRequestException } from '@nestjs/common';
 import { UserService, type Role } from '../../core/user.service';
 import { API_PREFIX } from '../../../common/constants';
 import { Roles } from '../../../common/auth/auth.decorators';
@@ -22,20 +22,53 @@ export class UsersController {
   ) {
     const nickname = (body?.nickname || '').trim();
     const roles = (body?.roles || []) as Role[];
-    if (!nickname) throw new Error('nickname required');
+    if (!nickname) throw new BadRequestException('nickname required');
+    if (!Array.isArray(roles) || roles.length === 0) {
+      throw new BadRequestException('at least one role is required');
+    }
+    // Optional: validate role values
+    const allowed: Role[] = ['ADMIN', 'STOCK', 'CASHIER', 'ORDER_FULFILLER'];
+    for (const r of roles) {
+      if (!allowed.includes(r)) {
+        throw new BadRequestException(`invalid role: ${r}`);
+      }
+    }
     const user = await this.users.createUser(nickname, roles);
-    // base URL cannot be derived from req without @Req; use env BASE_URL for generating QR/login URL
-    const baseUrl = process.env.BASE_URL || '';
+    // Build both variants depending on environment variables
+    // Prefer STAFF_BASE_URL when present to generate a URL that lands on the staff SPA
+    // which will then call /auth/perm via AJAX and set the cookie seamlessly.
+    const staffBase = (process.env.STAFF_BASE_URL || '').trim();
+    const baseUrl = (process.env.BASE_URL || '').trim();
     const permToken = user.token.startsWith('perm:') ? user.token.slice(5) : user.token;
-    // Use canonical `token` param; if BASE_URL not set, return relative path
-    const prefix = baseUrl ? baseUrl.replace(/\/$/, '') : '';
-    const permUrl = `${prefix}/auth/perm?token=${encodeURIComponent(permToken)}`;
+    let permUrl: string;
+    if (staffBase) {
+      // Direct to SPA root with query param; SPA will consume and authenticate
+      const sb = staffBase.replace(/\/$/, '');
+      permUrl = `${sb}/?token=${encodeURIComponent(permToken)}`;
+    } else {
+      // Fallback: direct backend endpoint; the response is JSON and still sets cookie
+      const prefix = baseUrl ? baseUrl.replace(/\/$/, '') : '';
+      permUrl = `${prefix}/auth/perm?token=${encodeURIComponent(permToken)}`;
+    }
     return { user: { id: user.id, nickname: user.nickname, roles: user.roles }, permUrl };
   }
 
   @Patch(':id')
   async update(@Param('id') id: string, @Body() patch: { nickname?: string; roles?: Role[] }) {
-    const u = await this.users.updateUser(id, { nickname: patch?.nickname, roles: patch?.roles });
+    const nickname = patch?.nickname?.trim();
+    if (patch && 'roles' in patch) {
+      const roles = (patch?.roles || []) as Role[];
+      if (!Array.isArray(roles) || roles.length === 0) {
+        throw new BadRequestException('at least one role is required');
+      }
+      const allowed: Role[] = ['ADMIN', 'STOCK', 'CASHIER', 'ORDER_FULFILLER'];
+      for (const r of roles) {
+        if (!allowed.includes(r)) {
+          throw new BadRequestException(`invalid role: ${r}`);
+        }
+      }
+    }
+    const u = await this.users.updateUser(id, { nickname, roles: patch?.roles });
     if (!u) throw new Error('not found');
     return { id: u.id, nickname: u.nickname, roles: u.roles };
   }

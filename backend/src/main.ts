@@ -19,6 +19,9 @@ async function bootstrap() {
     'http://localhost:5174',
     'http://localhost:5175',
     'http://localhost:3000',
+    // Static Nginx-served apps from docker-compose for customer/staff
+    'http://localhost:8080', // web-customer
+    'http://localhost:8081', // web-staff
   ];
   app.enableCors({
     origin: (origin, callback) => {
