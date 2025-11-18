@@ -6,7 +6,7 @@ import { json, urlencoded } from 'express';
 import cookieParser from 'cookie-parser';
 import { platformStatusMiddleware } from './common/middleware/platform-status.middleware';
 import { API_VERSION } from './common/constants';
-import { requestLoggerMiddleware } from './request-logger.middleware';
+import { requestLoggerMiddleware } from './common/middleware/request-logger.middleware';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { cors: true });
