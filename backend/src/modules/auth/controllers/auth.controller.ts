@@ -1,12 +1,14 @@
 import { Body, Controller, Get, Post, Query, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { UserService, type User } from '../../core/user.service';
+import { Public } from '../../../common/auth/auth.decorators';
 
 @Controller('/auth')
 export class AuthController {
   constructor(private readonly users: UserService) {}
 
   @Get('status')
+  @Public()
   async status(@Res({ passthrough: true }) res: Response) {
     const adminExists = await this.users.adminExists();
     const user = (res.req as any).user as User | undefined;
@@ -17,6 +19,7 @@ export class AuthController {
   }
 
   @Post('init-admin')
+  @Public()
   async initAdmin(@Body() body: { nickname?: string }, @Res({ passthrough: true }) res: Response) {
     const user = await this.users.createAdmin((body?.nickname || '').trim());
     // Set timeless cookie
@@ -25,6 +28,7 @@ export class AuthController {
   }
 
   @Get('perm')
+  @Public()
   async perm(@Query('token') token: string, @Res() res: Response) {
     // Accept `token` (canonical) and keep `fixef` as backward-compatible alias
     const raw = (token || '').trim();

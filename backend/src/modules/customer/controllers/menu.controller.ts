@@ -1,6 +1,7 @@
 import { Controller, Get, Logger, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import { MenuService } from '../../core/menu.service';
+import { Public } from '../../../common/auth/auth.decorators';
 
 @Controller('menu')
 export class MenuController {
@@ -9,6 +10,7 @@ export class MenuController {
 
   // Public menu for customers
   @Get()
+  @Public()
   async getMenu(@Req() req: Request) {
     const data = await this.menu.publicMenu();
     const catCount = data.categories.length;

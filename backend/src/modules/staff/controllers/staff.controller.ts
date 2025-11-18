@@ -1,8 +1,10 @@
 import { Body, Controller, Get, Logger, Param, Post, Put, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import { MenuService, Category, MenuItem } from '../../core/menu.service';
+import { Roles } from '../../../common/auth/auth.decorators';
 
 @Controller('staff/menu')
+@Roles('STOCK', 'ADMIN')
 export class StaffController {
   private readonly logger = new Logger('StaffController');
   constructor(private readonly menu: MenuService) {}

@@ -1,11 +1,13 @@
 import { Controller, Get } from '@nestjs/common';
 import { RedisService } from '../../core/redis.service';
+import { Public } from '../../../common/auth/auth.decorators';
 
 @Controller('')
 export class AppController {
   constructor(private readonly redisSvc: RedisService) {}
 
   @Get('health')
+  @Public()
   async health() {
     // simple ping
     let redis = 'down';
@@ -17,6 +19,7 @@ export class AppController {
   }
 
   @Get('platform/status')
+  @Public()
   async platformStatus() {
     const r = this.redisSvc.redis;
     const status = (await r.get('platform:status')) || 'online';
