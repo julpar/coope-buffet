@@ -1,14 +1,17 @@
 FROM node:22-alpine AS builder
-WORKDIR /app
+WORKDIR /repo
 
-COPY package.json package-lock.json* pnpm-lock.yaml* yarn.lock* ./
-RUN npm ci || npm install
+# Install workspace deps from monorepo root for better caching
+COPY package.json package-lock.json* turbo.json ./
+COPY app-customer/package.json app-customer/package.json
+RUN npm install
 
-COPY . .
-RUN npm run build
+# Copy only the app sources and build the specific workspace
+COPY app-customer ./app-customer
+RUN npm run build -w app-customer
 
 FROM nginx:1.27-alpine AS runtime
-COPY nginx.conf /etc/nginx/nginx.conf
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY app-customer/nginx.conf /etc/nginx/nginx.conf
+COPY --from=builder /repo/app-customer/dist /usr/share/nginx/html
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
