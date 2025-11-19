@@ -11,7 +11,13 @@
       </div>
     </template>
     <div class="stock-toolbar">
-      <div class="muted">Monitoreo de platos con stock agotado o cercano al umbral.</div>
+      <div class="muted">
+        Monitoreo de platos con stock agotado o cercano al umbral.
+        <span class="toggle">
+          <n-switch size="small" v-model:value="includeDonation" />
+          <span class="toggle-label">Incluir Feria del Plato</span>
+        </span>
+      </div>
       <div class="actions">
         <n-tooltip trigger="hover">
           <template #trigger>
@@ -30,12 +36,12 @@
       <div class="stock-panel">
         <div class="panel-header">
           <strong>Agotados</strong>
-          <n-tag type="error" size="small">{{ outOfStock.length }}</n-tag>
+          <n-tag type="error" size="small">{{ outVisibleCount }}</n-tag>
         </div>
-        <template v-if="outOfStock.length">
+        <template v-if="outVisibleByCategory.length">
           <n-collapse v-model:expanded-names="outExpanded" :accordion="false">
             <n-collapse-item
-              v-for="grp in outByCategory"
+              v-for="grp in outVisibleByCategory"
               :key="grp.categoryId"
               :name="grp.categoryId"
               :title="`${grp.categoryName} (${grp.items.length})`"
@@ -56,12 +62,12 @@
       <div class="stock-panel">
         <div class="panel-header">
           <strong>Bajo stock</strong>
-          <n-tag type="warning" size="small">{{ lowStock.length }}</n-tag>
+          <n-tag type="warning" size="small">{{ lowVisibleCount }}</n-tag>
         </div>
-        <template v-if="lowStock.length">
+        <template v-if="lowVisibleByCategory.length">
           <n-collapse v-model:expanded-names="lowExpanded" :accordion="false">
             <n-collapse-item
-              v-for="grp in lowByCategory"
+              v-for="grp in lowVisibleByCategory"
               :key="grp.categoryId"
               :name="grp.categoryId"
               :title="`${grp.categoryName} (${grp.items.length})`"
@@ -138,8 +144,8 @@
 </template>
 
 <script setup lang="ts">
-import { h, ref, computed, onMounted } from 'vue';
-import { NIcon, NTag, NButton, NTooltip, NCollapse, NCollapseItem, type DataTableColumns } from 'naive-ui';
+import { h, ref, computed, onMounted, watch } from 'vue';
+import { NIcon, NTag, NButton, NTooltip, NCollapse, NCollapseItem, NSwitch, type DataTableColumns } from 'naive-ui';
 import { ListOutline, RefreshOutline } from '@vicons/ionicons5';
 import type { Item, Category } from '../types';
 import { staffApi, authApi, type StaffUser } from '../lib/api';
@@ -234,23 +240,44 @@ function groupByCategory(list: Item[]): Group[] {
   });
 }
 
-// Required: collapse specific category by default
-const COLLAPSED_CATEGORY_IDS = new Set<string>(['feria-del-plat']);
+// Toggle to include donation category/categories in stock alerts (disabled by default)
+const DONATION_CATEGORY_IDS = new Set<string>(['feria-del-plat']);
+const LS_TOGGLE_KEY = 'staff-dashboard-include-donation';
+const includeDonation = ref<boolean>(false);
+try {
+  const saved = localStorage.getItem(LS_TOGGLE_KEY);
+  if (saved === '1') includeDonation.value = true;
+} catch {}
 
 const outByCategory = computed<Group[]>(() => groupByCategory(outOfStock.value));
 const lowByCategory = computed<Group[]>(() => groupByCategory(lowStock.value));
+
+// Visible groups based on toggle
+const outVisibleByCategory = computed<Group[]>(() =>
+  outByCategory.value.filter(g => includeDonation.value || !DONATION_CATEGORY_IDS.has(g.categoryId))
+);
+const lowVisibleByCategory = computed<Group[]>(() =>
+  lowByCategory.value.filter(g => includeDonation.value || !DONATION_CATEGORY_IDS.has(g.categoryId))
+);
+
+// Visible counts for header tags
+const outVisibleCount = computed<number>(() => outVisibleByCategory.value.reduce((acc, g) => acc + g.items.length, 0));
+const lowVisibleCount = computed<number>(() => lowVisibleByCategory.value.reduce((acc, g) => acc + g.items.length, 0));
 
 const outExpanded = ref<string[]>([]);
 const lowExpanded = ref<string[]>([]);
 
 function setDefaultExpanded() {
-  outExpanded.value = outByCategory.value
-    .filter(g => !COLLAPSED_CATEGORY_IDS.has(g.categoryId))
-    .map(g => g.categoryId);
-  lowExpanded.value = lowByCategory.value
-    .filter(g => !COLLAPSED_CATEGORY_IDS.has(g.categoryId))
-    .map(g => g.categoryId);
+  outExpanded.value = outVisibleByCategory.value.map(g => g.categoryId);
+  lowExpanded.value = lowVisibleByCategory.value.map(g => g.categoryId);
 }
+
+// Persist toggle changes and adjust expanded groups to what's visible
+watch(includeDonation, (val) => {
+  try { localStorage.setItem(LS_TOGGLE_KEY, val ? '1' : '0'); } catch {}
+  // Recalculate expanded to include/exclude donation categories according to visibility
+  setDefaultExpanded();
+});
 
 // Orders overview logic
 const loadingOrders = ref(false);
@@ -337,7 +364,11 @@ const lowColsGrouped: DataTableColumns<Row> = [
 .stock-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
 .panel-header { display:flex; align-items:center; gap:8px; margin-bottom: 8px; }
 .empty { color: rgba(0,0,0,.45); font-size: 13px; padding: 8px 0; }
-.muted { color: rgba(0,0,0,.45); font-size: 12px; }
+.muted { color: rgba(0,0,0,.45); font-size: 12px; display:flex; align-items:center; gap:8px; flex-wrap: wrap; }
+
+/* Toggle alignment */
+.toggle { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; }
+.toggle-label { line-height: 1; }
 
 /* Orders overview */
 .orders-sections { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
