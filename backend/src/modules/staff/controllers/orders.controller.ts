@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Logger, Param, Post, Query, BadRequestException, NotFoundException } from '@nestjs/common';
 import { Roles } from '../../../common/auth/auth.decorators';
-import { OrdersService, OrderState, FulfillmentStatus } from '../../core/orders.service';
+import { OrdersService, OrderState } from '../../core/orders.service';
 
 @Controller('staff/orders')
 @Roles('ORDER_FULFILLER', 'CASHIER', 'ADMIN')
@@ -45,10 +45,10 @@ export class StaffOrdersController {
     return o;
   }
 
-  // Fulfillment status progression while in paid state
+  // Fulfillment: simplified — only allow marking as fulfilled (true) while in paid state
   @Post(':id/fulfillment')
-  async setFulfillment(@Param('id') id: string, @Body() body: { status: FulfillmentStatus }) {
-    const o = await this.orders.setFulfillment(id, body?.status as FulfillmentStatus);
+  async setFulfillment(@Param('id') id: string, @Body() body: { fulfilled: boolean }) {
+    const o = await this.orders.setFulfillment(id, !!body?.fulfilled);
     if (!o) throw new NotFoundException('order not found');
     return o;
   }

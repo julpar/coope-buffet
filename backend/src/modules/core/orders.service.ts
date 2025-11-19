@@ -3,7 +3,6 @@ import { RedisService } from './redis.service';
 import { MenuService } from './menu.service';
 
 export type OrderState = 'pending_payment' | 'paid' | 'fulfilled' | 'cancelled';
-export type FulfillmentStatus = 'received' | 'preparing' | 'ready' | 'completed';
 
 export type OrderItem = {
   id: string; // menu item id
@@ -18,7 +17,8 @@ export interface Order {
   updatedAt: string;
   channel: 'pickup' | 'delivery' | 'in-store';
   status: OrderState;
-  fulfillment?: FulfillmentStatus; // for staff board granularity while status === 'paid'
+  // Simplified: no intermediate fulfillment transitions; only boolean completed flag
+  fulfillment?: boolean; // false/undefined until completed; true when delivered
   // Short, non-guessable code for cashier/fulfillment scanning (e.g., 6 chars)
   shortCode: string;
   items: OrderItem[];
@@ -108,7 +108,7 @@ export class OrdersService {
       updatedAt: now,
       channel: input.channel,
       status: 'pending_payment',
-      fulfillment: undefined,
+      fulfillment: false,
       shortCode,
       items: norm,
       subtotal,
@@ -146,7 +146,7 @@ export class OrdersService {
       await this.menu.adjustStock(it.id, -it.qty);
     }
     o.status = 'paid';
-    o.fulfillment = 'received';
+    o.fulfillment = false;
     if (o.payment) {
       o.payment.paidAt = new Date().toISOString();
       if (opts?.externalId !== undefined) o.payment.externalId = opts.externalId;
@@ -163,7 +163,7 @@ export class OrdersService {
     if (o.status === 'fulfilled') return o;
     if (o.status !== 'paid') return o;
     o.status = 'fulfilled';
-    o.fulfillment = 'completed';
+    o.fulfillment = true;
     await this.save(o);
     await this.moveList(o.id, this.LIST_PAID, this.LIST_FULFILLED);
     this.logger.log(`order fulfilled id=${o.id}`);
@@ -193,13 +193,13 @@ export class OrdersService {
     else if (state === 'fulfilled') listKey = this.LIST_FULFILLED;
     else listKey = null;
     if (!listKey) return [];
-    const ids = await this.redis.redis.lrange(listKey, 0, -1);
-    const multi = this.redis.redis.multi();
-    for (const id of ids) multi.get(this.orderKey(id));
-    const raws = (await multi.exec()) as string[];
+    const ids = (await this.redis.redis.lrange(listKey, 0, -1)).filter(Boolean);
+    if (ids.length === 0) return [];
+    const keys = ids.map((id) => this.orderKey(id));
+    const raws = await this.redis.redis.mget(keys);
     const out: Order[] = [];
     for (const raw of raws) {
-      try { if (raw) out.push(JSON.parse(raw)); } catch {}
+      try { if (raw) out.push(JSON.parse(raw as unknown as string)); } catch {}
     }
     // Sort by createdAt ascending
     out.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
@@ -209,36 +209,29 @@ export class OrdersService {
   // List all active orders across states (pending_payment, paid, fulfilled)
   async listAll(): Promise<Order[]> {
     const lists = [this.LIST_PENDING, this.LIST_PAID, this.LIST_FULFILLED];
-    const multiIds = this.redis.redis.multi();
-    for (const key of lists) multiIds.lrange(key, 0, -1);
-    const listIds = (await multiIds.exec()) as string[][];
-    const ids = Array.from(new Set(listIds.flat()));
+    const perList = await Promise.all(lists.map((k) => this.redis.redis.lrange(k, 0, -1)));
+    const ids = Array.from(new Set(perList.flat().filter(Boolean)));
     if (ids.length === 0) return [];
-    const multi = this.redis.redis.multi();
-    for (const id of ids) multi.get(this.orderKey(id));
-    const raws = (await multi.exec()) as string[];
+    const keys = ids.map((id) => this.orderKey(id));
+    const raws = await this.redis.redis.mget(keys);
     const out: Order[] = [];
     for (const raw of raws) {
-      try { if (raw) out.push(JSON.parse(raw)); } catch {}
+      try { if (raw) out.push(JSON.parse(raw as unknown as string)); } catch {}
     }
     // Sort by createdAt ascending
     out.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     return out;
   }
 
-  async setFulfillment(id: string, next: FulfillmentStatus): Promise<Order | null> {
+  // Simplified: allow only switching to fulfilled=true while in paid state
+  async setFulfillment(id: string, fulfilled: boolean): Promise<Order | null> {
     const o = await this.get(id);
     if (!o) return null;
     if (o.status !== 'paid') return o; // only while paid
-    const allowed: FulfillmentStatus[] = ['received', 'preparing', 'ready', 'completed'];
-    if (!allowed.includes(next)) return o;
-    o.fulfillment = next;
-    await this.save(o);
-    // When going to completed, also finalize order
-    if (next === 'completed') {
-      await this.complete(id);
-    }
-    this.logger.log(`order fulfillment id=${o.id} -> ${next}`);
-    return o;
+    // Only transition allowed is to mark as fulfilled (true)
+    if (!fulfilled) return o;
+    await this.complete(id);
+    this.logger.log(`order fulfillment id=${o.id} -> fulfilled=true`);
+    return await this.get(id);
   }
 }
