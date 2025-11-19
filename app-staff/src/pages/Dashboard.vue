@@ -131,7 +131,7 @@
             </template>
             Refrescar
           </n-tooltip>
-          <n-button size="small" type="primary" @click="goToFulfillment">Ir a Preparación</n-button>
+          <n-button size="small" type="primary" @click="goToFulfillment">Ir a Entrega</n-button>
         </div>
         <div class="kpi">
           <div class="kpi-value">{{ awaitingFulfillmentCount }}</div>

@@ -91,7 +91,8 @@ import type { Item } from '../types';
 type State = 'pending_payment' | 'paid' | 'fulfilled' | 'all';
 type Fulfillment = boolean | undefined;
 const q = ref('');
-const state = ref<State>('paid');
+// Default to showing all orders (previously defaulted to 'paid')
+const state = ref<State>('all');
 const loading = ref(false);
 const msg = useMessage();
 type Row = { id: string; code: string; customer?: string; items: number; total: string; fulfillment: Fulfillment; raw: any };

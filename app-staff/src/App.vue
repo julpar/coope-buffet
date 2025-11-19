@@ -11,7 +11,7 @@
             </template>
           </n-button>
           <n-icon size="22"><StorefrontOutline /></n-icon>
-          <span>Buffet · Staff</span>
+          <span>Buffet Coope Grecia</span>
         </div>
         <div class="header-actions">
           <div class="api-indicator" :title="`API: ${apiBase}`">
@@ -162,7 +162,7 @@ const menuOptions = computed(() => {
     opts.push({ label: 'Cajero', key: '/cashier', icon: renderIcon(CashOutline) });
   }
   if (roles.includes('ORDER_FULFILLER')) {
-    opts.push({ label: 'Fulfillment', key: '/fulfillment', icon: renderIcon(CheckmarkDoneOutline) });
+    opts.push({ label: 'Entrega', key: '/fulfillment', icon: renderIcon(CheckmarkDoneOutline) });
   }
   // Inventory editing is allowed for STOCK role
   if (roles.includes('STOCK')) {
