@@ -432,13 +432,18 @@ function rowStyle(id: string | number) {
 .fulfillment { display: flex; flex-direction: column; gap: 16px; }
 .fulfillment.focus .scanner-card { display: none; }
 .scanner-card.minimal { background: #fff; }
-.scan-row { display: flex; gap: 16px; align-items: stretch; }
+/* Match Cashier layout and sizing for scanner section */
+.scanner-card.minimal :deep(.n-card__content) { padding-top: 12px; }
+.scan-row { display: grid; grid-template-columns: 1fr 420px; gap: 16px; align-items: start; }
 .scan-left { flex: 1; display:flex; flex-direction:column; gap: 6px; }
-.field-row.big { display:flex; gap:8px; }
-.scan-right { width: 340px; display:flex; flex-direction:column; gap:8px; }
-.video-wrap { position: relative; background: #000; border-radius: 8px; overflow: hidden; height: 200px; }
+.field-row.big { display:flex; gap:8px; align-items:center; }
+.field-row.big :deep(.n-input) { font-size: 20px; }
+.field-row.big :deep(.n-input__input-el) { height: 56px; }
+.field-row.big :deep(.n-button) { height: 56px; font-size: 18px; padding: 0 22px; }
+.scan-right { width: 420px; display:flex; flex-direction:column; gap:8px; }
+.video-wrap { position: relative; width: 100%; aspect-ratio: 1/1; background: #000; border-radius: 8px; overflow: hidden; }
 .video-wrap video { width: 100%; height: 100%; object-fit: cover; }
-.video-wrap .overlay { position:absolute; inset:auto 0 0 0; color:#fff; text-align:center; padding:6px; background: linear-gradient(transparent, rgba(0,0,0,.5)); }
+.overlay { position:absolute; inset:auto 0 0 0; color:#fff; text-align:center; background: linear-gradient(transparent, rgba(0,0,0,0.6)); padding: 10px 12px; font-size: 14px; letter-spacing: .2px; }
 .order-card.focus-only { background: #fff; }
 .order-summary { display:flex; flex-direction:column; gap:6px; margin-bottom: 8px; }
 .order-summary .row { display:flex; gap:8px; align-items:center; }
@@ -465,8 +470,8 @@ function rowStyle(id: string | number) {
 .subsection-header .subsection-title { font-weight: 700; font-size: 14px; letter-spacing: .2px; }
 .subsection-header .subsection-count { font-weight: 700; background:#f2f3f5; color:#333; border-radius: 999px; padding: 2px 8px; font-size: 12px; }
 .subsection-header.muted { color:#666; }
-@media (max-width: 768px) {
-  .scan-row { flex-direction: column; }
+@media (max-width: 900px) {
+  .scan-row { grid-template-columns: 1fr; }
   .scan-right { width: auto; }
 }
 </style>
