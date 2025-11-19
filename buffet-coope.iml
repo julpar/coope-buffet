@@ -6,6 +6,7 @@
       <sourceFolder url="file://$MODULE_DIR$/app-customer/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/app-staff/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/backend/src" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/.turbo" />
     </content>
     <orderEntry type="jdk" jdkName="21" jdkType="JavaSDK" />
     <orderEntry type="sourceFolder" forTests="false" />
