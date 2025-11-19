@@ -40,14 +40,14 @@
       </div>
       <div class="order-summary">
         <div class="row big-code"><strong>Código:</strong> <span class="code">{{ order.shortCode }}</span></div>
-        <div class="row"><strong>Subtotal:</strong> <span class="money">${{ (subtotalCents/100).toFixed(2) }}</span></div>
-        <div class="row" v-if="order.total && order.total !== subtotalCents"><strong>Total:</strong> <span class="money">${{ (order.total/100).toFixed(2) }}</span></div>
+        <div class="row"><strong>Subtotal:</strong> <span class="money">{{ peso(subtotal) }}</span></div>
+        <div class="row" v-if="order.total && order.total !== subtotal"><strong>Total:</strong> <span class="money">{{ peso(order.total) }}</span></div>
       </div>
       <div class="items">
         <div class="item" v-for="it in order.items" :key="it.id">
           <span class="qty">x{{ it.qty }}</span>
           <span class="name">{{ it.name || it.id }}</span>
-          <span class="price">${{ ((it.unitPrice*it.qty)/100).toFixed(2) }}</span>
+          <span class="price">{{ peso((it.unitPrice || 0) * (it.qty || 0)) }}</span>
         </div>
       </div>
       <template #action>
@@ -72,6 +72,11 @@ const manualCode = ref('');
 const loading = ref(false);
 const marking = ref(false);
 const order = ref<Order | null>(null);
+
+// Money formatting: backend/client prices are in ARS currency units (not cents)
+function peso(amount: number) {
+  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(amount || 0);
+}
 
 // Camera/QR
 const videoEl = ref<HTMLVideoElement | null>(null);
@@ -229,8 +234,8 @@ function resetForNext(restartScan = false) {
   }, 800);
 }
 
-// Subtotal for focused view
-const subtotalCents = computed(() => {
+// Subtotal for focused view (currency units)
+const subtotal = computed(() => {
   const o = order.value as any;
   if (!o?.items) return 0;
   return o.items.reduce((sum: number, it: any) => sum + (it.unitPrice || 0) * (it.qty || 1), 0);

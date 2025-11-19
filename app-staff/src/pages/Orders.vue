@@ -22,9 +22,9 @@
       <div style="display:flex; gap: 8px; align-items:center; margin-bottom: 8px;">
         <n-tag :type="statusTagType(selected)">{{ statusLabel(selected) }}</n-tag>
         <span style="color:#666">•</span>
-        <span>Canal: <strong>{{ selected.raw?.channel || '-' }}</strong></span>
-        <span style="color:#666">•</span>
         <span>Creada: <strong>{{ fmtDateTime(selected.raw?.createdAt) }}</strong></span>
+        <span v-if="selected.raw?.customerName" style="color:#666">•</span>
+        <span v-if="selected.raw?.customerName">Cliente: <strong>{{ selected.raw.customerName }}</strong></span>
         <span style="color:#666">•</span>
         <span>ID: <strong>{{ selected.raw?.id }}</strong></span>
         <span style="flex:1"></span>
@@ -83,7 +83,7 @@ const q = ref('');
 const state = ref<State>('paid');
 const loading = ref(false);
 const msg = useMessage();
-type Row = { id: string; code: string; items: number; total: string; fulfillment: Fulfillment; raw: any };
+type Row = { id: string; code: string; customer?: string; items: number; total: string; fulfillment: Fulfillment; raw: any };
 const rows = ref<Row[]>([]);
 
 // Details modal state
@@ -116,7 +116,9 @@ const stateOptions = [
 const filtered = computed(() => rows.value.filter(r => {
   const term = q.value?.toLowerCase() || '';
   if (!term) return true;
-  return `${r.code}`.toLowerCase().includes(term) || `${r.id}`.toLowerCase().includes(term);
+  return `${r.code}`.toLowerCase().includes(term)
+    || `${r.id}`.toLowerCase().includes(term)
+    || `${r.customer || ''}`.toLowerCase().includes(term);
 }));
 
 function statusLabel(row: Row): string {
@@ -137,6 +139,7 @@ function statusTagType(row: Row): 'warning' | 'info' | 'success' | 'default' {
 const columns: DataTableColumns<Row> = [
   { title: 'Detalles', key: 'details', width: 110, render: (row: Row) => h(NButton, { size: 'small', onClick: () => openDetails(row) }, { default: () => 'Ver' }) },
   { title: '#', key: 'code', width: 120 },
+  { title: 'Cliente', key: 'customer', width: 200, render: (row: Row) => h('span', null, row.customer || '-') },
   { title: 'Items', key: 'items', width: 80 },
   { title: 'Total', key: 'total', width: 120 },
   { title: 'Estado', key: 'fulfillment', width: 160, render: (row: Row) => h(NTag, { type: statusTagType(row) }, { default: () => statusLabel(row) }) },
@@ -157,6 +160,7 @@ async function refresh() {
     rows.value = sorted.map((o: any) => ({
       id: o.id,
       code: o.shortCode || o.id,
+      customer: o.customerName || undefined,
       items: Array.isArray(o.items) ? o.items.reduce((a: number, it: any) => a + (it.qty || 0), 0) : 0,
       total: peso(o.total || 0),
       fulfillment: (o.fulfillment as any) as Fulfillment,
