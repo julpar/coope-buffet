@@ -165,8 +165,12 @@ export const staffApi = {
   // Orders (no mock fallback provided on purpose; shows offline banner instead)
   listOrders: (state: 'pending_payment' | 'paid' | 'fulfilled' = 'paid') =>
     tryApi<any[]>(() => http(`/staff/orders?state=${encodeURIComponent(state)}`), async () => []),
+  lookupOrderByCode: (code: string) =>
+    tryApi<any>(() => http(`/staff/orders/lookup?code=${encodeURIComponent(code)}`), async () => { throw new Error('offline'); }),
   markOrderPaid: (id: string, externalId?: string | null) =>
     tryApi<any>(() => http(`/staff/orders/${encodeURIComponent(id)}/paid`, { method: 'POST', body: JSON.stringify({ externalId: externalId ?? null }) }), async () => { throw new Error('offline'); }),
+  markOrderPaidByCode: (code: string, externalId?: string | null) =>
+    tryApi<any>(() => http(`/staff/orders/paid-by-code`, { method: 'POST', body: JSON.stringify({ code, externalId: externalId ?? null }) }), async () => { throw new Error('offline'); }),
   setOrderFulfillment: (id: string, status: 'received' | 'preparing' | 'ready' | 'completed') =>
     tryApi<any>(() => http(`/staff/orders/${encodeURIComponent(id)}/fulfillment`, { method: 'POST', body: JSON.stringify({ status }) }), async () => { throw new Error('offline'); }),
   cancelOrder: (id: string) =>

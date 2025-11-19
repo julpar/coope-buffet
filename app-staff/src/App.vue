@@ -117,6 +117,7 @@ import {
   ListOutline,
   RestaurantOutline,
   PersonOutline,
+  CashOutline,
   NotificationsOutline
 } from '@vicons/ionicons5';
 import { isMocked as apiIsMocked, API_BASE, apiOnline, authApi, type StaffUser } from './lib/api';
@@ -131,6 +132,7 @@ const renderIcon = (icon: any) => () => h(NIcon, null, { default: () => h(icon) 
 const menuOptions = [
   { label: 'Dashboard', key: '/', icon: renderIcon(BarChartOutline) },
   { label: 'Órdenes', key: '/orders', icon: renderIcon(ListOutline) },
+  { label: 'Cajero', key: '/cashier', icon: renderIcon(CashOutline) },
   { label: 'Menú', key: '/menu', icon: renderIcon(RestaurantOutline) },
   { label: 'Usuarios', key: '/users', icon: renderIcon(PersonOutline) },
 ];

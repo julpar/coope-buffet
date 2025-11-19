@@ -4,6 +4,7 @@ import { authApi } from '../lib/api';
 const Dashboard = () => import('../pages/Dashboard.vue');
 const Orders = () => import('../pages/Orders.vue');
 const Menu = () => import('../pages/Menu.vue');
+const Cashier = () => import('../pages/Cashier.vue');
 const Users = () => import('../pages/Users.vue');
 const Login = () => import('../pages/Login.vue');
 const AuthPerm = () => import('../pages/auth/AuthPerm.vue');
@@ -13,6 +14,7 @@ const router = createRouter({
   routes: [
     { path: '/', name: 'dashboard', component: Dashboard },
     { path: '/orders', name: 'orders', component: Orders },
+    { path: '/cashier', name: 'cashier', component: Cashier },
     { path: '/menu', name: 'menu', component: Menu },
     { path: '/users', name: 'users', component: Users },
     { path: '/login', name: 'login', component: Login },
@@ -28,7 +30,8 @@ router.beforeEach(async (to) => {
   // Always fetch fresh status to reflect newly created admin or QR logins
   let st: { adminExists: boolean; hasUser: boolean } = { adminExists: true, hasUser: false };
   try {
-    const s = await authApi.status();
+    // Force bypassing the 60s cache to immediately reflect new sessions (e.g., token login)
+    const s = await authApi.status({ force: true });
     st = { adminExists: s.adminExists, hasUser: !!s.currentUser };
   } catch {
     // leave defaults; App.vue mock banner will guide user

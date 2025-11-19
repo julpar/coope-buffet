@@ -36,15 +36,34 @@
           </n-form-item>
           <div class="row">
             <n-form-item label="Precio" path="price">
-              <n-input-number v-model:value="form.price" :min="0" :step="10" placeholder="0" />
+              <n-input-number
+                v-model:value="form.price"
+                :min="0"
+                :step="10"
+                placeholder="0"
+                :show-button="false"
+                :input-props="{ inputmode: 'decimal', pattern: '[0-9]*' }"
+              />
             </n-form-item>
             <n-form-item label="Stock" path="stock">
-              <n-input-number v-model:value="form.stock" :min="0" :step="1" placeholder="0" />
+              <n-input-number
+                v-model:value="form.stock"
+                :min="0"
+                :step="1"
+                placeholder="0"
+                :input-props="{ inputmode: 'numeric', pattern: '[0-9]*' }"
+              />
             </n-form-item>
           </div>
           <div class="row">
             <n-form-item label="Umbral de bajo stock" path="lowStockThreshold">
-              <n-input-number v-model:value="form.lowStockThreshold" :min="0" :step="1" placeholder="0" />
+              <n-input-number
+                v-model:value="form.lowStockThreshold"
+                :min="0"
+                :step="1"
+                placeholder="0"
+                :input-props="{ inputmode: 'numeric', pattern: '[0-9]*' }"
+              />
             </n-form-item>
             <n-form-item label="Sin TACC" path="isGlutenFree">
               <n-switch v-model:value="form.isGlutenFree" />
@@ -103,6 +122,11 @@ const columns: DataTableColumns<any> = [
   { title: 'Precio', key: 'priceFmt', width: 140 },
   { title: 'Stock', key: 'stock', width: 100 },
   { title: 'Disponible', key: 'availability', width: 160, render: (row: any) => {
+      // Combine the "active" state with stock availability to determine the label
+      const isActive = row.active !== false; // default to true when undefined
+      if (!isActive) {
+        return h(NTag, { type: 'error' }, { default: () => 'No' });
+      }
       const t = row.availability === 'sold-out' ? 'error' : row.availability === 'limited' ? 'warning' : 'success';
       const label = row.availability === 'sold-out' ? 'No' : row.availability === 'limited' ? 'Bajo' : 'Sí';
       return h(NTag, { type: t }, { default: () => label });
