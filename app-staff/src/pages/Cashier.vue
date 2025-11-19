@@ -1,9 +1,9 @@
 <template>
-  <div class="cashier">
+  <div class="cashier" :class="{ focus: !!order }">
     <h2>Cajero</h2>
 
     <!-- Single-operation workstation: big input + live scanner -->
-    <n-card size="small" class="scanner-card minimal">
+    <n-card v-if="!order" size="small" class="scanner-card minimal">
       <div class="scan-row">
         <div class="scan-left">
           <div class="field-row big">
@@ -30,12 +30,22 @@
       </div>
     </n-card>
 
-    <n-card v-if="order" class="order-card" :title="'Pedido ' + order.id">
+    <n-card v-if="order" class="order-card focus-only" :title="'Pedido ' + order.id">
+      <div v-if="!isPayable" class="prominent-warning">
+        <n-alert type="warning" title="No se puede cobrar este pedido" :show-icon="true">
+          <div class="warn-text">
+            El estado actual es <strong class="status">{{ statusLabel }}</strong>.
+            No hay acciones disponibles en este módulo.
+          </div>
+          <div class="warn-help">
+            Informe al cliente sobre el estado y, si corresponde, diríjalo a caja o a soporte.
+          </div>
+        </n-alert>
+      </div>
       <div class="order-summary">
-        <div class="row"><strong>Código:</strong> <span class="code">{{ order.shortCode }}</span></div>
-        <div class="row"><strong>Estado:</strong> <span>{{ order.status }}</span></div>
-        <div class="row"><strong>Canal:</strong> <span>{{ order.channel }}</span></div>
-        <div class="row"><strong>Total:</strong> <span>${{ (order.total/100).toFixed(2) }}</span></div>
+        <div class="row big-code"><strong>Código:</strong> <span class="code">{{ order.shortCode }}</span></div>
+        <div class="row"><strong>Subtotal:</strong> <span class="money">${{ (subtotalCents/100).toFixed(2) }}</span></div>
+        <div class="row" v-if="order.total && order.total !== subtotalCents"><strong>Total:</strong> <span class="money">${{ (order.total/100).toFixed(2) }}</span></div>
       </div>
       <div class="items">
         <div class="item" v-for="it in order.items" :key="it.id">
@@ -46,8 +56,8 @@
       </div>
       <template #action>
         <n-space>
-          <n-button size="large" secondary @click="clearOrder">Cancelar</n-button>
-          <n-button size="large" strong type="primary" :loading="marking" @click="markPaid" :disabled="order.status !== 'pending_payment'">MARCAR PAGADO</n-button>
+          <n-button size="large" strong secondary @click="clearOrder">Cancelar</n-button>
+          <n-button size="large" strong type="primary" class="cta-pay" :loading="marking" @click="markPaid" :disabled="order.status !== 'pending_payment'">MARCAR PAGADO</n-button>
         </n-space>
       </template>
     </n-card>
@@ -55,7 +65,7 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { onBeforeUnmount, onMounted, ref, computed } from 'vue';
 import { useMessage } from 'naive-ui';
 import { staffApi } from '../lib/api';
 
@@ -88,6 +98,7 @@ async function lookup() {
   try {
     const o = await staffApi.lookupOrderByCode(code);
     order.value = o;
+    if (o) stopScan();
     if (o?.status !== 'pending_payment') {
       msg.warning('El pedido no está pendiente de pago.');
     }
@@ -221,10 +232,33 @@ function resetForNext(restartScan = false) {
     if (restartScan && barcodeSupported) startScan();
   }, 800);
 }
+
+// Subtotal for focused view
+const subtotalCents = computed(() => {
+  const o = order.value as any;
+  if (!o?.items) return 0;
+  return o.items.reduce((sum: number, it: any) => sum + (it.unitPrice || 0) * (it.qty || 1), 0);
+});
+
+// Payable and humanized status for UI
+const isPayable = computed(() => (order.value?.status === 'pending_payment'));
+const statusLabel = computed(() => {
+  const s = String(order.value?.status || '').toLowerCase();
+  const map: Record<string, string> = {
+    pending_payment: 'Pendiente de pago',
+    paid: 'Pagado',
+    preparing: 'En preparación',
+    ready: 'Listo para retirar',
+    delivered: 'Entregado',
+    cancelled: 'Cancelado'
+  };
+  return map[s] || (s ? s : 'Desconocido');
+});
 </script>
 
 <style scoped>
 .cashier { display: flex; flex-direction: column; gap: 16px; }
+.cashier.focus .scanner-card { display: none; }
 .scanner-card.minimal :deep(.n-card__content) { padding-top: 12px; }
 .scan-row { display: grid; grid-template-columns: 1fr 420px; gap: 16px; align-items: start; }
 @media (max-width: 900px) {
@@ -241,11 +275,19 @@ function resetForNext(restartScan = false) {
 .video-wrap video { width: 100%; height: 100%; object-fit: cover; }
 .overlay { position:absolute; inset:auto 0 0 0; color:#fff; text-align:center; background: linear-gradient(transparent, rgba(0,0,0,0.6)); padding: 10px 12px; font-size: 14px; letter-spacing: .2px; }
 .order-card { }
+.order-card.focus-only :deep(.n-card-header__main) { font-size: 18px; }
 .order-summary { display:flex; flex-wrap: wrap; gap: 16px; margin-bottom: 8px; }
 .order-summary .row { min-width: 140px; }
+.order-summary .big-code .code { font-size: 24px; font-weight: 700; }
 .code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; letter-spacing: 1px; }
 .items { border-top: 1px solid #eee; margin-top: 8px; padding-top: 8px; display:flex; flex-direction:column; gap:6px; }
 .item { display:grid; grid-template-columns: auto 1fr auto; gap:8px; align-items:center; }
 .qty { font-weight: 600; }
 .price { opacity: 0.8 }
+.money { font-weight: 700; font-size: 18px; }
+.cta-pay { font-size: 18px; padding: 0 28px; }
+.prominent-warning { margin-bottom: 12px; }
+.prominent-warning :deep(.n-alert) { border: 1px solid #f7c566; }
+.warn-text { margin-bottom: 6px; }
+.warn-text .status { font-weight: 700; }
 </style>
