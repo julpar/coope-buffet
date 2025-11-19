@@ -18,7 +18,6 @@ services:
       - NODE_ENV=production
       - REDIS_URL=redis://redis:6379
       - MERCADOPAGO_ACCESS_TOKEN=changeme
-      - BASE_URL=${BASE_URL}
       - STAFF_BASE_URL=${STAFF_BASE_URL:-http://localhost:8081}
     # Expose backend to host for local development and for web-staff/browser to reach it directly.
     # In production behind a reverse proxy you can remove this.
