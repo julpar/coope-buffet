@@ -5,6 +5,7 @@ const Dashboard = () => import('../pages/Dashboard.vue');
 const Orders = () => import('../pages/Orders.vue');
 const Menu = () => import('../pages/Menu.vue');
 const Cashier = () => import('../pages/Cashier.vue');
+const Fulfillment = () => import('../pages/Fulfillment.vue');
 const Users = () => import('../pages/Users.vue');
 const Login = () => import('../pages/Login.vue');
 const AuthPerm = () => import('../pages/auth/AuthPerm.vue');
@@ -15,6 +16,7 @@ const router = createRouter({
     { path: '/', name: 'dashboard', component: Dashboard },
     { path: '/orders', name: 'orders', component: Orders },
     { path: '/cashier', name: 'cashier', component: Cashier },
+    { path: '/fulfillment', name: 'fulfillment', component: Fulfillment },
     { path: '/menu', name: 'menu', component: Menu },
     { path: '/users', name: 'users', component: Users },
     { path: '/login', name: 'login', component: Login },

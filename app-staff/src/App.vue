@@ -118,7 +118,8 @@ import {
   RestaurantOutline,
   PersonOutline,
   CashOutline,
-  NotificationsOutline
+  NotificationsOutline,
+  CheckmarkDoneOutline
 } from '@vicons/ionicons5';
 import { isMocked as apiIsMocked, API_BASE, apiOnline, authApi, type StaffUser } from './lib/api';
 
@@ -129,13 +130,36 @@ const isMobile = ref(false);
 
 const renderIcon = (icon: any) => () => h(NIcon, null, { default: () => h(icon) });
 
-const menuOptions = [
-  { label: 'Dashboard', key: '/', icon: renderIcon(BarChartOutline) },
-  { label: 'Órdenes', key: '/orders', icon: renderIcon(ListOutline) },
-  { label: 'Cajero', key: '/cashier', icon: renderIcon(CashOutline) },
-  { label: 'Menú', key: '/menu', icon: renderIcon(RestaurantOutline) },
-  { label: 'Usuarios', key: '/users', icon: renderIcon(PersonOutline) },
-];
+const menuOptions = computed(() => {
+  const roles = currentUser.value?.roles || [];
+  const isAdmin = roles.includes('ADMIN');
+
+  // Base: everyone sees Dashboard
+  const opts: any[] = [
+    { label: 'Dashboard', key: '/', icon: renderIcon(BarChartOutline) },
+  ];
+
+  if (isAdmin) {
+    // Admin sees everything by default
+    opts.push({ label: 'Órdenes', key: '/orders', icon: renderIcon(ListOutline) });
+    opts.push({ label: 'Cajero', key: '/cashier', icon: renderIcon(CashOutline) });
+    opts.push({ label: 'Fulfillment', key: '/fulfillment', icon: renderIcon(CheckmarkDoneOutline) });
+    opts.push({ label: 'Menú', key: '/menu', icon: renderIcon(RestaurantOutline) });
+    opts.push({ label: 'Usuarios', key: '/users', icon: renderIcon(PersonOutline) });
+    return opts;
+  }
+
+  // Non-admin roles are limited: only their workstation + Dashboard
+  if (roles.includes('CASHIER')) {
+    opts.push({ label: 'Cajero', key: '/cashier', icon: renderIcon(CashOutline) });
+  }
+  if (roles.includes('ORDER_FULFILLER')) {
+    opts.push({ label: 'Fulfillment', key: '/fulfillment', icon: renderIcon(CheckmarkDoneOutline) });
+  }
+
+  // Do not expose other modules (Órdenes, Menú, Usuarios) for non-admin users.
+  return opts;
+});
 
 const onMenu = (path: string) => {
   if (path !== router.currentRoute.value.path) router.push(path);

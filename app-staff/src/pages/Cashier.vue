@@ -10,12 +10,7 @@
             <n-input size="large" v-model:value="manualCode" placeholder="Código del pedido" maxlength="12" @keydown.enter.prevent="lookup" />
             <n-button size="large" type="primary" :disabled="!canLookup" :loading="loading" @click="lookup">Buscar</n-button>
           </div>
-          <small class="hint">Escanea el QR o escribe el código. Diseñado para uso continuo.</small>
-          <div class="shortcuts" aria-hidden="true">
-            <span><kbd>Enter</kbd> buscar</span>
-            <span><kbd>P</kbd> pagar</span>
-            <span><kbd>Esc</kbd> limpiar</span>
-          </div>
+          <small class="hint">Escanea el QR o escribe el código.</small>
         </div>
         <div class="scan-right">
           <div class="video-wrap">
@@ -197,33 +192,13 @@ onMounted(() => {
   canLookup.value = true;
   // Auto-start scanner for faster workflow
   if (barcodeSupported) startScan();
-  // Hotkeys for operation mode
-  window.addEventListener('keydown', onKey);
 });
 
 onBeforeUnmount(() => {
   stopScan();
-  window.removeEventListener('keydown', onKey);
 });
 
-function onKey(e: KeyboardEvent) {
-  // Avoid when typing inside input unless Enter
-  const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
-  const inInput = tag === 'input' || tag === 'textarea';
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    lookup();
-    return;
-  }
-  if (inInput) return;
-  if (e.key.toLowerCase() === 'p') {
-    if (order.value && order.value.status === 'pending_payment') markPaid();
-  } else if (e.key === 'Escape') {
-    manualCode.value = '';
-    clearOrder();
-    if (!scanning.value && barcodeSupported) startScan();
-  }
-}
+// Hotkeys removidos: se eliminan atajos de teclado globales para simplificar la UI
 
 function resetForNext(restartScan = false) {
   // Clear UI shortly after success to continue with next order
@@ -270,8 +245,6 @@ const statusLabel = computed(() => {
 .field-row.big :deep(.n-input__input-el) { height: 56px; }
 .field-row.big :deep(.n-button) { height: 56px; font-size: 18px; padding: 0 22px; }
 .hint { color: #666; }
-.shortcuts { display:flex; gap:12px; margin-top:6px; color:#888; font-size:12px; }
-.shortcuts kbd { background:#f0f0f0; border-radius:4px; padding:1px 6px; font-family: ui-monospace, monospace; }
 .video-wrap { position: relative; width: 100%; aspect-ratio: 1/1; background: #000; border-radius: 8px; overflow: hidden; }
 .video-wrap video { width: 100%; height: 100%; object-fit: cover; }
 .overlay { position:absolute; inset:auto 0 0 0; color:#fff; text-align:center; background: linear-gradient(transparent, rgba(0,0,0,0.6)); padding: 10px 12px; font-size: 14px; letter-spacing: .2px; }
