@@ -14,18 +14,19 @@
         <div><strong>Total:</strong> {{ currency(order.total) }}</div>
         <div><strong>Estado:</strong> {{ order.status }}</div>
       </div>
-      <RouterLink to="/">Volver al menú</RouterLink>
+      <a href="/" @click.prevent="onBackClick">Volver al menú</a>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import type { CustomerOrder } from '../types';
 import { customerApi } from '../lib/api';
 
 const route = useRoute();
+const router = useRouter();
 const loading = ref(true);
 const order = ref<CustomerOrder | null>(null);
 const qrSrc = ref('');
@@ -49,6 +50,20 @@ onMounted(async () => {
     loading.value = false;
   }
 });
+
+function onBackClick() {
+  // Warn the customer that returning to the menu will drop the cart/order
+  // This avoids losing a potentially paid order without explicit consent.
+  const status = order.value?.status || '';
+  const msg =
+    '¿Seguro que querés volver al menú?\n' +
+    'Se perderá el carrito y el pedido actual' +
+    (status ? ` (estado: ${status})` : '') +
+    '.\nSi ya realizaste el pago, el pedido también se perderá.';
+  if (window.confirm(msg)) {
+    router.push('/');
+  }
+}
 </script>
 
 <style scoped>
