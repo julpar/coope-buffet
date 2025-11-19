@@ -19,6 +19,8 @@ export interface Order {
   channel: 'pickup' | 'delivery' | 'in-store';
   status: OrderState;
   fulfillment?: FulfillmentStatus; // for staff board granularity while status === 'paid'
+  // Short, non-guessable code for cashier/fulfillment scanning (e.g., 6 chars)
+  shortCode: string;
   items: OrderItem[];
   subtotal: number; // cents
   total: number; // cents (taxes/fees not modeled yet)
@@ -30,6 +32,7 @@ export interface Order {
 export class OrdersService {
   private readonly logger = new Logger('OrdersService');
   private readonly ORDER_KEY_PREFIX = 'order#';
+  private readonly ORDER_CODE_PREFIX = 'ordercode#';
   private readonly LIST_PENDING = 'orders:pending_payment';
   private readonly LIST_PAID = 'orders:paid';
   private readonly LIST_FULFILLED = 'orders:fulfilled';
@@ -43,6 +46,32 @@ export class OrdersService {
     const subtotal = items.reduce((acc, it) => acc + it.unitPrice * it.qty, 0);
     // No extra fees yet
     return { subtotal, total: subtotal };
+  }
+
+  private async generateUniqueShortCode(): Promise<string> {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no O, I, 0, 1
+    function gen(len = 6) {
+      let s = '';
+      for (let i = 0; i < len; i++) s += alphabet[Math.floor(Math.random() * alphabet.length)];
+      return s;
+    }
+    for (let attempts = 0; attempts < 1000; attempts++) {
+      const code = gen(6);
+      const exists = await this.redis.redis.get(this.ORDER_CODE_PREFIX + code);
+      if (!exists) return code;
+    }
+    // Fallback to timestamp-based
+    return ('X' + Math.random().toString(36).slice(2, 8)).toUpperCase();
+  }
+
+  private async bindCode(code: string, orderId: string): Promise<void> {
+    await this.redis.redis.set(this.ORDER_CODE_PREFIX + code, orderId);
+  }
+
+  async getByCode(code: string): Promise<Order | null> {
+    const id = await this.redis.redis.get(this.ORDER_CODE_PREFIX + (code || '').toUpperCase());
+    if (!id) return null;
+    return this.get(id);
   }
 
   async get(id: string): Promise<Order | null> {
@@ -68,6 +97,7 @@ export class OrdersService {
     });
     const { subtotal, total } = this.computeTotals(norm);
     const now = new Date().toISOString();
+    const shortCode = await this.generateUniqueShortCode();
     const order: Order = {
       id: input.id,
       createdAt: now,
@@ -75,6 +105,7 @@ export class OrdersService {
       channel: input.channel,
       status: 'pending_payment',
       fulfillment: undefined,
+      shortCode,
       items: norm,
       subtotal,
       total,
@@ -82,6 +113,7 @@ export class OrdersService {
       payment: { method: input.paymentMethod ?? 'cash', externalId: null, paidAt: null },
     };
     await this.redis.redis.set(this.orderKey(order.id), JSON.stringify(order));
+    await this.bindCode(shortCode, order.id);
     await this.redis.redis.lpush(this.LIST_PENDING, order.id);
     this.logger.log(`create order id=${order.id} total=${order.total} state=pending_payment`);
     return order;
