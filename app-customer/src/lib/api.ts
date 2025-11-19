@@ -23,6 +23,16 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
   }
   if (!res.ok) {
     apiOnline.value = false;
+    // If the backend is in hard-offline, middleware returns 503 with an HTML page.
+    // In that case, proactively refresh the public platform status so the UI can
+    // switch to the full-screen offline overlay instead of showing raw HTML.
+    if (res.status === 503) {
+      try { await platform.fetch(); } catch {}
+      const err: any = new Error('Servicio no disponible');
+      err.status = 503;
+      err.code = 'HARD_OFFLINE';
+      throw err;
+    }
     // Try to parse a structured API error first
     let bodyText = '';
     try { bodyText = await res.text(); } catch { bodyText = ''; }

@@ -28,12 +28,26 @@
           </div>
         </n-layout-header>
 
-        <!-- Soft-offline banner overlay -->
-        <div v-if="platform.status === 'soft-offline'" class="soft-overlay" role="dialog" aria-modal="true">
+        <!-- Soft-offline banner overlay (suppressed on Success page so users can view their completed order) -->
+        <div v-if="showSoftOverlay" class="soft-overlay" role="dialog" aria-modal="true">
           <div class="soft-card">
             <h3>Estamos en pausa momentánea</h3>
-            <p>{{ platform.message || 'Volvemos en unos minutos.' }}</p>
-            <small v-if="platform.offlineUntil" class="muted">Hasta: {{ new Date(platform.offlineUntil).toLocaleString() }}</small>
+            <p>{{ platform.message.value || 'Volvemos en unos minutos.' }}</p>
+            <small v-if="platform.offlineUntil.value" class="muted">Hasta: {{ new Date(platform.offlineUntil.value).toLocaleString() }}</small>
+          </div>
+        </div>
+
+        <!-- Hard-offline FULL SCREEN component -->
+        <div v-if="platform.status.value === 'hard-offline'" class="hard-offline" role="dialog" aria-modal="true" aria-label="Servicio no disponible">
+          <div class="hard-card">
+            <h1>Servicio no disponible</h1>
+            <p class="desc">
+              {{ platform.message.value || 'El buffet está temporalmente fuera de servicio. Intenta nuevamente más tarde.' }}
+            </p>
+            <small v-if="platform.offlineUntil.value" class="muted">Hasta: {{ new Date(platform.offlineUntil.value).toLocaleString() }}</small>
+            <div class="actions">
+              <n-button type="primary" @click="retryNow">Reintentar ahora</n-button>
+            </div>
           </div>
         </div>
 
@@ -82,7 +96,7 @@
                 <div>Subtotal</div>
                 <div>{{ currency(subtotal) }}</div>
               </div>
-              <n-button type="primary" :disabled="items.length===0 || platform.status==='soft-offline' || activeShortageIds.size>0" @click="goCheckout" :title="activeShortageIds.size>0 ? 'Corregí las cantidades antes de continuar' : ''">
+              <n-button type="primary" :disabled="items.length===0 || platform.status.value==='soft-offline' || activeShortageIds.size>0" @click="goCheckout" :title="activeShortageIds.size>0 ? 'Corregí las cantidades antes de continuar' : ''">
                 Continuar al pago
               </n-button>
             </div>
@@ -109,6 +123,14 @@ const { message } = createDiscreteApi(['message']);
 const items = computed(() => cart.items.value);
 const subtotal = computed(() => cart.subtotal.value);
 const cartQty = computed(() => cart.totalQty.value);
+
+// Soft-offline should NOT block the Success page (order already created)
+const isSuccessRoute = computed(() => {
+  const path = router.currentRoute.value.path || '';
+  // Match /success and /success/:id
+  return path === '/success' || path.startsWith('/success/');
+});
+const showSoftOverlay = computed(() => platform.status.value === 'soft-offline' && !isSuccessRoute.value);
 
 // Shortages state provided by Checkout on error; we keep available amounts here
 type ShortageInfo = { id: string; name?: string; available: number };
@@ -241,6 +263,10 @@ watch(activeShortageIds, (set) => {
   }
 });
 
+function retryNow() {
+  platform.fetch();
+}
+
 // If the cart becomes empty while the drawer is open, close it to avoid blocking the UI
 watch(
   () => items.value.length,
@@ -310,4 +336,11 @@ watch(
 
 .soft-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 20; }
 .soft-card { background: #111; color: #fff; padding: 16px; border-radius: 10px; text-align: center; max-width: 480px; margin: 0 12px; }
+
+/* Hard-offline full-screen */
+.hard-offline { position: fixed; inset: 0; background: #111; color: #fff; z-index: 30; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.hard-card { max-width: 640px; text-align: center; }
+.hard-card h1 { font-size: 28px; margin: 0 0 12px; }
+.hard-card .desc { opacity: .92; line-height: 1.4; }
+.hard-card .actions { margin-top: 16px; }
 </style>
