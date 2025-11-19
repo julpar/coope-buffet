@@ -206,6 +206,26 @@ export class OrdersService {
     return out;
   }
 
+  // List all active orders across states (pending_payment, paid, fulfilled)
+  async listAll(): Promise<Order[]> {
+    const lists = [this.LIST_PENDING, this.LIST_PAID, this.LIST_FULFILLED];
+    const multiIds = this.redis.redis.multi();
+    for (const key of lists) multiIds.lrange(key, 0, -1);
+    const listIds = (await multiIds.exec()) as string[][];
+    const ids = Array.from(new Set(listIds.flat()));
+    if (ids.length === 0) return [];
+    const multi = this.redis.redis.multi();
+    for (const id of ids) multi.get(this.orderKey(id));
+    const raws = (await multi.exec()) as string[];
+    const out: Order[] = [];
+    for (const raw of raws) {
+      try { if (raw) out.push(JSON.parse(raw)); } catch {}
+    }
+    // Sort by createdAt ascending
+    out.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    return out;
+  }
+
   async setFulfillment(id: string, next: FulfillmentStatus): Promise<Order | null> {
     const o = await this.get(id);
     if (!o) return null;

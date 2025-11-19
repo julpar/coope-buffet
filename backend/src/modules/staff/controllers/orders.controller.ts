@@ -9,9 +9,9 @@ export class StaffOrdersController {
   constructor(private readonly orders: OrdersService) {}
 
   @Get()
-  async list(@Query('state') state: OrderState = 'paid') {
-    const s = state || 'paid';
-    const list = await this.orders.listByState(s);
+  async list(@Query('state') state?: string) {
+    const s = (state as any) || 'paid';
+    const list = s === 'all' ? await this.orders.listAll() : await this.orders.listByState(s as OrderState);
     this.logger.debug(`list orders state=${s} count=${list.length}`);
     return list;
   }
