@@ -28,9 +28,16 @@ export class StaffOrdersController {
   // Cashier/MP webhook would call this; for now exposed for staff
   @Post(':id/paid')
   async markPaid(@Param('id') id: string, @Body() body: { externalId?: string | null }) {
-    const o = await this.orders.markPaid(id, { externalId: body?.externalId ?? null });
-    if (!o) throw new NotFoundException('order not found');
-    return o;
+    try {
+      const o = await this.orders.markPaid(id, { externalId: body?.externalId ?? null });
+      if (!o) throw new NotFoundException('order not found');
+      return o;
+    } catch (e: any) {
+      if (e?.name === 'InsufficientStockError' && e?.shortages) {
+        throw new BadRequestException({ code: 'INSUFFICIENT_STOCK', message: 'Not enough stock for some items', shortages: e.shortages });
+      }
+      throw e;
+    }
   }
 
   // Convenience: mark paid by short code
@@ -40,9 +47,16 @@ export class StaffOrdersController {
     if (!code) throw new BadRequestException('code required');
     const o0 = await this.orders.getByCode(code);
     if (!o0) throw new NotFoundException('order not found');
-    const o = await this.orders.markPaid(o0.id, { externalId: body?.externalId ?? null });
-    if (!o) throw new NotFoundException('order not found');
-    return o;
+    try {
+      const o = await this.orders.markPaid(o0.id, { externalId: body?.externalId ?? null });
+      if (!o) throw new NotFoundException('order not found');
+      return o;
+    } catch (e: any) {
+      if (e?.name === 'InsufficientStockError' && e?.shortages) {
+        throw new BadRequestException({ code: 'INSUFFICIENT_STOCK', message: 'Not enough stock for some items', shortages: e.shortages });
+      }
+      throw e;
+    }
   }
 
   // Fulfillment: simplified — only allow marking as fulfilled (true) while in paid state
