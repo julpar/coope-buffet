@@ -234,13 +234,15 @@ const savingAdmin = ref(false);
 const canCreateAdmin = computed(() => !!adminNickname.value && (adminPassword.value?.length || 0) >= 6);
 const loggingOut = ref(false);
 
-// Platform status (for showing banner to non-admin roles)
+// Platform status banner (visible to every logged-in user on soft/hard offline)
 const platformStatus = ref<PlatformStatusResponse | null>(null);
 const platformTimer = ref<number | null>(null);
 const isAdminUser = computed(() => (currentUser.value?.roles || []).includes('ADMIN'));
 const showPlatformBanner = computed(() => {
+  // Only show once the app knows there's a logged-in user
+  if (!currentUser.value) return false;
   if (!platformStatus.value) return false;
-  if (isAdminUser.value) return false; // Only non-admin roles need the banner
+  // Show for both soft and hard offline
   return platformStatus.value.status === 'soft-offline' || platformStatus.value.status === 'hard-offline';
 });
 const platformBannerClass = computed(() => {

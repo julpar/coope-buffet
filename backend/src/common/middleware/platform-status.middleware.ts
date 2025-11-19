@@ -25,7 +25,15 @@ export function platformStatusMiddleware() {
     // Only enforce for customer-facing routes; allow staff and auth always
     const path = req.path;
     // Bypass for staff/admin tools (versioned) and auth endpoints (non-versioned)
-    if (path.startsWith(`${API_PREFIX}/staff`) || path.startsWith('/auth')) {
+    if (
+      path.startsWith(`${API_PREFIX}/staff`) ||
+      // Auth endpoints: allow both versioned and non-versioned paths just in case
+      path.startsWith(`${API_PREFIX}/auth`) ||
+      path.startsWith('/auth') ||
+      // Always allow public status and health probes even when offline
+      path.startsWith(`${API_PREFIX}/platform/status`) ||
+      path.startsWith(`${API_PREFIX}/health`)
+    ) {
       return next();
     }
 
