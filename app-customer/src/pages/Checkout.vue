@@ -6,35 +6,55 @@
       <n-button size="small" type="tertiary" @click="goHome">Volver al menú</n-button>
     </div>
     <div v-else class="content">
-      <section class="review">
-        <h3>Resumen</h3>
-        <div class="list">
-          <div v-for="it in items" :key="it.id" class="row">
-            <div class="name">{{ it.name }} <small class="muted">x{{ it.qty }}</small></div>
-            <div class="price">{{ currency(it.unitPrice * it.qty) }}</div>
+      <!-- Steps header -->
+      <div class="steps">
+        <div class="step" :class="{ active: step===1 }">1. Datos</div>
+        <div class="sep"></div>
+        <div class="step" :class="{ active: step===2 }">2. Confirmación</div>
+      </div>
+
+      <!-- Step 1: ask name -->
+      <template v-if="step === 1">
+        <section class="details">
+          <h3>Tu nombre</h3>
+          <n-form label-placement="top">
+            <n-form-item label="Tu nombre (opcional)">
+              <n-input v-model:value="customerName" placeholder="Ej: Juan" @keyup.enter="goNext" />
+            </n-form-item>
+          </n-form>
+          <div class="actions">
+            <n-button tertiary @click="goHome">Volver</n-button>
+            <n-button type="primary" @click="goNext">Siguiente</n-button>
           </div>
-        </div>
-        <div class="total">
-          <div>Total</div>
-          <div class="price">{{ currency(subtotal) }}</div>
-        </div>
-      </section>
+        </section>
+      </template>
 
-      <section class="details">
-        <h3>Detalles</h3>
-        <n-form label-placement="top">
-          <n-form-item label="Tu nombre (opcional)">
-            <n-input v-model:value="customerName" placeholder="Ej: Juan" />
-          </n-form-item>
-        </n-form>
-      </section>
+      <!-- Step 2: review + confirm -->
+      <template v-else>
+        <section class="review">
+          <h3>Resumen</h3>
+          <div class="list">
+            <div v-for="it in items" :key="it.id" class="row">
+              <div class="name">{{ it.name }} <small class="muted">x{{ it.qty }}</small></div>
+              <div class="price">{{ currency(it.unitPrice * it.qty) }}</div>
+            </div>
+          </div>
+          <div class="total">
+            <div>Total</div>
+            <div class="price">{{ currency(subtotal) }}</div>
+          </div>
+        </section>
 
-      <section class="pay">
-        <h3>Pago</h3>
-        <p class="muted">Por ahora solo en efectivo. El pedido quedará pendiente de validar manualmente por el personal.</p>
-        <n-button type="primary" :loading="loading" :disabled="items.length===0" @click="placeOrder">Confirmar pedido y generar QR</n-button>
-        <div v-if="error" class="error">{{ error }}</div>
-      </section>
+        <section class="pay">
+          <h3>Pago</h3>
+          <p class="muted">Por ahora solo en efectivo. El pedido quedará pendiente de validar manualmente por el personal.</p>
+          <div class="actions">
+            <n-button tertiary @click="step=1">Atrás</n-button>
+            <n-button type="primary" :loading="loading" :disabled="items.length===0" @click="placeOrder">Confirmar pedido y generar QR</n-button>
+          </div>
+          <div v-if="error" class="error">{{ error }}</div>
+        </section>
+      </template>
     </div>
   </div>
 </template>
@@ -51,6 +71,8 @@ const subtotal = computed(() => cart.subtotal.value);
 const customerName = ref('');
 const loading = ref(false);
 const error = ref('');
+// Two-step flow: 1) ask name, 2) review and confirm
+const step = ref<1|2>(1);
 // prevent auto-redirect during active submission flow
 const suppressEmptyRedirect = ref(false);
 
@@ -61,6 +83,11 @@ function currency(amount: number): string {
 
 function goHome() {
   router.replace('/');
+}
+
+function goNext() {
+  // Name is optional, so we can continue directly
+  step.value = 2;
 }
 
 // If cart is empty on entering checkout, gently send the user back to the menu
@@ -91,8 +118,11 @@ async function placeOrder() {
       customerName: customerName.value || undefined,
       paymentMethod: 'cash'
     });
+    // Navigate to success FIRST to avoid the checkout empty-cart watcher
+    // interfering when we clear the cart. Once we're on success, it's safe to clear.
+    const id = res.id;
+    await router.replace(`/success/${id}`);
     cart.clear();
-    router.replace(`/success/${res.id}`);
   } catch (e: any) {
     // Gracefully handle stock shortages so the customer can fix the cart manually (do NOT auto-adjust)
     if (e && e.code === 'INSUFFICIENT_STOCK' && Array.isArray(e.shortages)) {
@@ -163,10 +193,15 @@ async function placeOrder() {
 .muted { color: #666; }
 .empty { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
 .content { display: flex; flex-direction: column; gap: 16px; }
+.steps { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.step { padding: 6px 10px; border-radius: 14px; background: #f1f2f5; color: #666; font-weight: 600; font-size: 12px; }
+.step.active { background: #e3f2ff; color: #1976d2; }
+.steps .sep { flex: 1; height: 1px; background: #eee; }
 .review .list { display: flex; flex-direction: column; gap: 6px; }
 .row { display: flex; justify-content: space-between; }
 .name { font-weight: 500; }
 .price { font-weight: 600; }
 .total { display: flex; justify-content: space-between; border-top: 1px dashed #ddd; padding-top: 8px; margin-top: 8px; }
+.actions { display: flex; gap: 8px; margin-top: 8px; }
 .error { margin-top: 8px; color: #b71c1c; }
 </style>
