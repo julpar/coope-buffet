@@ -27,13 +27,18 @@
       </div>
     </template>
     <template v-if="selected">
-      <div style="display:flex; gap: 8px; align-items:center; margin-bottom: 8px;">
-        <span>Creada: <strong>{{ fmtDateTime(selected.raw?.createdAt) }}</strong></span>
+      <div class="meta-row">
+        <!-- Cliente primero: como texto pero resaltado -->
+        <span v-if="selected.raw?.customerName" class="customer-highlight">
+          <span class="label">Cliente:</span>
+          <span class="name">{{ selected.raw.customerName }}</span>
+        </span>
         <span v-if="selected.raw?.customerName" style="color:#666">•</span>
-        <span v-if="selected.raw?.customerName">Cliente: <strong>{{ selected.raw.customerName }}</strong></span>
+
+        <span>Creada: <strong>{{ fmtDateTime(selected.raw?.createdAt) }}</strong></span>
         <span style="color:#666">•</span>
         <span>ID: <strong>{{ selected.raw?.id }}</strong></span>
-        <span style="flex:1"></span>
+        <span class="flex-spacer"></span>
         <span>Total: <strong>{{ selected.total }}</strong></span>
       </div>
 
@@ -255,4 +260,12 @@ onMounted(() => { loadItemsLookup(); });
 /* Card header with status at the top next to title */
 .card-header-line { display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .card-title { font-weight: 700; font-size: 18px; letter-spacing: .2px; }
+/* Details metadata row: allow wrapping so long names don't break layout */
+.meta-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+.meta-row > * { min-width: 0; }
+.flex-spacer { flex: 1 1 auto; min-width: 0; }
+/* Customer highlight: looks like text, subtly emphasized (not like a label/tag) */
+.customer-highlight { display:inline; padding:2px 6px; border-radius:6px; background: rgba(32,128,240,.08); color:#1f2d3d; line-height: 1.4; }
+.customer-highlight .label { color:#1a59b7; font-weight: 700; }
+.customer-highlight .name { font-weight: 700; word-break: break-word; }
 </style>

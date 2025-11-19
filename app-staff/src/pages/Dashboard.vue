@@ -32,16 +32,25 @@
           <strong>Agotados</strong>
           <n-tag type="error" size="small">{{ outOfStock.length }}</n-tag>
         </div>
-        <n-data-table
-          :columns="outCols"
-          :data="outOfStock"
-          :loading="loadingStock"
-          :bordered="true"
-          size="small"
-          :scroll-x="680"
-          :pagination="{ pageSize: 5 }"
-          v-if="outOfStock.length"
-        />
+        <template v-if="outOfStock.length">
+          <n-collapse v-model:expanded-names="outExpanded" :accordion="false">
+            <n-collapse-item
+              v-for="grp in outByCategory"
+              :key="grp.categoryId"
+              :name="grp.categoryId"
+              :title="`${grp.categoryName} (${grp.items.length})`"
+            >
+              <n-data-table
+                :columns="outColsGrouped"
+                :data="grp.items"
+                :loading="loadingStock"
+                :bordered="true"
+                size="small"
+                :pagination="{ pageSize: 5 }"
+              />
+            </n-collapse-item>
+          </n-collapse>
+        </template>
         <div v-else class="empty">Sin items agotados.</div>
       </div>
       <div class="stock-panel">
@@ -49,16 +58,25 @@
           <strong>Bajo stock</strong>
           <n-tag type="warning" size="small">{{ lowStock.length }}</n-tag>
         </div>
-        <n-data-table
-          :columns="lowCols"
-          :data="lowStock"
-          :loading="loadingStock"
-          :bordered="true"
-          size="small"
-          :scroll-x="680"
-          :pagination="{ pageSize: 5 }"
-          v-if="lowStock.length"
-        />
+        <template v-if="lowStock.length">
+          <n-collapse v-model:expanded-names="lowExpanded" :accordion="false">
+            <n-collapse-item
+              v-for="grp in lowByCategory"
+              :key="grp.categoryId"
+              :name="grp.categoryId"
+              :title="`${grp.categoryName} (${grp.items.length})`"
+            >
+              <n-data-table
+                :columns="lowColsGrouped"
+                :data="grp.items"
+                :loading="loadingStock"
+                :bordered="true"
+                size="small"
+                :pagination="{ pageSize: 5 }"
+              />
+            </n-collapse-item>
+          </n-collapse>
+        </template>
         <div v-else class="empty">Sin items con bajo stock.</div>
       </div>
     </div>
@@ -77,7 +95,6 @@
       <div class="orders-panel" v-if="canSeeCashier">
         <div class="panel-header">
           <strong>Esperando pago</strong>
-          <n-tag type="warning" size="small">{{ pendingPaymentCount }}</n-tag>
           <span class="spacer"></span>
           <n-tooltip trigger="hover">
             <template #trigger>
@@ -99,7 +116,6 @@
       <div class="orders-panel" v-if="canSeeFulfillment">
         <div class="panel-header">
           <strong>En preparación/entrega</strong>
-          <n-tag type="info" size="small">{{ awaitingFulfillmentCount }}</n-tag>
           <span class="spacer"></span>
           <n-tooltip trigger="hover">
             <template #trigger>
@@ -123,9 +139,9 @@
 
 <script setup lang="ts">
 import { h, ref, computed, onMounted } from 'vue';
-import { NIcon, NTag, NButton, NTooltip, type DataTableColumns } from 'naive-ui';
+import { NIcon, NTag, NButton, NTooltip, NCollapse, NCollapseItem, type DataTableColumns } from 'naive-ui';
 import { ListOutline, RefreshOutline } from '@vicons/ionicons5';
-import type { Item } from '../types';
+import type { Item, Category } from '../types';
 import { staffApi, authApi, type StaffUser } from '../lib/api';
 import { useRouter } from 'vue-router';
 
@@ -133,6 +149,8 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 const loadingStock = ref(false);
 const items = ref<Item[]>([]);
+const categories = ref<Category[]>([]);
+const categoryMap = computed<Record<string, Category>>(() => Object.fromEntries(categories.value.map(c => [c.id, c])));
 const currentUser = ref<StaffUser | null>(null);
 const roles = computed(() => currentUser.value?.roles || []);
 const canSeeStockAlerts = computed(() => roles.value.includes('ADMIN') || roles.value.includes('STOCK'));
@@ -140,15 +158,19 @@ const canSeeCashier = computed(() => roles.value.includes('ADMIN') || roles.valu
 // Align with App.vue which uses role key 'ORDER_FULFILLER'
 const canSeeFulfillment = computed(() => roles.value.includes('ADMIN') || roles.value.includes('ORDER_FULFILLER'));
 
+// Hide disabled items from stock alerts, regardless of their current stock
 const outOfStock = computed(() =>
-  items.value.filter(it => (it.stock ?? 0) <= 0).sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+  items.value
+    .filter(it => (it.active ?? true) && (it.stock ?? 0) <= 0)
+    .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
 );
 const lowStock = computed(() =>
   items.value
     .filter(it => {
+      const isActive = it.active ?? true;
       const s = it.stock ?? 0;
       const t = it.lowStockThreshold ?? 0;
-      return s > 0 && t > 0 && s <= t;
+      return isActive && s > 0 && t > 0 && s <= t;
     })
     .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
 );
@@ -169,6 +191,66 @@ function refreshStock() { return loadStock(); }
 function goToMenu() { router.push('/menu'); }
 function goToCashier() { router.push('/cashier'); }
 function goToFulfillment() { router.push('/fulfillment'); }
+
+// Categories loading
+async function loadCategories() {
+  try {
+    categories.value = await staffApi.getCategories();
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn('Error loading categories', e);
+    categories.value = [];
+  }
+}
+
+// Grouping helpers
+type Group = { categoryId: string; categoryName: string; items: Item[] };
+const categoryOrder = computed<string[]>(() =>
+  [...categories.value]
+    .sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999) || a.name.localeCompare(b.name))
+    .map(c => c.id)
+);
+
+function groupByCategory(list: Item[]): Group[] {
+  const groups: Record<string, Item[]> = {};
+  for (const it of list) {
+    const cid = it.categoryId || 'otros';
+    (groups[cid] ||= []).push(it);
+  }
+  const ids = Object.keys(groups);
+  const sortedIds = ids.sort((a, b) => {
+    const ia = categoryOrder.value.indexOf(a);
+    const ib = categoryOrder.value.indexOf(b);
+    if (ia === -1 && ib === -1) return a.localeCompare(b);
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
+  return sortedIds.map(id => {
+    const cat = categoryMap.value[id];
+    const name = cat?.name || id;
+    const itemsSorted = groups[id].slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    return { categoryId: id, categoryName: name, items: itemsSorted };
+  });
+}
+
+// Required: collapse specific category by default
+const COLLAPSED_CATEGORY_IDS = new Set<string>(['feria-del-plat']);
+
+const outByCategory = computed<Group[]>(() => groupByCategory(outOfStock.value));
+const lowByCategory = computed<Group[]>(() => groupByCategory(lowStock.value));
+
+const outExpanded = ref<string[]>([]);
+const lowExpanded = ref<string[]>([]);
+
+function setDefaultExpanded() {
+  outExpanded.value = outByCategory.value
+    .filter(g => !COLLAPSED_CATEGORY_IDS.has(g.categoryId))
+    .map(g => g.categoryId);
+  lowExpanded.value = lowByCategory.value
+    .filter(g => !COLLAPSED_CATEGORY_IDS.has(g.categoryId))
+    .map(g => g.categoryId);
+}
 
 // Orders overview logic
 const loadingOrders = ref(false);
@@ -204,7 +286,8 @@ onMounted(async () => {
   }
   // Only load stock data when the user is allowed to see this section
   if (canSeeStockAlerts.value) {
-    await loadStock();
+    await Promise.all([loadCategories(), loadStock()]);
+    setDefaultExpanded();
   }
   // Load orders counts for visible sections
   if (canSeeCashier.value || canSeeFulfillment.value) {
@@ -224,6 +307,19 @@ const outCols: DataTableColumns<Row> = [
 const lowCols: DataTableColumns<Row> = [
   { title: 'Plato', key: 'name' },
   { title: 'Categoría', key: 'categoryId', width: 140 },
+  { title: 'Stock', key: 'stock', width: 100, align: 'right', render: (row) => h(NTag, { type: 'warning', size: 'small' }, { default: () => String(row.stock ?? 0) }) },
+  { title: 'Umbral', key: 'lowStockThreshold', width: 110, align: 'right' },
+];
+
+// Grouped columns (category column removed, since grouping shows it in header)
+const outColsGrouped: DataTableColumns<Row> = [
+  { title: 'Plato', key: 'name' },
+  { title: 'Stock', key: 'stock', width: 100, align: 'right', render: () => h(NTag, { type: 'error', size: 'small' }, { default: () => '0' }) },
+  { title: 'Umbral', key: 'lowStockThreshold', width: 110, align: 'right' },
+];
+
+const lowColsGrouped: DataTableColumns<Row> = [
+  { title: 'Plato', key: 'name' },
   { title: 'Stock', key: 'stock', width: 100, align: 'right', render: (row) => h(NTag, { type: 'warning', size: 'small' }, { default: () => String(row.stock ?? 0) }) },
   { title: 'Umbral', key: 'lowStockThreshold', width: 110, align: 'right' },
 ];

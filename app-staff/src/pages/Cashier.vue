@@ -236,7 +236,7 @@ const statusLabel = computed(() => {
 .cashier { display: flex; flex-direction: column; gap: 16px; }
 .cashier.focus .scanner-card { display: none; }
 .scanner-card.minimal :deep(.n-card__content) { padding-top: 12px; }
-.scan-row { display: grid; grid-template-columns: 1fr 420px; gap: 16px; align-items: start; }
+.scan-row { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; }
 /* Stack input above camera on medium screens too (same as narrow displays) */
 @media (max-width: 1280px) {
   .scan-row { grid-template-columns: 1fr; }

@@ -150,7 +150,7 @@ const menuOptions = computed(() => {
     // Admin sees everything by default
     opts.push({ label: 'Órdenes', key: '/orders', icon: renderIcon(ListOutline) });
     opts.push({ label: 'Cajero', key: '/cashier', icon: renderIcon(CashOutline) });
-    opts.push({ label: 'Fulfillment', key: '/fulfillment', icon: renderIcon(CheckmarkDoneOutline) });
+    opts.push({ label: 'Entrega', key: '/fulfillment', icon: renderIcon(CheckmarkDoneOutline) });
     opts.push({ label: 'Menú', key: '/menu', icon: renderIcon(RestaurantOutline) });
     opts.push({ label: 'Usuarios', key: '/users', icon: renderIcon(PersonOutline) });
     opts.push({ label: 'Estado plataforma', key: '/platform', icon: renderIcon(PowerOutline) });

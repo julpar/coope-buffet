@@ -1,6 +1,6 @@
 <template>
   <div class="fulfillment" :class="{ focus: !!order }">
-    <h2>Entrega / Fulfillment</h2>
+    <h2>Entrega</h2>
 
     <!-- Scanner / code entry when no order loaded -->
     <n-card v-if="!order" size="small" class="scanner-card minimal">
@@ -434,13 +434,13 @@ function rowStyle(id: string | number) {
 .scanner-card.minimal { background: #fff; }
 /* Match Cashier layout and sizing for scanner section */
 .scanner-card.minimal :deep(.n-card__content) { padding-top: 12px; }
-.scan-row { display: grid; grid-template-columns: 1fr 420px; gap: 16px; align-items: start; }
+.scan-row { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; }
 .scan-left { flex: 1; display:flex; flex-direction:column; gap: 6px; }
 .field-row.big { display:flex; gap:8px; align-items:center; }
 .field-row.big :deep(.n-input) { font-size: 20px; }
 .field-row.big :deep(.n-input__input-el) { height: 56px; }
 .field-row.big :deep(.n-button) { height: 56px; font-size: 18px; padding: 0 22px; }
-.scan-right { width: 420px; display:flex; flex-direction:column; gap:8px; }
+.scan-right { width: auto; display:flex; flex-direction:column; gap:8px; }
 .video-wrap { position: relative; width: 100%; aspect-ratio: 1/1; background: #000; border-radius: 8px; overflow: hidden; }
 .video-wrap video { width: 100%; height: 100%; object-fit: cover; }
 .overlay { position:absolute; inset:auto 0 0 0; color:#fff; text-align:center; background: linear-gradient(transparent, rgba(0,0,0,0.6)); padding: 10px 12px; font-size: 14px; letter-spacing: .2px; }
