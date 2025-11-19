@@ -16,6 +16,15 @@
         <div class="status-desc">{{ statusDescription(order.status) }}</div>
       </div>
 
+      <!-- Código manual destacado (alternativa al QR) -->
+      <div class="manual-code" v-if="order.shortCode">
+        <div class="code-label">Código</div>
+        <div class="code-value" :aria-label="`Código ${order.shortCode}`">{{ order.shortCode }}</div>
+        <n-button size="small" tertiary class="copy-btn" @click="copyCode">
+          Copiar
+        </n-button>
+      </div>
+
       <!-- Resto de la descripción/detalles debajo del QR -->
       <p>Guardá tu código de pedido. Mostralo al personal para continuar.</p>
       <div class="sum">
@@ -63,6 +72,8 @@ let pollTimer: number | null = null;
 let pollDeadline = 0; // epoch ms when we should stop polling
 // Local flag to allow programmatic navigation without showing the paid warning twice
 const allowLeave = ref(false);
+// Feedback when copying the manual code
+const { message } = createDiscreteApi(['message']);
 
 // Discrete dialog for nicer confirmations (no provider required here)
 const { dialog } = createDiscreteApi(['dialog']);
@@ -115,6 +126,19 @@ function cancelOrderContent() {
 // Show the number as-is without dividing by 100.
 function currency(amount: number): string {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(amount);
+}
+
+async function copyCode() {
+  const code = order.value?.shortCode || '';
+  if (!code) return;
+  try {
+    await navigator.clipboard.writeText(code);
+    message.success('Código copiado');
+  } catch {
+    // Fallback para navegadores sin permiso/soporte
+    const ok = window.prompt('Copiá el código manualmente:', code);
+    void ok;
+  }
 }
 
 onMounted(async () => {
@@ -273,6 +297,21 @@ function statusClass(status?: CustomerOrder['status'] | string | null): string {
 .is-fulfilled { background: #e8f5e9; border-color: #a5d6a7; color: #1b5e20; }
 .is-cancelled { background: #ffebee; border-color: #ef9a9a; color: #b71c1c; }
 .is-default { background: #f5f5f5; border-color: #e0e0e0; color: #333; }
+/* Manual code — big and highly visible */
+.manual-code { position: relative; display: flex; align-items: center; gap: 10px; background: #111; color: #fff; padding: 10px 12px; border-radius: 12px; border: 2px solid #000; box-shadow: 0 2px 10px rgba(0,0,0,.15); }
+.manual-code .code-label { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; opacity: .8; }
+.manual-code .code-value { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-weight: 800; font-size: 40px; line-height: 1; letter-spacing: .06em; padding: 6px 10px; background: #fff; color: #111; border-radius: 8px; border: 2px solid #000; min-width: 6ch; text-align: center; }
+.manual-code .copy-btn { position: relative; }
+@media (max-width: 480px) {
+  .manual-code { padding: 8px 10px; gap: 8px; }
+  .manual-code .code-value { font-size: 32px; padding: 4px 8px; }
+}
+/* Print-friendly: ensure the code stays very visible */
+@media print {
+  .qr-wrap { display: none !important; }
+  .manual-code { border-color: #000; background: #fff; color: #000; box-shadow: none; }
+  .manual-code .code-value { color: #000; border-color: #000; background: #fff; }
+}
 @media (max-width: 480px) {
   .qr { width: 240px; height: 240px; }
 }
