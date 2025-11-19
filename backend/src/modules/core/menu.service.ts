@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RedisService } from './redis.service';
+import { MENU_CATEGORIES } from './menu.constants';
 
 export type Category = {
   id: string; // slug or uuid
@@ -91,7 +92,10 @@ export class MenuService {
 
   // Public menu projection
   async publicMenu() {
-    const [categories, items] = await Promise.all([this.listCategories(), this.listItems()]);
+    const [catsFromDb, items] = await Promise.all([this.listCategories(), this.listItems()]);
+    // If no categories were configured yet, fall back to defaults so the
+    // public menu still returns items grouped by category as expected.
+    const categories = catsFromDb.length > 0 ? catsFromDb : MENU_CATEGORIES;
     const byCat: Record<string, MenuItem[]> = {};
     for (const it of items) {
       if (it.active === false) continue;

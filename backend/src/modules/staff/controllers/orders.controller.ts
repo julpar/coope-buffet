@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Logger, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Logger, Param, Post, Query, BadRequestException, NotFoundException } from '@nestjs/common';
 import { Roles } from '../../../common/auth/auth.decorators';
 import { OrdersService, OrderState, FulfillmentStatus } from '../../core/orders.service';
 
@@ -19,9 +19,9 @@ export class StaffOrdersController {
   // Lookup order by short code (used by cashier QR/manual input)
   @Get('lookup')
   async lookupByCode(@Query('code') code: string) {
-    if (!code) throw new Error('code required');
+    if (!code) throw new BadRequestException('code required');
     const o = await this.orders.getByCode(String(code).toUpperCase());
-    if (!o) throw new Error('order not found');
+    if (!o) throw new NotFoundException('order not found');
     return o;
   }
 
@@ -29,7 +29,7 @@ export class StaffOrdersController {
   @Post(':id/paid')
   async markPaid(@Param('id') id: string, @Body() body: { externalId?: string | null }) {
     const o = await this.orders.markPaid(id, { externalId: body?.externalId ?? null });
-    if (!o) throw new Error('order not found');
+    if (!o) throw new NotFoundException('order not found');
     return o;
   }
 
@@ -37,11 +37,11 @@ export class StaffOrdersController {
   @Post('paid-by-code')
   async markPaidByCode(@Body() body: { code: string; externalId?: string | null }) {
     const code = body?.code?.toUpperCase?.() || '';
-    if (!code) throw new Error('code required');
+    if (!code) throw new BadRequestException('code required');
     const o0 = await this.orders.getByCode(code);
-    if (!o0) throw new Error('order not found');
+    if (!o0) throw new NotFoundException('order not found');
     const o = await this.orders.markPaid(o0.id, { externalId: body?.externalId ?? null });
-    if (!o) throw new Error('order not found');
+    if (!o) throw new NotFoundException('order not found');
     return o;
   }
 
@@ -49,14 +49,14 @@ export class StaffOrdersController {
   @Post(':id/fulfillment')
   async setFulfillment(@Param('id') id: string, @Body() body: { status: FulfillmentStatus }) {
     const o = await this.orders.setFulfillment(id, body?.status as FulfillmentStatus);
-    if (!o) throw new Error('order not found');
+    if (!o) throw new NotFoundException('order not found');
     return o;
   }
 
   @Post(':id/cancel')
   async cancel(@Param('id') id: string) {
     const o = await this.orders.cancel(id);
-    if (!o) throw new Error('order not found');
+    if (!o) throw new NotFoundException('order not found');
     return o;
   }
 }

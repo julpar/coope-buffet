@@ -24,7 +24,8 @@ export interface Order {
   items: OrderItem[];
   subtotal: number; // cents
   total: number; // cents (taxes/fees not modeled yet)
-  note?: string;
+  customerName?: string; // optional display name provided by customer
+  note?: string; // kept for backward-compat but no longer accepted from clients
   payment?: { method: 'online' | 'cash'; externalId?: string | null; paidAt?: string | null };
 }
 
@@ -42,6 +43,10 @@ export class OrdersService {
   private orderKey(id: string) { return `${this.ORDER_KEY_PREFIX}${id}`; }
 
   // Utils
+  private newOrderId(): string {
+    const rnd = Math.random().toString(36).slice(2, 8);
+    return `o_${Date.now()}_${rnd}`;
+  }
   private computeTotals(items: OrderItem[]): { subtotal: number; total: number } {
     const subtotal = items.reduce((acc, it) => acc + it.unitPrice * it.qty, 0);
     // No extra fees yet
@@ -81,10 +86,9 @@ export class OrdersService {
   }
 
   async createPending(input: {
-    id: string;
     channel: Order['channel'];
     items: Array<{ id: string; qty: number }>; // price sourced from menu
-    note?: string;
+    customerName?: string;
     paymentMethod?: 'online' | 'cash';
   }): Promise<Order> {
     // Load items and validate stock (best-effort; final check on payment/advance can re-validate)
@@ -99,7 +103,7 @@ export class OrdersService {
     const now = new Date().toISOString();
     const shortCode = await this.generateUniqueShortCode();
     const order: Order = {
-      id: input.id,
+      id: this.newOrderId(),
       createdAt: now,
       updatedAt: now,
       channel: input.channel,
@@ -109,7 +113,7 @@ export class OrdersService {
       items: norm,
       subtotal,
       total,
-      note: input.note,
+      customerName: input.customerName,
       payment: { method: input.paymentMethod ?? 'cash', externalId: null, paidAt: null },
     };
     await this.redis.redis.set(this.orderKey(order.id), JSON.stringify(order));
