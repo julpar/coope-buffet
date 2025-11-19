@@ -146,6 +146,35 @@ Staff app (app-staff) now uses REAL API for:
 Notes:
 - Next steps will wire up PUT `/v1/staff/menu/items/:id` and POST `/v1/staff/menu/items/:id/stock` from the Menu/Inventory flows (UI hooks already exist, but actions still point to placeholders).
 
+## Customer app (app-customer) — Implemented this iteration
+
+- App shell migrated to Vue SFCs with Naive UI and Vue Router. ✓
+- Live platform status overlay (soft-offline) using `/v1/platform/status`. ✓
+- Public menu browsing page that consumes backend `GET /v1/menu`, shows categories and items with availability badges (in-stock/limited/sold-out) and GF tag. ✓
+- Client-side cart with localStorage persistence, subtotal, quantity controls, and cart drawer in the header. ✓
+- Checkout page: review items, choose channel (pickup/in‑store; delivery disabled for now), optional note. ✓
+- Order creation against backend `POST /v1/orders` with `paymentMethod: 'cash'`; generates an order id on the client (guest flow) and clears the cart on success. ✓
+- Success page: fetches order by id (`GET /v1/orders/:id`) and displays a QR image encoding `orderId`, `total` and `method=cash` for manual validation by staff. ✓
+- Naive UI minimal components registered globally to keep bundle small. ✓
+
+How to try it (customer webapp):
+
+```
+cd app-customer
+npm install
+npm run dev
+```
+
+- Open http://localhost:5173
+- The app targets backend base `VITE_API_BASE_URL` (default `http://localhost:3000`) and version `VITE_API_VERSION` (default `v1`).
+- Flow to validate:
+  - Browse Menú, add items to cart, open cart drawer, go to Checkout.
+  - Confirm pedido (cash) → redirected to Success with QR. Show QR to staff to validate and collect cash (manual).
+  - If platform is set to soft‑offline in backend, an overlay prevents checkout.
+
+Notes:
+- MercadoPago online payment is intentionally deferred; only cash path is wired now per request. The order remains `pending_payment` until staff marks it paid. Stock is finalized on payment per backend service logic.
+
 ## Next steps
 
 Staff webapp (frontend):
@@ -155,7 +184,13 @@ Staff webapp (frontend):
 4) Auth and role-based access (guard routes/components when backend auth is ready).
 5) Polish UI (filters, search, pagination) and accessibility pass.
 
-Backend (reference — unchanged here):
+Customer app (frontend):
+1) Address field and delivery mode flow; pickup time slot selection.
+2) Cart stock revalidation on checkout start with server hint messages.
+3) Better empty/error states and loading skeletons.
+4) PWA install and offline fallback.
+
+Backend (reference):
 1) Cart/stock validation endpoints
 2) Order flow (reserve/finalize/revert on payment)
 3) MercadoPago integration + webhook
