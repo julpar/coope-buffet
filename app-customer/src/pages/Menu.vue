@@ -11,7 +11,7 @@
               <div class="meta">
                 <div class="title">
                   <strong>{{ it.name }}</strong>
-                  <n-tag v-if="it.isGlutenFree" type="success" size="small">GF</n-tag>
+                  <n-tag v-if="it.isGlutenFree" type="success" size="small">SIN TACC</n-tag>
                 </div>
                 <div class="price">{{ currency(it.price) }}</div>
               </div>
@@ -46,8 +46,9 @@ function normalizeAvailability(it: Item): Item {
   return { ...it, availability };
 }
 
-function currency(cents: number): string {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(cents / 100);
+// Monetary values now come in ARS units (not cents)
+function currency(amount: number): string {
+  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(amount);
 }
 
 function add(it: Item) { cart.add(it, 1); }

@@ -79,8 +79,9 @@ const items = computed(() => cart.items.value);
 const subtotal = computed(() => cart.subtotal.value);
 const cartQty = computed(() => cart.totalQty.value);
 
-function currency(cents: number): string {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(cents / 100);
+// Monetary values are already expressed in ARS units (not cents)
+function currency(amount: number): string {
+  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(amount);
 }
 
 function toggleCart() { drawer.value = !drawer.value; }

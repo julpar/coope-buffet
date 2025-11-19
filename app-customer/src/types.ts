@@ -10,7 +10,7 @@ export interface Item {
   id: string;
   name: string;
   categoryId: string;
-  price: number; // cents
+  price: number; // ARS units (not cents)
   imageUrl?: string | null;
   isGlutenFree?: boolean;
   stock?: number;
@@ -33,7 +33,7 @@ export type OrderChannel = 'pickup' | 'delivery' | 'in-store';
 export interface OrderItemRef {
   id: string;
   name?: string;
-  unitPrice: number; // cents
+  unitPrice: number; // ARS units (not cents)
   qty: number;
 }
 
@@ -45,8 +45,8 @@ export interface CustomerOrder {
   status: 'pending_payment' | 'paid' | 'fulfilled' | 'cancelled';
   shortCode: string;
   items: OrderItemRef[];
-  subtotal: number; // cents
-  total: number; // cents
+  subtotal: number; // ARS units (not cents)
+  total: number; // ARS units (not cents)
   customerName?: string;
   payment?: { method: 'online' | 'cash'; externalId?: string | null; paidAt?: string | null };
 }

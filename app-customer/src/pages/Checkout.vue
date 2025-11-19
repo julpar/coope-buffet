@@ -23,13 +23,6 @@
           <n-form-item label="Tu nombre (opcional)">
             <n-input v-model:value="customerName" placeholder="Ej: Juan" />
           </n-form-item>
-          <n-form-item label="Modalidad">
-            <n-radio-group v-model:value="channel">
-              <n-radio-button value="pickup">Retiro en el local</n-radio-button>
-              <n-radio-button value="in-store">Consumir en el lugar</n-radio-button>
-              <n-radio-button value="delivery" disabled>Delivery (próximamente)</n-radio-button>
-            </n-radio-group>
-          </n-form-item>
         </n-form>
       </section>
 
@@ -46,7 +39,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import type { OrderChannel } from '../types';
 import { cart } from '../lib/cart';
 import { customerApi } from '../lib/api';
 
@@ -54,19 +46,20 @@ const router = useRouter();
 const items = computed(() => cart.items.value);
 const subtotal = computed(() => cart.subtotal.value);
 const customerName = ref('');
-const channel = ref<OrderChannel>('pickup');
 const loading = ref(false);
 const error = ref('');
 
-function currency(cents: number): string {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(cents / 100);
+// Monetary values are provided in ARS units (not cents)
+function currency(amount: number): string {
+  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(amount);
 }
 
 async function placeOrder() {
   loading.value = true; error.value = '';
   try {
     const res = await customerApi.createOrder({
-      channel: channel.value,
+      // Only pickup is supported as ordering modality
+      channel: 'pickup',
       items: cart.toOrderItems(),
       customerName: customerName.value || undefined,
       paymentMethod: 'cash'
