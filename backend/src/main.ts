@@ -18,7 +18,13 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // Explicit CORS configuration to support local apps (e.g., Vite on :5175) and cookies
-  const allowedOrigins = [
+  // Allow overriding/adding CORS origins from env.
+  // Use CORS_ORIGINS as a comma-separated list, e.g.:
+  //   CORS_ORIGINS="https://staff.example.com,https://customer.example.com"
+  // Special handling:
+  // - entries starting with "." or "*." mean suffix match (e.g., ".example.com" allows https://foo.example.com)
+  // - set CORS_ALLOW_ALL=true to allow any origin (use with caution)
+  const defaultOrigins = [
     'http://localhost:5173', // common Vite default
     'http://localhost:5174',
     'http://localhost:5175',
@@ -27,12 +33,32 @@ async function bootstrap() {
     'http://localhost:8080', // web-customer
     'http://localhost:8081', // web-staff
   ];
+
+  const envOrigins = (process.env.CORS_ORIGINS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const allowedOrigins = [...new Set([...defaultOrigins, ...envOrigins])];
+
+  const allowAll = String(process.env.CORS_ALLOW_ALL || '').toLowerCase() === 'true';
+
+  // Pre-compute suffix patterns like .example.com or *.example.com
+  const originSuffixes = allowedOrigins
+    .map((o) => (o.startsWith('*.') ? o.slice(1) : o))
+    .filter((o) => o.startsWith('.'));
   app.enableCors({
     origin: (origin, callback) => {
       // Allow requests with no origin (mobile apps, curl) or from our whitelist
-      if (!origin || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
+      if (!origin) return callback(null, true);
+
+      if (allowAll) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+
+      // Allow suffix matches like .example.com (covers subdomains)
+      if (originSuffixes.some((suf) => origin.endsWith(suf))) return callback(null, true);
+
       return callback(new Error(`CORS blocked for origin: ${origin}`));
     },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -40,6 +66,17 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     optionsSuccessStatus: 204,
   });
+
+  // eslint-disable-next-line no-console
+  console.log('[CORS] allowed origins:', allowedOrigins);
+  if (originSuffixes.length) {
+    // eslint-disable-next-line no-console
+    console.log('[CORS] allowed suffixes:', originSuffixes);
+  }
+  if (allowAll) {
+    // eslint-disable-next-line no-console
+    console.warn('[CORS] CORS_ALLOW_ALL=true — allowing any origin');
+  }
 
   app.use(cookieParser());
   app.use(json({ limit: '1mb' }));

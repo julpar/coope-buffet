@@ -19,6 +19,12 @@ services:
       - REDIS_URL=redis://redis:6379
       - MERCADOPAGO_ACCESS_TOKEN=changeme
       - STAFF_BASE_URL=${STAFF_BASE_URL:-http://localhost:8081}
+      # Comma-separated list of allowed CORS origins. Examples:
+      # CORS_ORIGINS=https://staff.buffetgrecia.com.ar,https://customer.buffetgrecia.com.ar
+      # For subdomains you can use suffix notation like ".buffetgrecia.com.ar"
+      - CORS_ORIGINS=${CORS_ORIGINS:-}
+      # Set to true only if you want to allow any origin (not recommended for production)
+      - CORS_ALLOW_ALL=${CORS_ALLOW_ALL:-false}
     # Expose backend to host for local development and for web-staff/browser to reach it directly.
     # In production behind a reverse proxy you can remove this.
     ports:
