@@ -36,7 +36,7 @@
           tertiary
           @click="onCancelClick"
         >
-          Abandonar pedido
+          {{ order.status === 'paid' ? 'Abandonar pedido' : 'Cancelar pedido' }}
         </n-button>
 
         <!-- Fallback action for any other state -->
@@ -71,7 +71,9 @@ function confirmDialog(opts: { title: string; content: any; positiveText?: strin
   return new Promise((resolve) => {
     const d = dialog.warning({
       title: opts.title,
-      content: opts.content,
+      // Naive UI expects content as a render function. If a VNode is provided,
+      // wrap it so the body actually renders (otherwise it shows nothing).
+      content: typeof opts.content === 'function' ? opts.content : () => opts.content,
       positiveText: opts.positiveText ?? 'Sí',
       negativeText: opts.negativeText ?? 'No',
       closable: true,
@@ -87,7 +89,9 @@ function confirmDialog(opts: { title: string; content: any; positiveText?: strin
 function paidLeaveContent() {
   return h('div', { style: 'display:flex; flex-direction:column; gap:8px;' }, [
     h('p', { style: 'margin:0' }, '¡Atención! Este pedido ya figura como PAGADO.'),
-    h('p', { style: 'margin:0' }, 'Si salís de esta pantalla se perderá el pedido y no podremos asociarlo, lo que puede implicar perder el dinero.'),
+    h('p', { style: 'margin:0' }, 'Si salís de esta pantalla, el pedido se perderá y no podrá canjearse.'),
+    // Explicit refund reminder for paid orders
+    h('p', { style: 'margin:0; color:#b00020;' }, 'El reintegro, en caso de corresponder, deberá solicitarse manualmente a los organizadores.'),
     h('p', { style: 'margin:0; font-weight:700;' }, '¿Seguro que querés salir y volver al menú?')
   ]);
 }
@@ -95,8 +99,15 @@ function paidLeaveContent() {
 function abandonOrderContent() {
   return h('div', { style: 'display:flex; flex-direction:column; gap:8px;' }, [
     h('p', { style: 'margin:0; font-weight:700;' }, '¿Abandonar el pedido y volver al menú?'),
-    h('p', { style: 'margin:0' }, 'Perderás el código de este pedido y será descartado.'),
-    h('p', { style: 'margin:0; color:#b00020;' }, 'Si ya pagaste, vas a tener que contactar manualmente a los organizadores para solicitar el reintegro.')
+    h('p', { style: 'margin:0' }, 'Este pedido está PAGADO. Si lo abandonás, se perderá y no podrá canjearse.'),
+    h('p', { style: 'margin:0; color:#b00020;' }, 'El reintegro deberá reclamarse manualmente a los organizadores.')
+  ]);
+}
+
+function cancelOrderContent() {
+  return h('div', { style: 'display:flex; flex-direction:column; gap:8px;' }, [
+    h('p', { style: 'margin:0; font-weight:700;' }, '¿Cancelar el pedido y volver al menú?'),
+    h('p', { style: 'margin:0' }, 'Perderás el código de este pedido y será descartado.')
   ]);
 }
 
@@ -208,18 +219,28 @@ function goToMenu() {
 
 async function onCancelClick() {
   // For now we don't call backend cancel; leaving the page is equivalent for the flow
+  // Refresh order just-in-time to ensure we show the correct wording (paid vs pending)
+  try {
+    const currId = String(order.value?.id || route.params.id || '');
+    if (currId) {
+      const fresh = await customerApi.getOrder(currId);
+      if (fresh) order.value = fresh as any;
+    }
+  } catch {}
+  const st = order.value?.status;
+  const isPaid = st === 'paid';
   const confirmed = await confirmDialog({
-    title: 'Abandonar pedido',
-    content: abandonOrderContent(),
-    positiveText: 'Abandonar y volver',
+    title: isPaid ? 'Abandonar pedido' : 'Cancelar pedido',
+    content: isPaid ? abandonOrderContent() : cancelOrderContent(),
+    positiveText: isPaid ? 'Abandonar y volver' : 'Cancelar y volver',
     negativeText: 'Seguir en este pedido'
   });
   if (confirmed) {
     // Avoid double confirmation when the order is paid and the route guard is active
-    allowLeave.value = true;
+    if (isPaid) allowLeave.value = true;
     goToMenu();
     // Reset the flag shortly after navigation so future leaves still warn
-    setTimeout(() => { allowLeave.value = false; }, 500);
+    if (isPaid) setTimeout(() => { allowLeave.value = false; }, 500);
   }
 }
 
