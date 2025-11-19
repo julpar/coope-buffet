@@ -8,6 +8,13 @@ RUN npm install
 
 # Copy only the app sources and build the specific workspace
 COPY app-customer ./app-customer
+
+# Accept Vite build-time env args for API base/version and expose them during build
+# This mirrors app-staff so docker-compose can pass API settings via build args.
+ARG VITE_API_BASE_URL
+ARG VITE_API_VERSION
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+ENV VITE_API_VERSION=${VITE_API_VERSION}
 RUN npm run build -w app-customer
 
 FROM nginx:1.27-alpine AS runtime
