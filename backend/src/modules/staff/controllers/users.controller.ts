@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, BadRequestException, NotFoundException } from '@nestjs/common';
 import { UserService, type Role } from '../../core/user.service';
 import { API_PREFIX } from '../../../common/constants';
 import { Roles } from '../../../common/auth/auth.decorators';
@@ -78,5 +78,25 @@ export class UsersController {
     const ok = await this.users.revokeUser(id);
     if (!ok) throw new Error('not found');
     return { ok: true };
+  }
+
+  // Return the permanent login URL for an existing user so ADMIN can reshare/scan the QR again
+  @Get(':id/perm-url')
+  async getPermUrl(@Param('id') id: string) {
+    const user = await this.users.getUserById(id);
+    if (!user) throw new NotFoundException('user not found');
+    // Build URL same way as in create()
+    const staffBase = (process.env.STAFF_BASE_URL || '').trim();
+    const baseUrl = (process.env.BASE_URL || '').trim();
+    const permToken = user.token.startsWith('perm:') ? user.token.slice(5) : user.token;
+    let permUrl: string;
+    if (staffBase) {
+      const sb = staffBase.replace(/\/$/, '');
+      permUrl = `${sb}/?token=${encodeURIComponent(permToken)}`;
+    } else {
+      const prefix = baseUrl ? baseUrl.replace(/\/$/, '') : '';
+      permUrl = `${prefix}/auth/perm?token=${encodeURIComponent(permToken)}`;
+    }
+    return { permUrl };
   }
 }

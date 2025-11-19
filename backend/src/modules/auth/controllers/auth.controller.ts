@@ -43,6 +43,21 @@ export class AuthController {
     return res.json({ ok: true, user: { id: user.id, nickname: user.nickname, roles: user.roles } });
   }
 
+  @Post('logout')
+  @Public()
+  async logout(@Res() res: Response) {
+    // Clear the session cookie by setting an immediate expiration
+    const isProd = process.env.NODE_ENV === 'production';
+    res.cookie('session', '', {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: 'strict',
+      expires: new Date(0),
+      path: '/',
+    });
+    return res.status(204).send();
+  }
+
   private setSessionCookie(res: Response, token: string) {
     const isProd = process.env.NODE_ENV === 'production';
     res.cookie('session', token, {
