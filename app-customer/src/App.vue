@@ -46,6 +46,9 @@
                   </li>
                 </ul>
                 <div class="shortage-actions">
+                  <n-button size="small" type="primary" :disabled="activeShortageIds.size>0" @click="goCheckout" :title="activeShortageIds.size>0 ? 'Corregí las cantidades para continuar' : 'Ir a pagar'">
+                    Intentar de nuevo
+                  </n-button>
                   <n-button size="small" tertiary @click="clearShortages">Ocultar avisos</n-button>
                 </div>
               </div>
@@ -82,7 +85,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
+import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { CartOutline } from '@vicons/ionicons5';
 import { cart } from './lib/cart';
@@ -139,7 +142,14 @@ function currency(amount: number): string {
 }
 
 function toggleCart() { drawer.value = !drawer.value; }
-function goCheckout() { drawer.value = false; router.push('/checkout'); }
+function goCheckout() {
+  // Clear shortage warnings when proceeding to checkout (they're already fixed)
+  if (activeShortageIds.value.size === 0 && Object.keys(shortages.value || {}).length) {
+    shortages.value = {};
+  }
+  drawer.value = false;
+  router.push('/checkout');
+}
 
 function inc(id: string) { cart.increase(id); }
 function dec(id: string) { cart.decrease(id); }
@@ -190,6 +200,13 @@ onBeforeUnmount(() => {
   if (window.__notifyHandler) window.removeEventListener('notify', window.__notifyHandler);
   // @ts-expect-error - custom global events
   if (window.__setShortagesHandler) window.removeEventListener('set-shortages', window.__setShortagesHandler);
+});
+
+// When user fixes all shortages, give a friendly hint that they can continue
+watch(activeShortageIds, (set) => {
+  if (set.size === 0 && Object.keys(shortages.value || {}).length) {
+    message.success('Listo, ya podés continuar al pago.');
+  }
 });
 </script>
 

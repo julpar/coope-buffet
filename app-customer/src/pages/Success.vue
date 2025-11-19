@@ -24,19 +24,19 @@
       </div>
       <!-- Actions -->
       <div class="actions">
-        <!-- If order is paid or fulfilled, encourage starting a new one -->
-        <n-button v-if="order.status === 'paid' || order.status === 'fulfilled'" type="primary" @click="goToMenu">
+        <!-- If order is already fulfilled, it's safe to promote a new one -->
+        <n-button v-if="order.status === 'fulfilled'" type="primary" @click="goToMenu">
           Crear nuevo pedido
         </n-button>
 
-        <!-- If order is pending payment, allow cancel (navigate away) with confirmation -->
+        <!-- If order is pending payment or paid (unfulfilled), de-emphasize and offer to cancel -->
         <n-button
-          v-else-if="order.status === 'pending_payment'"
+          v-else-if="order.status === 'pending_payment' || order.status === 'paid'"
           type="error"
           tertiary
           @click="onCancelClick"
         >
-          Cancelar pedido
+          Abandonar pedido
         </n-button>
 
         <!-- Fallback action for any other state -->
@@ -47,11 +47,12 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+import { onMounted, onUnmounted, ref, h } from 'vue';
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
 import type { CustomerOrder } from '../types';
 import { customerApi } from '../lib/api';
 import { statusLabel, statusDescription } from '../lib/status';
+import { createDiscreteApi } from 'naive-ui';
 
 const route = useRoute();
 const router = useRouter();
@@ -60,6 +61,44 @@ const order = ref<CustomerOrder | null>(null);
 const qrSrc = ref('');
 let pollTimer: number | null = null;
 let pollDeadline = 0; // epoch ms when we should stop polling
+// Local flag to allow programmatic navigation without showing the paid warning twice
+const allowLeave = ref(false);
+
+// Discrete dialog for nicer confirmations (no provider required here)
+const { dialog } = createDiscreteApi(['dialog']);
+
+function confirmDialog(opts: { title: string; content: any; positiveText?: string; negativeText?: string }): Promise<boolean> {
+  return new Promise((resolve) => {
+    const d = dialog.warning({
+      title: opts.title,
+      content: opts.content,
+      positiveText: opts.positiveText ?? 'Sí',
+      negativeText: opts.negativeText ?? 'No',
+      closable: true,
+      maskClosable: false,
+      onPositiveClick: () => { resolve(true); },
+      onNegativeClick: () => { resolve(false); },
+      onClose: () => { resolve(false); }
+    });
+    void d; // ensure allocated
+  });
+}
+
+function paidLeaveContent() {
+  return h('div', { style: 'display:flex; flex-direction:column; gap:8px;' }, [
+    h('p', { style: 'margin:0' }, '¡Atención! Este pedido ya figura como PAGADO.'),
+    h('p', { style: 'margin:0' }, 'Si salís de esta pantalla se perderá el pedido y no podremos asociarlo, lo que puede implicar perder el dinero.'),
+    h('p', { style: 'margin:0; font-weight:700;' }, '¿Seguro que querés salir y volver al menú?')
+  ]);
+}
+
+function abandonOrderContent() {
+  return h('div', { style: 'display:flex; flex-direction:column; gap:8px;' }, [
+    h('p', { style: 'margin:0; font-weight:700;' }, '¿Abandonar el pedido y volver al menú?'),
+    h('p', { style: 'margin:0' }, 'Perderás el código de este pedido y será descartado.'),
+    h('p', { style: 'margin:0; color:#b00020;' }, 'Si ya pagaste, vas a tener que contactar manualmente a los organizadores para solicitar el reintegro.')
+  ]);
+}
 
 // Backend now returns monetary values in whole ARS (not cents).
 // Show the number as-is without dividing by 100.
@@ -101,16 +140,15 @@ onUnmounted(() => stopPolling());
 // Global-ish protection: if the current order is PAID and the user tries to leave
 // this screen (go back to menú, cart, or anywhere else), show a strong warning.
 // This also covers browser Back/Forward actions.
-onBeforeRouteLeave(() => {
+onBeforeRouteLeave(async () => {
   const st = order.value?.status;
-  if (st === 'paid') {
-    const msg = [
-      '¡Atención! Este pedido ya figura como PAGADO.',
-      'Si salís de esta pantalla se perderá el pedido y no podremos asociarlo,',
-      'lo que puede implicar perder el dinero.\n',
-      '¿Seguro que querés salir y volver al menú?'
-    ].join(' ');
-    const ok = window.confirm(msg);
+  if (st === 'paid' && !allowLeave.value) {
+    const ok = await confirmDialog({
+      title: 'Pedido pagado',
+      content: paidLeaveContent(),
+      positiveText: 'Salir igualmente',
+      negativeText: 'Quedarme'
+    });
     if (!ok) return false; // cancelar navegación
   }
   return true;
@@ -168,12 +206,21 @@ function goToMenu() {
   router.push('/');
 }
 
-function onCancelClick() {
+async function onCancelClick() {
   // For now we don't call backend cancel; leaving the page is equivalent for the flow
-  const confirmed = window.confirm(
-    '¿Cancelar el pedido y volver al menú?\nPerderás el código de este pedido y será descartado.'
-  );
-  if (confirmed) goToMenu();
+  const confirmed = await confirmDialog({
+    title: 'Abandonar pedido',
+    content: abandonOrderContent(),
+    positiveText: 'Abandonar y volver',
+    negativeText: 'Seguir en este pedido'
+  });
+  if (confirmed) {
+    // Avoid double confirmation when the order is paid and the route guard is active
+    allowLeave.value = true;
+    goToMenu();
+    // Reset the flag shortly after navigation so future leaves still warn
+    setTimeout(() => { allowLeave.value = false; }, 500);
+  }
 }
 
 // Map status to banner color classes
