@@ -13,7 +13,13 @@
       </n-button>
     </div>
 
-    <n-data-table :columns="columns" :data="filtered" :bordered="true" :loading="loading" />
+    <n-data-table
+      :columns="columns"
+      :data="filtered"
+      :bordered="true"
+      :loading="loading"
+      size="small"
+    />
   </div>
 
   <!-- Detalles de la orden -->
@@ -82,8 +88,8 @@
 </template>
 
 <script setup lang="ts">
-import { h, computed, ref, onMounted, watch } from 'vue';
-import { useMessage, NTag, NButton, NIcon, NModal, NTable, type DataTableColumns } from 'naive-ui';
+import { h, ref, onMounted, watch, computed } from 'vue';
+import { useMessage, NTag, NButton, NIcon, NModal, NTable, NTooltip, type DataTableColumns } from 'naive-ui';
 import { RefreshOutline, SearchOutline, CheckmarkDoneOutline, CashOutline } from '@vicons/ionicons5';
 import { staffApi } from '../lib/api';
 import type { Item } from '../types';
@@ -148,14 +154,88 @@ function statusTagType(row: Row): 'warning' | 'info' | 'success' | 'default' {
   return 'default';
 }
 
+// Columns are static; visibility/compactness is handled purely with CSS media queries
 const columns: DataTableColumns<Row> = [
-  { title: 'Detalles', key: 'details', width: 110, render: (row: Row) => h(NButton, { size: 'small', onClick: () => openDetails(row) }, { default: () => 'Ver' }) },
-  { title: '#', key: 'code', width: 120 },
-  { title: 'Cliente', key: 'customer', width: 200, render: (row: Row) => h('span', null, row.customer || '-') },
-  { title: 'Items', key: 'items', width: 80 },
-  { title: 'Total', key: 'total', width: 120 },
-  { title: 'Estado', key: 'fulfillment', width: 160, render: (row: Row) => h(NTag, { type: statusTagType(row) }, { default: () => statusLabel(row) }) },
-  { title: 'Cambiar estado', key: 'action', width: 220, render: (row: Row) => renderAction(row) }
+  // Mobile-only composite column (two-line grid). Hidden on >500px via CSS
+  {
+    title: 'Orden',
+    key: 'combined',
+    ellipsis: false,
+    className: 'col-mobile',
+    titleClassName: 'col-mobile',
+    render: (row: Row) => {
+      const left1 = h('div', { class: 'g-left1' }, [
+        h('span', { class: 'code' }, `#${row.code}`),
+        h('span', { class: 'dot', 'aria-hidden': 'true' }, '•'),
+        h('span', { class: 'customer cell-ellipsis' }, row.customer || '-')
+      ]);
+      const right1 = h('div', { class: 'g-right1' }, [
+        h('strong', { class: 'total' }, row.total),
+        h(NTag, { class: 'status-tag', type: statusTagType(row) }, { default: () => statusLabel(row) })
+      ]);
+
+      // Actions: primary first, then details
+      const primaryAction = renderAction(row) as any;
+      const detailsBtn = (() => {
+        const b = h(
+          NButton,
+          { size: 'small', quaternary: true, onClick: () => openDetails(row), 'aria-label': 'Ver detalles' },
+          { icon: () => h(NIcon, { size: 18 }, { default: () => h(SearchOutline) }), default: () => h('span', { class: 'label-text' }, 'Ver detalles') }
+        );
+        return h(NTooltip, { placement: 'top' }, { trigger: () => b, default: () => 'Ver detalles' });
+      })();
+      const left2 = h('div', { class: 'g-left2' }, [primaryAction, detailsBtn]);
+      const right2 = h('div', { class: 'g-right2' }, [h('span', { class: 'items' }, `Items: ${row.items}`)]);
+
+      return h('div', { class: 'two-line-grid' }, [left1, right1, left2, right2]);
+    }
+  },
+  // Desktop/Tablet columns
+  {
+    title: 'Detalles',
+    key: 'details',
+    width: 110,
+    className: 'col-details',
+    titleClassName: 'col-details',
+    render: (row: Row) => {
+      const btn = h(
+        NButton,
+        { size: 'small', onClick: () => openDetails(row), quaternary: true },
+        {
+          icon: () => h(NIcon, null, { default: () => h(SearchOutline) }),
+          default: () => h('span', { class: 'label-text' }, 'Ver')
+        }
+      );
+      return h(NTooltip, { placement: 'top' }, { trigger: () => btn, default: () => 'Ver detalles' });
+    }
+  },
+  { title: '#', key: 'code', width: 120, className: 'col-code', titleClassName: 'col-code' },
+  {
+    title: 'Cliente',
+    key: 'customer',
+    width: 200,
+    className: 'col-customer',
+    titleClassName: 'col-customer',
+    render: (row: Row) => h('span', { class: 'cell-ellipsis' }, row.customer || '-')
+  },
+  { title: 'Items', key: 'items', width: 80, className: 'col-items', titleClassName: 'col-items' },
+  { title: 'Total', key: 'total', width: 120, className: 'col-total', titleClassName: 'col-total' },
+  {
+    title: 'Estado',
+    key: 'fulfillment',
+    width: 160,
+    className: 'col-status',
+    titleClassName: 'col-status',
+    render: (row: Row) => h(NTag, { class: 'status-tag', type: statusTagType(row) }, { default: () => statusLabel(row) })
+  },
+  {
+    title: 'Cambiar estado',
+    key: 'action',
+    width: 220,
+    className: 'col-action',
+    titleClassName: 'col-action',
+    render: (row: Row) => renderAction(row)
+  }
 ];
 
 async function refresh() {
@@ -190,16 +270,18 @@ function renderAction(row: Row) {
   const st = row.raw?.status as string;
   if (st === 'fulfilled' || row.fulfillment) return h('span', { style: 'color: #888' }, 'Sin acciones');
   if (st === 'pending_payment') {
-    return h(NButton, { size: 'small', tertiary: true, onClick: () => markPaid(row), disabled: loading.value }, {
+    const btn = h(NButton, { size: 'small', tertiary: true, onClick: () => markPaid(row), disabled: loading.value }, {
       icon: () => h(NIcon, null, { default: () => h(CashOutline) }),
-      default: () => 'Marcar como pagada'
+      default: () => h('span', { class: 'label-text' }, 'Marcar como pagada')
     });
+    return h(NTooltip, { placement: 'top' }, { trigger: () => btn, default: () => 'Marcar como pagada' });
   }
   if (st === 'paid') {
-    return h(NButton, { size: 'small', tertiary: true, onClick: () => markFulfilled(row), disabled: loading.value }, {
+    const btn = h(NButton, { size: 'small', tertiary: true, onClick: () => markFulfilled(row), disabled: loading.value }, {
       icon: () => h(NIcon, null, { default: () => h(CheckmarkDoneOutline) }),
-      default: () => 'Marcar como completada'
+      default: () => h('span', { class: 'label-text' }, 'Marcar como completada')
     });
+    return h(NTooltip, { placement: 'top' }, { trigger: () => btn, default: () => 'Marcar como completada' });
   }
   return h('span', { style: 'color: #888' }, 'Sin acciones');
 }
@@ -258,6 +340,8 @@ onMounted(() => { loadItemsLookup(); });
 .page { display: flex; flex-direction: column; gap: 12px; }
 .toolbar { display: flex; gap: 8px; align-items: center; }
 .grow { flex: 1; }
+/* Make long customer names truncate nicely in narrow layouts */
+.cell-ellipsis { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Card header with status at the top next to title */
 .card-header-line { display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .card-title { font-weight: 700; font-size: 18px; letter-spacing: .2px; }
@@ -269,4 +353,80 @@ onMounted(() => { loadItemsLookup(); });
 .customer-highlight { display:inline; padding:2px 6px; border-radius:6px; background: rgba(32,128,240,.08); color:#1f2d3d; line-height: 1.4; }
 .customer-highlight .label { color:#1a59b7; font-weight: 700; }
 .customer-highlight .name { font-weight: 700; word-break: break-word; }
+
+/* Ultra-compact two-line row layout for very narrow screens (~500px) */
+/* New grid layout for ≤500px to improve alignment and readability */
+.two-line-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "left1 right1"
+    "left2 right2";
+  row-gap: 6px;
+  column-gap: 8px;
+  padding: 4px 0;
+}
+.g-left1 { grid-area: left1; min-width: 0; display: flex; align-items: center; gap: 6px; }
+.g-right1 { grid-area: right1; display: flex; align-items: center; gap: 6px; justify-self: end; }
+.g-left2 { grid-area: left2; display: flex; align-items: center; gap: 6px; }
+.g-right2 { grid-area: right2; display: flex; align-items: center; gap: 6px; justify-self: end; font-size: 12px; color: #666; }
+.g-left1 .code { font-weight: 700; }
+.g-left1 .customer { min-width: 0; max-width: 54vw; }
+.g-right1 .total { margin-right: 2px; }
+/* Make icon-only buttons consistent and compact */
+:deep(.n-button.n-button--quaternary),
+:deep(.n-button.n-button--tertiary) {
+  padding: 4px 6px;
+}
+/* Slight row divider feeling inside the cell */
+.two-line-grid { border-bottom: 1px solid rgba(0,0,0,.05); }
+
+/* =============================
+   CSS-first responsive behavior
+   ============================= */
+/* Default (desktop/tablet): use the regular multi-column table, hide mobile composite column */
+:deep(.n-data-table-th.col-mobile),
+:deep(.n-data-table-td.col-mobile) {
+  display: none;
+}
+
+/* Make button labels visible by default (desktop) */
+.label-text { display: inline; }
+
+/* Compact mode for medium screens (<900px): keep regular columns but make controls icon-first */
+@media (max-width: 899px) {
+  /* Hide text labels inside buttons to save space; keep icons */
+  .label-text { display: none; }
+  /* Slightly tighten tag appearance */
+  .status-tag { font-size: 12px; }
+}
+
+/* Ultra-compact mode for small phones (≤500px): show only the composite column */
+@media (max-width: 500px) {
+  /* Show the mobile composite column */
+  :deep(.n-data-table-th.col-mobile),
+  :deep(.n-data-table-td.col-mobile) {
+    display: table-cell;
+  }
+  /* Hide all standard columns */
+  :deep(.n-data-table-th.col-details),
+  :deep(.n-data-table-td.col-details),
+  :deep(.n-data-table-th.col-code),
+  :deep(.n-data-table-td.col-code),
+  :deep(.n-data-table-th.col-customer),
+  :deep(.n-data-table-td.col-customer),
+  :deep(.n-data-table-th.col-items),
+  :deep(.n-data-table-td.col-items),
+  :deep(.n-data-table-th.col-total),
+  :deep(.n-data-table-td.col-total),
+  :deep(.n-data-table-th.col-status),
+  :deep(.n-data-table-td.col-status),
+  :deep(.n-data-table-th.col-action),
+  :deep(.n-data-table-td.col-action) {
+    display: none;
+  }
+
+  /* Make tags compact in mobile composite */
+  .status-tag { font-size: 12px; }
+}
 </style>
