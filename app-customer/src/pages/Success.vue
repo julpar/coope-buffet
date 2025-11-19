@@ -24,8 +24,8 @@
       </div>
       <!-- Actions -->
       <div class="actions">
-        <!-- If order is fulfilled, encourage starting a new one -->
-        <n-button v-if="order.status === 'fulfilled'" type="primary" @click="goToMenu">
+        <!-- If order is paid or fulfilled, encourage starting a new one -->
+        <n-button v-if="order.status === 'paid' || order.status === 'fulfilled'" type="primary" @click="goToMenu">
           Crear nuevo pedido
         </n-button>
 
@@ -39,22 +39,10 @@
           Cancelar pedido
         </n-button>
 
-        <!-- If order is paid, do NOT cancel; show a big warning and allow explicit leave -->
-        <div v-else-if="order.status === 'paid'" class="paid-warning">
-          <div class="warn-title">⚠️ ¡Atención!</div>
-          <div>
-            Este pedido ya está marcado como <strong>pagado</strong>. Si salís de esta
-            pantalla y perdés el código, el pedido se puede <strong>perder para siempre</strong>.
-          </div>
-          <n-button quaternary type="warning" @click="goToMenu" style="margin-top:8px;">
-            Entiendo, volver al menú
-          </n-button>
-        </div>
-
         <!-- Fallback action for any other state -->
         <n-button v-else quaternary @click="goToMenu">Volver al menú</n-button>
       </div>
-    </div>
+      </div>
   </div>
 </template>
 
@@ -95,8 +83,9 @@ onMounted(async () => {
       qrSrc.value = '';
     }
 
-    // Si el pedido quedó en pendiente de pago, iniciar polling por 20 minutos máx, cada 3s.
-    if (o && o.status === 'pending_payment') {
+    // Si el pedido quedó en pendiente de pago o pagado (pendiente de preparación),
+    // iniciar polling por 20 minutos máx, cada 3s. Para 'paid' seguimos hasta fulfilled/cancelled.
+    if (o && (o.status === 'pending_payment' || o.status === 'paid')) {
       startPolling(id);
     }
   } catch {
@@ -118,8 +107,9 @@ function startPolling(id: string) {
     try {
       const fresh = await customerApi.getOrder(id);
       order.value = fresh;
-      // detener al salir de pendiente (pagado/fulfilled/cancelado)
-      if (fresh.status !== 'pending_payment') {
+      // Continuar mientras esté en 'pending_payment' o 'paid'.
+      // Considerar final cuando pase a 'fulfilled' o 'cancelled'.
+      if (fresh.status === 'fulfilled' || fresh.status === 'cancelled') {
         stopPolling();
         return;
       }
