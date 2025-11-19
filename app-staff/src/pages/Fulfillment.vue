@@ -30,7 +30,7 @@
       <div v-if="!isFulfillable" class="prominent-warning">
         <n-alert type="warning" title="No se puede completar este pedido" :show-icon="true">
           <div class="warn-text" style="font-weight: 700; font-size: 18px; letter-spacing: .5px;">
-            EL ESTADO DEBE SER PAGADO
+            NO ESTA LISTO PARA ENTREGAR
           </div>
         </n-alert>
       </div>

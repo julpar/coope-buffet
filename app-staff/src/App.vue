@@ -96,12 +96,6 @@
         <!-- Desktop/tablet: keep sider; Mobile: hide sider and use drawer -->
         <n-layout-sider v-if="!isMobile" :collapsed="collapsed" show-trigger bordered collapse-mode="width" :collapsed-width="64" width="220">
           <n-menu :value="$route.path" :options="menuOptions" @update:value="onMenu" :collapsed="collapsed" />
-          <div class="aside-footer">
-            <div class="aside-toggle">
-              <span>{{ collapsed ? 'Compact' : 'Expanded' }}</span>
-              <n-switch v-model:value="collapsed" size="small" />
-            </div>
-          </div>
         </n-layout-sider>
         <n-layout-content class="main">
           <RouterView />
@@ -372,8 +366,6 @@ async function onLogout() {
 .api-indicator .dot.offline { background:#b71c1c; }
 .api-indicator .dot.unknown { background:#9e9e9e; }
 .api-indicator .api-text { color:#333; }
-.aside-footer { margin-top: auto; padding: 12px; border-top: 1px solid rgba(0,0,0,.08); }
-.aside-toggle { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:12px; }
 .main { padding: 16px; background: #f6f7f9; }
 
 .mock-banner {
