@@ -1,7 +1,10 @@
 <template>
   <div class="checkout">
     <h2>Finalizar pedido</h2>
-    <div v-if="items.length === 0" class="muted">No hay items en el carrito.</div>
+    <div v-if="items.length === 0" class="empty">
+      <div class="muted">No hay items en el carrito.</div>
+      <n-button size="small" type="tertiary" @click="goHome">Volver al menú</n-button>
+    </div>
     <div v-else class="content">
       <section class="review">
         <h3>Resumen</h3>
@@ -37,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { cart } from '../lib/cart';
 import { customerApi } from '../lib/api';
@@ -48,14 +51,38 @@ const subtotal = computed(() => cart.subtotal.value);
 const customerName = ref('');
 const loading = ref(false);
 const error = ref('');
+// prevent auto-redirect during active submission flow
+const suppressEmptyRedirect = ref(false);
 
 // Monetary values are provided in ARS units (not cents)
 function currency(amount: number): string {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(amount);
 }
 
+function goHome() {
+  router.replace('/');
+}
+
+// If cart is empty on entering checkout, gently send the user back to the menu
+onMounted(() => {
+  if (items.value.length === 0) {
+    // small delay to avoid flicker and ensure router is ready
+    setTimeout(() => {
+      if (!suppressEmptyRedirect.value) router.replace('/');
+    }, 0);
+  }
+});
+
+// Also react to the cart becoming empty (e.g., after external clear)
+watch(items, (list) => {
+  if (list.length === 0 && !loading.value && !suppressEmptyRedirect.value) {
+    router.replace('/');
+  }
+});
+
 async function placeOrder() {
   loading.value = true; error.value = '';
+  suppressEmptyRedirect.value = true;
   try {
     const res = await customerApi.createOrder({
       // Only pickup is supported as ordering modality
@@ -126,6 +153,7 @@ async function placeOrder() {
     error.value = e?.message || 'No se pudo crear el pedido.';
   } finally {
     loading.value = false;
+    suppressEmptyRedirect.value = false;
   }
 }
 </script>
@@ -133,6 +161,7 @@ async function placeOrder() {
 <style scoped>
 .checkout { display: flex; flex-direction: column; gap: 12px; }
 .muted { color: #666; }
+.empty { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
 .content { display: flex; flex-direction: column; gap: 16px; }
 .review .list { display: flex; flex-direction: column; gap: 6px; }
 .row { display: flex; justify-content: space-between; }

@@ -232,7 +232,7 @@ async function onCancelClick() {
   const confirmed = await confirmDialog({
     title: isPaid ? 'Abandonar pedido' : 'Cancelar pedido',
     content: isPaid ? abandonOrderContent() : cancelOrderContent(),
-    positiveText: isPaid ? 'Abandonar y volver' : 'Cancelar y volver',
+    positiveText: isPaid ? 'Entiendo y acepto' : 'Cancelar y volver',
     negativeText: 'Seguir en este pedido'
   });
   if (confirmed) {

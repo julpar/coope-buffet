@@ -7,9 +7,17 @@
             <span class="logo">🍽️</span>
             <span>Buffet</span>
           </div>
-          <div class="cart" @click="toggleCart">
+          <div
+            class="cart"
+            role="button"
+            tabindex="0"
+            :aria-label="cartQty > 0 ? `Abrir carrito. ${cartQty} items, subtotal ${currency(subtotal)}` : 'Abrir carrito, vacío'"
+            @click="toggleCart"
+            @keydown.enter="toggleCart"
+            @keydown.space.prevent="toggleCart"
+          >
             <n-badge :value="cartQty" :max="99" type="success">
-              <n-button quaternary>
+              <n-button type="primary" size="small">
                 <template #icon>
                   <n-icon><CartOutline /></n-icon>
                 </template>
@@ -141,7 +149,15 @@ function currency(amount: number): string {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(amount);
 }
 
-function toggleCart() { drawer.value = !drawer.value; }
+function toggleCart() {
+  // Do not open the drawer if the cart is empty; it blocks the UI unnecessarily
+  if (items.value.length === 0) {
+    message.info('El carrito está vacío');
+    drawer.value = false;
+    return;
+  }
+  drawer.value = !drawer.value;
+}
 function goCheckout() {
   // Clear shortage warnings when proceeding to checkout (they're already fixed)
   if (activeShortageIds.value.size === 0 && Object.keys(shortages.value || {}).length) {
@@ -157,7 +173,15 @@ function dec(id: string) { cart.decrease(id); }
 onMounted(() => {
   // Single initial fetch; ongoing checks are done just-in-time before API calls
   platform.fetch();
-  const openCartHandler = () => { drawer.value = true; };
+  const openCartHandler = () => {
+    // Only open if there are items to show; otherwise just inform the user
+    if (items.value.length === 0) {
+      message.info('El carrito está vacío');
+      drawer.value = false;
+    } else {
+      drawer.value = true;
+    }
+  };
   const notifyHandler = (e: Event) => {
     const detail: any = (e as CustomEvent).detail || {};
     const text = [detail.message, detail.description].filter(Boolean).join(' ');
@@ -208,16 +232,56 @@ watch(activeShortageIds, (set) => {
     message.success('Listo, ya podés continuar al pago.');
   }
 });
+
+// If the cart becomes empty while the drawer is open, close it to avoid blocking the UI
+watch(
+  () => items.value.length,
+  (len, prev) => {
+    if (len === 0 && drawer.value) {
+      drawer.value = false;
+      // Only notify if it changed from a non-empty state
+      if ((prev || 0) > 0) message.info('El carrito quedó vacío');
+    }
+  }
+);
 </script>
 
 <style scoped>
 .layout { min-height: 100vh; background: #fafafa; }
-.header { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; }
+.header {
+  /* Use fixed to guarantee persistence even if a sibling becomes the scroll container */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 15;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
 .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; }
 .logo { font-size: 18px; }
-.cart { display: flex; align-items: center; gap: 8px; }
+.cart {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 2px;
+}
+.cart:focus-visible {
+  outline: 2px solid #18a058; /* Naive UI primary color default */
+  outline-offset: 2px;
+}
 .subtotal { font-weight: 600; }
-.main { padding: 12px; }
+.main {
+  /* Add top padding to avoid content being hidden under the fixed header */
+  padding: 68px 12px 12px;
+}
 .hide-on-mobile { display: none; }
 @media (min-width: 640px) { .hide-on-mobile { display: inline; } }
 

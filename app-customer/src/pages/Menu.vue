@@ -73,13 +73,15 @@ onMounted(async () => {
 .muted { color: #666; }
 .menu { display: flex; flex-direction: column; gap: 12px; }
 .cat { margin-bottom: 12px; }
-.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-@media (min-width: 700px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+.grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+/* Force one item per line at all viewport sizes */
+@media (min-width: 700px) { .grid { grid-template-columns: 1fr; } }
 .it { display: flex; flex-direction: column; gap: 8px; }
 .meta { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .title { display: flex; align-items: center; gap: 6px; }
 .price { font-weight: 600; }
-.actions { display: flex; align-items: center; justify-content: space-between; }
+.actions { display: flex; align-items: center; }
+.actions > :last-child { margin-left: auto; }
 .sold { color: #b71c1c; font-weight: 600; }
 .limited { color: #ef6c00; font-weight: 600; }
 </style>
