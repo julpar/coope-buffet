@@ -28,7 +28,6 @@
       <!-- Resto de la descripción/detalles debajo del QR -->
       <p>Guardá tu código de pedido. Mostralo al personal para continuar.</p>
       <div class="sum">
-        <div><strong>Código:</strong> {{ order.shortCode }}</div>
         <div><strong>Total:</strong> {{ currency(order.total) }}</div>
       </div>
       <!-- Actions -->
