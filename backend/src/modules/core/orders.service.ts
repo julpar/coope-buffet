@@ -29,6 +29,23 @@ export interface Order {
   payment?: { method: 'online' | 'cash'; externalId?: string | null; paidAt?: string | null };
 }
 
+// Domain error to signal stock issues in a structured way to controllers
+export type StockShortage = {
+  id: string;
+  name?: string;
+  requested: number;
+  available: number; // can be 0
+};
+
+export class InsufficientStockError extends Error {
+  shortages: StockShortage[];
+  constructor(shortages: StockShortage[]) {
+    super('insufficient_stock');
+    this.name = 'InsufficientStockError';
+    this.shortages = shortages;
+  }
+}
+
 @Injectable()
 export class OrdersService {
   private readonly logger = new Logger('OrdersService');
@@ -91,7 +108,7 @@ export class OrdersService {
     customerName?: string;
     paymentMethod?: 'online' | 'cash';
   }): Promise<Order> {
-    // Load items and validate stock (best-effort; final check on payment/advance can re-validate)
+    // Load items and validate stock BEFORE creating the order
     const menuItems = await this.menu.listItems();
     const byId = new Map(menuItems.map((m) => [m.id, m] as const));
     const norm: OrderItem[] = input.items.map((it) => {
@@ -99,6 +116,21 @@ export class OrdersService {
       const unitPrice = found?.price ?? 0;
       return { id: it.id, name: found?.name, unitPrice, qty: Math.max(1, Number(it.qty || 1)) };
     });
+
+    // Compute shortages
+    const shortages: StockShortage[] = [];
+    for (const it of norm) {
+      const found = byId.get(it.id);
+      const available = Math.max(0, found?.stock ?? 0);
+      const active = found?.active !== false;
+      if (!found || !active || it.qty > available) {
+        shortages.push({ id: it.id, name: found?.name, requested: it.qty, available: active ? available : 0 });
+      }
+    }
+    if (shortages.length > 0) {
+      // Signal to controller to return a 400 with details
+      throw new InsufficientStockError(shortages);
+    }
     const { subtotal, total } = this.computeTotals(norm);
     const now = new Date().toISOString();
     const shortCode = await this.generateUniqueShortCode();
@@ -141,10 +173,21 @@ export class OrdersService {
     if (!o) return null;
     if (o.status === 'paid') return o;
     if (o.status !== 'pending_payment') return o;
-    // Optionally reserve stock earlier; for now, adjust stock now when paid
+    // Re-validate stock at payment time to avoid overselling if stock changed
+    const shortages: StockShortage[] = [];
     for (const it of o.items) {
-      await this.menu.adjustStock(it.id, -it.qty);
+      const item = await this.menu.getItem(it.id);
+      const available = Math.max(0, item?.stock ?? 0);
+      const active = item?.active !== false;
+      if (!item || !active || it.qty > available) {
+        shortages.push({ id: it.id, name: item?.name, requested: it.qty, available: active ? available : 0 });
+      }
     }
+    if (shortages.length > 0) {
+      throw new InsufficientStockError(shortages);
+    }
+    // Adjust stock now that validation passed
+    for (const it of o.items) await this.menu.adjustStock(it.id, -it.qty);
     o.status = 'paid';
     o.fulfillment = false;
     if (o.payment) {
