@@ -156,6 +156,10 @@ const menuOptions = computed(() => {
   if (roles.includes('ORDER_FULFILLER')) {
     opts.push({ label: 'Fulfillment', key: '/fulfillment', icon: renderIcon(CheckmarkDoneOutline) });
   }
+  // Inventory editing is allowed for STOCK role
+  if (roles.includes('STOCK')) {
+    opts.push({ label: 'Menú', key: '/menu', icon: renderIcon(RestaurantOutline) });
+  }
 
   // Do not expose other modules (Órdenes, Menú, Usuarios) for non-admin users.
   return opts;

@@ -30,11 +30,11 @@ router.beforeEach(async (to) => {
   if (to.name === 'auth-perm') return true;
 
   // Always fetch fresh status to reflect newly created admin or QR logins
-  let st: { adminExists: boolean; hasUser: boolean } = { adminExists: true, hasUser: false };
+  let st: { adminExists: boolean; hasUser: boolean; roles: string[] } = { adminExists: true, hasUser: false, roles: [] };
   try {
     // Force bypassing the 60s cache to immediately reflect new sessions (e.g., token login)
     const s = await authApi.status({ force: true });
-    st = { adminExists: s.adminExists, hasUser: !!s.currentUser };
+    st = { adminExists: s.adminExists, hasUser: !!s.currentUser, roles: s.currentUser?.roles || [] };
   } catch {
     // leave defaults; App.vue mock banner will guide user
   }
@@ -50,6 +50,13 @@ router.beforeEach(async (to) => {
   }
   // If already logged in and going to login → redirect home
   if (st?.hasUser && to.name === 'login') return { path: '/' };
+
+  // Role-based access: Inventory (Menu) allowed for ADMIN and STOCK only
+  if (to.name === 'menu') {
+    const roles = st.roles || [];
+    const allowed = roles.includes('ADMIN') || roles.includes('STOCK');
+    if (!allowed) return { path: '/' };
+  }
   return true;
 });
 
