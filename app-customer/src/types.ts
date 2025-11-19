@@ -43,9 +43,10 @@ export interface CustomerOrder {
   updatedAt: string;
   channel: OrderChannel;
   status: 'pending_payment' | 'paid' | 'fulfilled' | 'cancelled';
+  shortCode: string;
   items: OrderItemRef[];
   subtotal: number; // cents
   total: number; // cents
-  note?: string;
+  customerName?: string;
   payment?: { method: 'online' | 'cash'; externalId?: string | null; paidAt?: string | null };
 }

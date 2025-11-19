@@ -9,7 +9,8 @@
         <img :src="qrSrc" alt="QR del pedido" />
       </div>
       <div class="sum">
-        <div><strong>ID:</strong> {{ order.id }}</div>
+        <div><strong>Código:</strong> {{ order.shortCode }}</div>
+        <div class="muted" style="font-size:12px;">ID: {{ order.id }}</div>
         <div><strong>Total:</strong> {{ currency(order.total) }}</div>
         <div><strong>Estado:</strong> {{ order.status }}</div>
       </div>
@@ -38,7 +39,9 @@ onMounted(async () => {
     const id = String(route.params.id || '');
     const o = await customerApi.getOrder(id);
     order.value = o;
-    const data = `order:${o.id};total:${o.total};method:cash`;
+    // Encode the same input expected by Cajero (app-staff): the short alphanumeric order code.
+    // Cashier scans either a plain short code or a URL with ?code=...; we provide the plain short code for maximum compatibility.
+    const data = String(o.shortCode || '');
     qrSrc.value = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(data)}`;
   } catch {
     order.value = null;
