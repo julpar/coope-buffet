@@ -33,12 +33,8 @@
     <n-card v-if="order" class="order-card focus-only" :title="'Pedido ' + order.id">
       <div v-if="!isPayable" class="prominent-warning">
         <n-alert type="warning" title="No se puede cobrar este pedido" :show-icon="true">
-          <div class="warn-text">
-            El estado actual es <strong class="status">{{ statusLabel }}</strong>.
-            No hay acciones disponibles en este módulo.
-          </div>
-          <div class="warn-help">
-            Informe al cliente sobre el estado y, si corresponde, diríjalo a caja o a soporte.
+          <div class="warn-text" style="font-weight: 700; font-size: 18px; letter-spacing: .5px;">
+            YA SE ENCUENTRA PAGO
           </div>
         </n-alert>
       </div>

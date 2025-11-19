@@ -6,7 +6,7 @@
           <n-icon size="16"><SearchOutline /></n-icon>
         </template>
       </n-input>
-      <n-select v-model:value="state" :options="stateOptions" placeholder="Estado" style="width:180px" />
+      <n-select v-model:value="state" :options="stateOptions" placeholder="Estado" style="width:200px" />
       <n-button type="primary" tertiary :loading="loading" @click="refresh">
         <template #icon><n-icon><RefreshOutline /></n-icon></template>
         Actualizar
@@ -19,12 +19,12 @@
 </template>
 
 <script setup lang="ts">
-import { h, computed, ref, onMounted } from 'vue';
+import { h, computed, ref, onMounted, watch } from 'vue';
 import { useMessage, NTag, NButton, NIcon, type DataTableColumns } from 'naive-ui';
 import { RefreshOutline, SearchOutline, PlayForwardOutline, CloseOutline } from '@vicons/ionicons5';
 import { staffApi } from '../lib/api';
 
-type State = 'pending_payment' | 'paid' | 'fulfilled';
+type State = 'pending_payment' | 'paid' | 'fulfilled' | 'all';
 type Fulfillment = 'received' | 'preparing' | 'ready' | 'completed' | undefined;
 const q = ref('');
 const state = ref<State>('paid');
@@ -36,6 +36,7 @@ const rows = ref<Row[]>([]);
 const peso = (cents: number) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format((cents || 0) / 100);
 
 const stateOptions = [
+  { label: 'Todas', value: 'all' },
   { label: 'Esperando pago', value: 'pending_payment' },
   { label: 'Pagadas (en preparación)', value: 'paid' },
   { label: 'Completadas', value: 'fulfilled' },
@@ -45,7 +46,7 @@ const filtered = computed(() => rows.value.filter(r =>
   (!q.value || `${r.id}`.toLowerCase().includes(q.value.toLowerCase()))
 ));
 
-const label = (s?: Fulfillment) => ({ received: 'Recibida', preparing: 'Preparando', ready: 'Lista', completed: 'Completada' } as any)[s || ''] || (s || '');
+const label = (s?: Fulfillment) => ({ received: 'Pago Pendiente', preparing: 'Preparando', ready: 'Lista', completed: 'Completada' } as any)[s || ''] || (s || '');
 const tagType = (s?: Fulfillment) => ({ received: 'warning', preparing: 'info', ready: 'success', completed: 'default' } as any)[s || ''] || 'default';
 
 const columns: DataTableColumns<Row> = [
@@ -87,9 +88,10 @@ async function refresh() {
 }
 
 function canAdvance(row: Row): boolean {
-  if (state.value !== 'paid') return false;
-  // Only advance paid orders
-  return row.fulfillment === 'received' || row.fulfillment === 'preparing' || row.fulfillment === 'ready';
+  // Only advance orders that are currently paid, regardless of selected filter
+  const isPaid = row?.raw?.status === 'paid';
+  const canProgress = row.fulfillment === 'received' || row.fulfillment === 'preparing' || row.fulfillment === 'ready';
+  return !!isPaid && canProgress;
 }
 
 async function advance(row: Row) {
@@ -117,6 +119,11 @@ async function cancel(row: Row) {
 }
 
 onMounted(() => { refresh(); });
+
+// Auto refresh when changing the state filter
+watch(state, () => {
+  refresh();
+});
 </script>
 
 <style scoped>
