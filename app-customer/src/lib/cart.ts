@@ -37,6 +37,13 @@ export const cart = {
       itemsRef.value.push({ id: product.id, name: product.name, unitPrice: product.price, qty: amount });
     }
   },
+  setQuantity(id: string, qty: number) {
+    const idx = findIndex(id);
+    const amount = Math.max(0, Math.floor(qty));
+    if (idx >= 0) {
+      if (amount <= 0) itemsRef.value.splice(idx, 1); else itemsRef.value[idx].qty = amount;
+    }
+  },
   increase(id: string) {
     const idx = findIndex(id); if (idx >= 0) itemsRef.value[idx].qty += 1;
   },

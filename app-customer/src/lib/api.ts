@@ -23,8 +23,43 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
   }
   if (!res.ok) {
     apiOnline.value = false;
-    const text = await res.text().catch(() => '');
-    throw new Error(`HTTP ${res.status} ${res.statusText}: ${text}`);
+    // Try to parse a structured API error first
+    let bodyText = '';
+    try { bodyText = await res.text(); } catch { bodyText = ''; }
+    // 1) Attempt straight JSON parse
+    try {
+      const json = bodyText ? JSON.parse(bodyText) : null;
+      if (json && (json.code || json.message)) {
+        const err: any = new Error(json.message || `${res.status} ${res.statusText}`);
+        err.status = res.status;
+        err.code = json.code;
+        if (json.shortages) err.shortages = json.shortages;
+        throw err;
+      }
+    } catch {
+      // 2) If parsing failed (e.g., body wrapped with extra text), try to extract the first JSON object substring
+      if (bodyText && bodyText.includes('{') && bodyText.includes('}')) {
+        const start = bodyText.indexOf('{');
+        const end = bodyText.lastIndexOf('}');
+        if (end > start) {
+          try {
+            const json = JSON.parse(bodyText.slice(start, end + 1));
+            if (json && (json.code || json.message)) {
+              const err: any = new Error(json.message || `${res.status} ${res.statusText}`);
+              err.status = res.status;
+              err.code = json.code;
+              if (json.shortages) err.shortages = json.shortages;
+              throw err;
+            }
+          } catch {
+            // ignore and fall through
+          }
+        }
+      }
+      // fallthrough to generic error
+    }
+    // Fallback to a generic error with raw text preserved
+    throw new Error(`HTTP ${res.status} ${res.statusText}: ${bodyText}`);
   }
   apiOnline.value = true;
   const ct = res.headers.get('content-type') || '';

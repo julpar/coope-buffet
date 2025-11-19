@@ -48,7 +48,7 @@
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
 import type { CustomerOrder } from '../types';
 import { customerApi } from '../lib/api';
 import { statusLabel, statusDescription } from '../lib/status';
@@ -72,13 +72,14 @@ onMounted(async () => {
     const id = String(route.params.id || '');
     const o = await customerApi.getOrder(id);
     order.value = o;
-    // Generamos un QR escaneable por "Cajero":
-    // El lector acepta URLs con ?code=SHORT o el bloque alfanumérico puro.
+    // Generamos el QR de "cumplimiento" (y caja) REUTILIZANDO el mismo código corto
+    // usado para pagar. No debe ser una URL, solo el código alfanumérico.
     const code = o?.shortCode || o?.id;
     if (code) {
-      const origin = typeof window !== 'undefined' ? window.location.origin : '';
-      const data = origin ? `${origin}/?code=${encodeURIComponent(code)}` : String(code);
-      qrSrc.value = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(data)}`;
+      // Importante: el data del QR debe ser únicamente el código, sin URL.
+      qrSrc.value = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(
+        String(code)
+      )}`;
     } else {
       qrSrc.value = '';
     }
@@ -96,6 +97,24 @@ onMounted(async () => {
 });
 
 onUnmounted(() => stopPolling());
+
+// Global-ish protection: if the current order is PAID and the user tries to leave
+// this screen (go back to menú, cart, or anywhere else), show a strong warning.
+// This also covers browser Back/Forward actions.
+onBeforeRouteLeave(() => {
+  const st = order.value?.status;
+  if (st === 'paid') {
+    const msg = [
+      '¡Atención! Este pedido ya figura como PAGADO.',
+      'Si salís de esta pantalla se perderá el pedido y no podremos asociarlo,',
+      'lo que puede implicar perder el dinero.\n',
+      '¿Seguro que querés salir y volver al menú?'
+    ].join(' ');
+    const ok = window.confirm(msg);
+    if (!ok) return false; // cancelar navegación
+  }
+  return true;
+});
 
 function startPolling(id: string) {
   stopPolling();
