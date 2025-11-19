@@ -1,24 +1,30 @@
 <template>
   <div class="cashier">
-    <h2>Cajero · Cobrar pedido</h2>
+    <h2>Cajero</h2>
 
-    <n-card size="small" class="scanner-card">
+    <!-- Single-operation workstation: big input + live scanner -->
+    <n-card size="small" class="scanner-card minimal">
       <div class="scan-row">
         <div class="scan-left">
-          <div class="field-row">
-            <n-input v-model:value="manualCode" placeholder="Código de 6 caracteres" maxlength="12" @keydown.enter.prevent="lookup" />
-            <n-button type="primary" :disabled="!canLookup" :loading="loading" @click="lookup">Buscar</n-button>
+          <div class="field-row big">
+            <n-input size="large" v-model:value="manualCode" placeholder="Código del pedido" maxlength="12" @keydown.enter.prevent="lookup" />
+            <n-button size="large" type="primary" :disabled="!canLookup" :loading="loading" @click="lookup">Buscar</n-button>
           </div>
-          <small class="hint">Puedes escribir el código corto que muestra el cliente. Ej: 6 letras/números legibles.</small>
+          <small class="hint">Escanea el QR o escribe el código. Diseñado para uso continuo.</small>
+          <div class="shortcuts" aria-hidden="true">
+            <span><kbd>Enter</kbd> buscar</span>
+            <span><kbd>P</kbd> pagar</span>
+            <span><kbd>Esc</kbd> limpiar</span>
+          </div>
         </div>
         <div class="scan-right">
           <div class="video-wrap">
             <video ref="videoEl" autoplay playsinline muted></video>
-            <div class="overlay">Escanea QR</div>
+            <div class="overlay">{{ scanning ? 'Escaneando…' : 'Escanear QR' }}</div>
           </div>
           <div class="scan-actions">
-            <n-button size="small" @click="toggleScan">{{ scanning ? 'Detener cámara' : 'Usar cámara' }}</n-button>
-            <small class="hint" v-if="!barcodeSupported">Tu navegador no soporta lector de QR; usa el código manual.</small>
+            <n-button size="large" tertiary @click="toggleScan">{{ scanning ? 'Detener cámara' : 'Usar cámara' }}</n-button>
+            <small class="hint" v-if="!barcodeSupported">El lector de QR no está disponible; usa el código manual.</small>
           </div>
         </div>
       </div>
@@ -40,8 +46,8 @@
       </div>
       <template #action>
         <n-space>
-          <n-button secondary @click="clearOrder">Cancelar</n-button>
-          <n-button type="primary" :loading="marking" @click="markPaid" :disabled="order.status !== 'pending_payment'">MARCAR PAGADO</n-button>
+          <n-button size="large" secondary @click="clearOrder">Cancelar</n-button>
+          <n-button size="large" strong type="primary" :loading="marking" @click="markPaid" :disabled="order.status !== 'pending_payment'">MARCAR PAGADO</n-button>
         </n-space>
       </template>
     </n-card>
@@ -101,6 +107,8 @@ async function markPaid() {
     const o = await staffApi.markOrderPaidByCode(code);
     order.value = o;
     msg.success('Pago registrado. Enviado a preparación.');
+    // Prepare immediately for the next customer
+    resetForNext(true);
   } catch (e: any) {
     msg.error('No se pudo marcar como pagado.');
   } finally {
@@ -175,25 +183,63 @@ function toggleScan() {
 
 onMounted(() => {
   canLookup.value = true;
+  // Auto-start scanner for faster workflow
+  if (barcodeSupported) startScan();
+  // Hotkeys for operation mode
+  window.addEventListener('keydown', onKey);
 });
 
 onBeforeUnmount(() => {
   stopScan();
+  window.removeEventListener('keydown', onKey);
 });
+
+function onKey(e: KeyboardEvent) {
+  // Avoid when typing inside input unless Enter
+  const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+  const inInput = tag === 'input' || tag === 'textarea';
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    lookup();
+    return;
+  }
+  if (inInput) return;
+  if (e.key.toLowerCase() === 'p') {
+    if (order.value && order.value.status === 'pending_payment') markPaid();
+  } else if (e.key === 'Escape') {
+    manualCode.value = '';
+    clearOrder();
+    if (!scanning.value && barcodeSupported) startScan();
+  }
+}
+
+function resetForNext(restartScan = false) {
+  // Clear UI shortly after success to continue with next order
+  setTimeout(() => {
+    manualCode.value = '';
+    clearOrder();
+    if (restartScan && barcodeSupported) startScan();
+  }, 800);
+}
 </script>
 
 <style scoped>
 .cashier { display: flex; flex-direction: column; gap: 16px; }
-.scanner-card { }
-.scan-row { display: grid; grid-template-columns: 1fr 320px; gap: 16px; }
+.scanner-card.minimal :deep(.n-card__content) { padding-top: 12px; }
+.scan-row { display: grid; grid-template-columns: 1fr 420px; gap: 16px; align-items: start; }
 @media (max-width: 900px) {
   .scan-row { grid-template-columns: 1fr; }
 }
 .field-row { display:flex; gap:8px; align-items:center; }
+.field-row.big :deep(.n-input) { font-size: 20px; }
+.field-row.big :deep(.n-input__input-el) { height: 56px; }
+.field-row.big :deep(.n-button) { height: 56px; font-size: 18px; padding: 0 22px; }
 .hint { color: #666; }
+.shortcuts { display:flex; gap:12px; margin-top:6px; color:#888; font-size:12px; }
+.shortcuts kbd { background:#f0f0f0; border-radius:4px; padding:1px 6px; font-family: ui-monospace, monospace; }
 .video-wrap { position: relative; width: 100%; aspect-ratio: 1/1; background: #000; border-radius: 8px; overflow: hidden; }
 .video-wrap video { width: 100%; height: 100%; object-fit: cover; }
-.overlay { position:absolute; inset:auto 0 0 0; color:#fff; text-align:center; background: linear-gradient(transparent, rgba(0,0,0,0.6)); padding: 6px 8px; font-size: 12px; }
+.overlay { position:absolute; inset:auto 0 0 0; color:#fff; text-align:center; background: linear-gradient(transparent, rgba(0,0,0,0.6)); padding: 10px 12px; font-size: 14px; letter-spacing: .2px; }
 .order-card { }
 .order-summary { display:flex; flex-wrap: wrap; gap: 16px; margin-bottom: 8px; }
 .order-summary .row { min-width: 140px; }

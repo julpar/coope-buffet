@@ -1,17 +1,7 @@
 import type { MenuResponse, CustomerOrder, OrderChannel } from '../types';
 import { ref } from 'vue';
-
-const API_BASE_URL = ((import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:3000') as string;
-const API_VERSION = ((import.meta as any).env?.VITE_API_VERSION || 'v1') as string;
-
-function buildBase(base: string, version: string): string {
-  const trimmedBase = base.replace(/\/$/, '');
-  const trimmedVer = version.replace(/^\//, '');
-  return `${trimmedBase}/${trimmedVer}`;
-}
-
-const ABS_BASE = buildBase(API_BASE_URL, API_VERSION);
-export const API_BASE = ABS_BASE;
+import { API_BASE as ABS_BASE } from './base';
+import { platform } from './platform';
 export const apiOnline = ref<boolean | null>(null);
 
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
@@ -19,6 +9,9 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
   const url = ABS_BASE + urlPath;
   let res: Response;
   try {
+    // Just-in-time platform status check before any server communication
+    // Debounced inside platform implementation to avoid bursts
+    await platform.fetch();
     res = await fetch(url, {
       headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
       credentials: 'include',
@@ -42,7 +35,7 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const customerApi = {
   getMenu(): Promise<MenuResponse> { return http('/menu'); },
-  createOrder(input: { id: string; channel: OrderChannel; items: Array<{ id: string; qty: number }>; note?: string; paymentMethod?: 'online' | 'cash' }): Promise<CustomerOrder> {
+  createOrder(input: { channel: OrderChannel; items: Array<{ id: string; qty: number }>; customerName?: string; paymentMethod?: 'online' | 'cash' }): Promise<CustomerOrder> {
     return http('/orders', { method: 'POST', body: JSON.stringify(input) });
   },
   getOrder(id: string): Promise<CustomerOrder> { return http(`/orders/${id}`); }

@@ -1,5 +1,5 @@
 import { ref } from 'vue';
-import { API_BASE } from './api';
+import { API_BASE } from './base';
 
 type Status = 'online' | 'soft-offline' | 'hard-offline';
 
@@ -7,20 +7,21 @@ export const platform = {
   status: ref<Status>('online'),
   message: ref<string>(''),
   offlineUntil: ref<number | null>(null),
-  _timer: null as any,
+  _inFlight: null as Promise<void> | null,
   async fetch() {
-    try {
-      const res = await fetch(`${API_BASE}/platform/status`);
-      const data = await res.json();
-      platform.status.value = data.status as Status;
-      platform.message.value = data.message || '';
-      platform.offlineUntil.value = data.offlineUntil ?? null;
-    } catch {}
+    // Coalesce concurrent calls to avoid duplicate requests
+    if (platform._inFlight) return platform._inFlight;
+    platform._inFlight = (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/platform/status`);
+        const data = await res.json();
+        platform.status.value = data.status as Status;
+        platform.message.value = data.message || '';
+        platform.offlineUntil.value = data.offlineUntil ?? null;
+      } catch {}
+    })().finally(() => {
+      platform._inFlight = null;
+    });
+    return platform._inFlight;
   },
-  start() {
-    platform.fetch();
-    clearInterval(platform._timer);
-    platform._timer = setInterval(platform.fetch, 3000);
-  },
-  stop() { clearInterval(platform._timer); }
 };

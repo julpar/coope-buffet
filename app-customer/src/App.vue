@@ -90,7 +90,8 @@ function inc(id: string) { cart.increase(id); }
 function dec(id: string) { cart.decrease(id); }
 
 onMounted(() => {
-  platform.start();
+  // Single initial fetch; ongoing checks are done just-in-time before API calls
+  platform.fetch();
 });
 </script>
 

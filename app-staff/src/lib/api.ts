@@ -23,6 +23,18 @@ const FORCE_MOCK = ((import.meta as any).env?.VITE_FORCE_MOCK === '1');
 const SESSION_MOCK = typeof window !== 'undefined' && sessionStorage.getItem('mock-mode') === '1';
 export const isMocked = ref<boolean>(FORCE_MOCK || SESSION_MOCK);
 
+export class HttpError extends Error {
+  status: number;
+  statusText: string;
+  bodyText?: string;
+  constructor(status: number, statusText: string, message?: string) {
+    super(message || `${status} ${statusText}`);
+    this.name = 'HttpError';
+    this.status = status;
+    this.statusText = statusText;
+  }
+}
+
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
   const urlPath = path.startsWith('/') ? path : `/${path}`;
   const url = ABS_BASE + urlPath;
@@ -39,9 +51,14 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
     throw e;
   }
   if (!res.ok) {
-    apiOnline.value = false;
     const text = await res.text().catch(() => '');
-    throw new Error(`HTTP ${res.status} ${res.statusText}: ${text}`);
+    // Do NOT mark offline for 4xx — treat as normal application errors
+    if (res.status >= 500) {
+      apiOnline.value = false;
+    }
+    const err = new HttpError(res.status, res.statusText, `HTTP ${res.status} ${res.statusText}`);
+    err.bodyText = text;
+    throw err;
   }
   // Successful response: consider the API online and, unless forced, exit mock mode
   apiOnline.value = true;
@@ -71,8 +88,13 @@ export async function tryApi<T>(fn: () => Promise<T>, fallback: () => Promise<T>
       try { sessionStorage.removeItem('mock-mode'); } catch {}
     }
     return res;
-  } catch (_) {
-    // Enable mocked mode on any failure
+  } catch (e: any) {
+    // For 4xx application errors, do not toggle offline/mock; just rethrow
+    const status = typeof e?.status === 'number' ? e.status : undefined;
+    if (status && status >= 400 && status < 500) {
+      throw e;
+    }
+    // Network errors or 5xx → enable mocked mode and fallback
     isMocked.value = true;
     apiOnline.value = false;
     try { sessionStorage.setItem('mock-mode', '1'); } catch {}
