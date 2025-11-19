@@ -31,8 +31,10 @@ const loading = ref(true);
 const order = ref<CustomerOrder | null>(null);
 const qrSrc = ref('');
 
-function currency(cents: number): string {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(cents / 100);
+// Backend now returns monetary values in whole ARS (not cents).
+// Show the number as-is without dividing by 100.
+function currency(amount: number): string {
+  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(amount);
 }
 
 onMounted(async () => {
