@@ -43,6 +43,16 @@
               <n-icon><PersonOutline /></n-icon>
             </template>
           </n-button>
+
+          <!-- Logout -->
+          <n-button class="hide-on-mobile" type="default" strong :loading="loggingOut" @click="onLogout">
+            Salir
+          </n-button>
+          <n-button class="only-mobile" quaternary circle :loading="loggingOut" aria-label="Salir" @click="onLogout">
+            <template #icon>
+              <n-icon><PersonOutline /></n-icon>
+            </template>
+          </n-button>
         </div>
       </n-layout-header>
 
@@ -58,6 +68,20 @@
           </div>
           <div class="mock-banner__actions">
             <n-button size="small" tertiary @click="dismissBanner">Ocultar por esta sesión</n-button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Operational status banner for non-admin roles (soft/hard offline) -->
+      <div v-if="ready && showPlatformBanner" class="platform-banner" :class="platformBannerClass" role="alert">
+        <div class="platform-banner__content">
+          <div class="platform-banner__text">
+            <strong v-if="platformStatus?.status==='hard-offline'">Clientes: servicio no disponible</strong>
+            <strong v-else>Clientes: pausa temporal</strong>
+            <span>
+              {{ platformStatus?.message || (platformStatus?.status==='hard-offline' ? 'El sitio de clientes está temporalmente apagado.' : 'Los clientes no pueden realizar pedidos por el momento.') }}
+              <small v-if="platformStatus?.offlineUntil" class="muted">Hasta: {{ new Date(platformStatus!.offlineUntil!).toLocaleString() }}</small>
+            </span>
           </div>
         </div>
       </div>
@@ -119,9 +143,10 @@ import {
   PersonOutline,
   CashOutline,
   NotificationsOutline,
-  CheckmarkDoneOutline
+  CheckmarkDoneOutline,
+  PowerOutline
 } from '@vicons/ionicons5';
-import { isMocked as apiIsMocked, API_BASE, apiOnline, authApi, type StaffUser } from './lib/api';
+import { isMocked as apiIsMocked, API_BASE, apiOnline, authApi, type StaffUser, platformApi, type PlatformStatusResponse } from './lib/api';
 
 const router = useRouter();
 const collapsed = ref(false);
@@ -146,6 +171,7 @@ const menuOptions = computed(() => {
     opts.push({ label: 'Fulfillment', key: '/fulfillment', icon: renderIcon(CheckmarkDoneOutline) });
     opts.push({ label: 'Menú', key: '/menu', icon: renderIcon(RestaurantOutline) });
     opts.push({ label: 'Usuarios', key: '/users', icon: renderIcon(PersonOutline) });
+    opts.push({ label: 'Estado plataforma', key: '/platform', icon: renderIcon(PowerOutline) });
     return opts;
   }
 
@@ -206,6 +232,41 @@ const adminNickname = ref('');
 const adminPassword = ref('');
 const savingAdmin = ref(false);
 const canCreateAdmin = computed(() => !!adminNickname.value && (adminPassword.value?.length || 0) >= 6);
+const loggingOut = ref(false);
+
+// Platform status (for showing banner to non-admin roles)
+const platformStatus = ref<PlatformStatusResponse | null>(null);
+const platformTimer = ref<number | null>(null);
+const isAdminUser = computed(() => (currentUser.value?.roles || []).includes('ADMIN'));
+const showPlatformBanner = computed(() => {
+  if (!platformStatus.value) return false;
+  if (isAdminUser.value) return false; // Only non-admin roles need the banner
+  return platformStatus.value.status === 'soft-offline' || platformStatus.value.status === 'hard-offline';
+});
+const platformBannerClass = computed(() => {
+  const s = platformStatus.value?.status;
+  return s === 'hard-offline' ? 'critical' : 'warning';
+});
+async function pollPlatformStatus() {
+  try {
+    const st = await platformApi.getPublicStatus();
+    platformStatus.value = st;
+  } catch {
+    // ignore
+  }
+}
+function startPlatformPolling() {
+  // fetch immediately and then every 20s
+  pollPlatformStatus();
+  stopPlatformPolling();
+  platformTimer.value = window.setInterval(pollPlatformStatus, 20000) as unknown as number;
+}
+function stopPlatformPolling() {
+  if (platformTimer.value) {
+    clearInterval(platformTimer.value as unknown as number);
+    platformTimer.value = null;
+  }
+}
 
 async function loadAuth(force = false) {
   try {
@@ -273,6 +334,9 @@ onMounted(async () => {
   window.addEventListener('resize', updateIsMobile);
   // Store cleanup handler on instance via global to remove later
   (cleanupFns as any).push(() => window.removeEventListener('resize', updateIsMobile));
+  // Start platform status polling
+  startPlatformPolling();
+  (cleanupFns as any).push(() => stopPlatformPolling());
 });
 
 // Refresh auth status on route changes so header/layout reacts after QR login
@@ -287,6 +351,18 @@ onBeforeUnmount(() => {
     try { fn(); } catch {}
   });
 });
+
+async function onLogout() {
+  if (loggingOut.value) return;
+  loggingOut.value = true;
+  try {
+    await authApi.logout();
+  } catch {}
+  // Best-effort client cleanup as well
+  try { sessionStorage.removeItem('mock-mode'); } catch {}
+  // Force a full reload so the app re-checks auth status and shows the login screen
+  location.reload();
+}
 </script>
 
 <style scoped>
@@ -330,6 +406,17 @@ onBeforeUnmount(() => {
 .mock-banner__text strong { color: #664d03; }
 .mock-banner__text .muted { color: #8d6e00; margin-left: 8px; }
 .mock-banner__actions { flex: 0 0 auto; }
+
+/* Platform operational status banner (for non-admin roles) */
+.platform-banner { position: sticky; top: 0; z-index: 49; border-bottom: 1px solid; }
+.platform-banner.warning { background: #fff8e1; border-color: #ffe082; }
+.platform-banner.critical { background: #fdecea; border-color: #f4b1ab; }
+.platform-banner__content { max-width: 1200px; margin: 0 auto; padding: 8px 16px; }
+.platform-banner__text { display: flex; flex-direction: column; gap: 2px; }
+.platform-banner.warning .platform-banner__text { color: #7a5d00; }
+.platform-banner.critical .platform-banner__text { color: #7a1f1f; }
+.platform-banner__text strong { font-weight: 700; }
+.platform-banner__text .muted { opacity: 0.85; margin-left: 6px; }
 
 .setup { display:flex; align-items:center; justify-content:center; padding: 40px 16px; }
 .setup-card { background:#fff; border:1px solid rgba(0,0,0,.08); border-radius:12px; padding:20px; max-width:480px; width:100%; display:flex; gap:12px; flex-direction:column; }

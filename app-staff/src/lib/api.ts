@@ -238,6 +238,8 @@ export const authApi = {
   }),
   // Initiate session from permanent token delivered via URL (param name: token)
   perm: (token: string) => http<{ ok: true; user: StaffUser }>(`/auth/perm?token=${encodeURIComponent(token)}`),
+  // Logout current session (server clears cookie)
+  logout: () => http<void>(`/auth/logout`, { method: 'POST' }),
 };
 
 export const usersApi = {
@@ -253,6 +255,24 @@ export const usersApi = {
       body: JSON.stringify(data),
     }),
   remove: (id: string) => http<{ ok: true }>(`/staff/users/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  // Get permanent login URL for an existing user (ADMIN only)
+  getPermUrl: (id: string) => http<{ permUrl: string }>(`/staff/users/${encodeURIComponent(id)}/perm-url`),
+};
+
+// Platform status (global kill switch)
+export type PlatformStatus = 'online' | 'soft-offline' | 'hard-offline';
+export type PlatformStatusResponse = { status: PlatformStatus; message: string; offlineUntil: number | null };
+
+export const platformApi = {
+  // Public endpoint, available to everyone
+  getPublicStatus: () => http<PlatformStatusResponse>(`/platform/status`),
+  // Admin-only staff endpoints
+  getStaffStatus: () => http<PlatformStatusResponse>(`/staff/platform/status`),
+  setStatus: (data: { status: PlatformStatus; message?: string; offlineUntil?: number | null }) =>
+    http<PlatformStatusResponse & { ok: true }>(`/staff/platform/status`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
 };
 
 // Background probe on startup to eagerly detect backend availability and show the banner early.

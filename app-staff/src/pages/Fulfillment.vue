@@ -470,7 +470,8 @@ function rowStyle(id: string | number) {
 .subsection-header .subsection-title { font-weight: 700; font-size: 14px; letter-spacing: .2px; }
 .subsection-header .subsection-count { font-weight: 700; background:#f2f3f5; color:#333; border-radius: 999px; padding: 2px 8px; font-size: 12px; }
 .subsection-header.muted { color:#666; }
-@media (max-width: 900px) {
+/* Stack input above camera on medium screens too (same as narrow displays) */
+@media (max-width: 1280px) {
   .scan-row { grid-template-columns: 1fr; }
   .scan-right { width: auto; }
 }

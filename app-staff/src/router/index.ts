@@ -7,6 +7,7 @@ const Menu = () => import('../pages/Menu.vue');
 const Cashier = () => import('../pages/Cashier.vue');
 const Fulfillment = () => import('../pages/Fulfillment.vue');
 const Users = () => import('../pages/Users.vue');
+const PlatformStatus = () => import('../pages/PlatformStatus.vue');
 const Login = () => import('../pages/Login.vue');
 const AuthPerm = () => import('../pages/auth/AuthPerm.vue');
 
@@ -19,6 +20,7 @@ const router = createRouter({
     { path: '/fulfillment', name: 'fulfillment', component: Fulfillment },
     { path: '/menu', name: 'menu', component: Menu },
     { path: '/users', name: 'users', component: Users },
+    { path: '/platform', name: 'platform', component: PlatformStatus },
     { path: '/login', name: 'login', component: Login },
     // Route to land from QR/permanent token
     { path: '/auth/perm', name: 'auth-perm', component: AuthPerm },
@@ -55,6 +57,12 @@ router.beforeEach(async (to) => {
   if (to.name === 'menu') {
     const roles = st.roles || [];
     const allowed = roles.includes('ADMIN') || roles.includes('STOCK');
+    if (!allowed) return { path: '/' };
+  }
+  // Platform page restricted to ADMIN only
+  if (to.name === 'platform') {
+    const roles = st.roles || [];
+    const allowed = roles.includes('ADMIN');
     if (!allowed) return { path: '/' };
   }
   return true;

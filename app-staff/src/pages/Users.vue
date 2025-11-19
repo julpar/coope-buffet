@@ -13,20 +13,35 @@
     </div>
 
     <div class="table-wrap">
-      <n-data-table :columns="columns" :data="filtered" :bordered="true" :scroll-x="820" />
+      <n-data-table :columns="columns" :data="filtered" :bordered="true" :scroll-x="880" />
     </div>
 
     <InviteUserModal v-model:show="showCreate" @created="onCreated" />
     <EditUserModal v-model:show="showEdit" :user="editingUser" @saved="onSaved" />
+
+    <n-modal v-model:show="showQR" preset="card" title="Acceso permanente" :mask-closable="!loadingQR" :closable="!loadingQR">
+      <div v-if="loadingQR">Cargando…</div>
+      <div v-else class="qr-modal">
+        <div class="hint">URL de acceso:</div>
+        <n-input :value="permUrl" readonly />
+        <div class="perm-actions">
+          <n-button size="small" @click="copyPerm">Copiar enlace</n-button>
+          <n-button size="small" tertiary tag="a" :href="permUrl" target="_blank">Abrir</n-button>
+        </div>
+        <div class="qr-wrap" v-if="qrSrc">
+          <img :src="qrSrc" alt="QR de acceso" class="qr" />
+          <div class="qr-hint">Escanea con la cámara del dispositivo para iniciar sesión.</div>
+        </div>
+      </div>
+    </n-modal>
   </div>
-  
 </template>
 
 <script setup lang="ts">
 import { h, computed, ref, onMounted } from 'vue';
 import { NTag, NButton, useMessage, type DataTableColumns } from 'naive-ui';
 import { PersonAddOutline, TrashOutline, SearchOutline } from '@vicons/ionicons5';
-import { usersApi, type StaffUser } from '../lib/api';
+import { usersApi, authApi, type StaffUser } from '../lib/api';
 import InviteUserModal from '../components/InviteUserModal.vue';
 import EditUserModal from '../components/EditUserModal.vue';
 
@@ -34,6 +49,8 @@ const q = ref('');
 const rows = ref<StaffUser[]>([]);
 const filtered = computed(() => rows.value.filter(r => !q.value || r.nickname.toLowerCase().includes(q.value.toLowerCase())));
 const message = useMessage();
+const roles = ref<string[]>([]);
+const isAdmin = computed(() => roles.value.includes('ADMIN'));
 
 async function loadUsers() {
   try {
@@ -43,18 +60,28 @@ async function loadUsers() {
   }
 }
 
+async function loadAuth() {
+  try {
+    const st = await authApi.status({ force: true });
+    roles.value = st.currentUser?.roles || [];
+  } catch {
+    roles.value = [];
+  }
+}
+
 const columns: DataTableColumns<StaffUser> = [
   { title: 'Nombre', key: 'nickname', minWidth: 200, ellipsis: true },
   { title: 'Roles', key: 'roles', minWidth: 240, render: (row: StaffUser) => h('div', { style: 'display:flex;flex-wrap:wrap;gap:6px' }, row.roles.map(r => h(NTag, { size: 'small' }, { default: () => r }))) },
   { title: 'ID', key: 'id', width: 160 },
-  { title: 'Acciones', key: 'actions', width: 220, render: (row: StaffUser) => h('div', { style: 'display:flex; gap:8px; white-space: nowrap;' }, [
+  { title: 'Acciones', key: 'actions', width: 300, render: (row: StaffUser) => h('div', { style: 'display:flex; gap:8px; white-space: nowrap;' }, [
+      isAdmin.value ? h(NButton, { quaternary: true, size: 'small', onClick: () => viewQR(row) }, { default: () => 'Ver QR' }) : null,
       h(NButton, { quaternary: true, size: 'small', onClick: () => editUser(row) }, { default: () => 'Editar' }),
       h(NButton, { quaternary: true, size: 'small', type: 'error', onClick: () => removeUser(row) }, { default: () => 'Eliminar', icon: () => h('i', { class: 'n-icon' }, h(TrashOutline)) })
-    ])
+    ].filter(Boolean) as any)
   }
 ];
 
-onMounted(loadUsers);
+onMounted(async () => { await Promise.all([loadUsers(), loadAuth()]); });
 
 // create modal state
 const showCreate = ref(false);
@@ -84,6 +111,36 @@ async function removeUser(u: StaffUser) {
     message.error('No se pudo eliminar');
   }
 }
+
+// QR modal state/actions
+const showQR = ref(false);
+const loadingQR = ref(false);
+const permUrl = ref('');
+const qrSrc = ref('');
+async function viewQR(u: StaffUser) {
+  if (!isAdmin.value) return;
+  showQR.value = true;
+  loadingQR.value = true;
+  permUrl.value = '';
+  qrSrc.value = '';
+  try {
+    const res = await usersApi.getPermUrl(u.id);
+    permUrl.value = res.permUrl;
+    qrSrc.value = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(permUrl.value)}`;
+  } catch {
+    message.error('No se pudo obtener el QR');
+    showQR.value = false;
+  } finally {
+    loadingQR.value = false;
+  }
+}
+
+function copyPerm() {
+  if (!permUrl.value) return;
+  navigator.clipboard?.writeText(permUrl.value)
+    .then(() => message.success('Enlace copiado'))
+    .catch(() => message.warning('No se pudo copiar'));
+}
 </script>
 
 <style scoped>
@@ -93,4 +150,12 @@ async function removeUser(u: StaffUser) {
 .table-wrap { overflow-x: auto; }
 /* Keep table headers in one line on small screens to avoid vertical letter stacking */
 :deep(.n-data-table-th) { white-space: nowrap; }
+.qr-modal { display:flex; flex-direction:column; gap:10px; }
+.hint { font-size:12px; color:#666; }
+.perm-actions { display:flex; gap:8px; align-items:center; }
+.qr-wrap { display:flex; flex-direction:column; align-items:flex-start; gap:6px; margin-top: 4px; }
+.qr { width: 320px; height: 320px; border:1px solid #eee; border-radius:8px; background:#fff; }
+@media (max-width: 480px) {
+  .qr { width: 240px; height: 240px; }
+}
 </style>

@@ -1,40 +1,5 @@
 <template>
-  <div class="grid">
-    <n-card class="tile" :bordered="true">
-      <template #header>
-        <div class="tile-header"><n-icon><BarChartOutline /></n-icon><span>Hoy</span></div>
-      </template>
-      <div class="kpi">
-        <div class="kpi-value">{{ currency( revenueToday ) }}</div>
-        <div class="kpi-sub">Ingresos</div>
-      </div>
-    </n-card>
-    <n-card class="tile" :bordered="true">
-      <template #header>
-        <div class="tile-header"><n-icon><ListOutline /></n-icon><span>Órdenes</span></div>
-      </template>
-      <div class="kpi">
-        <div class="kpi-value">{{ ordersToday }}</div>
-        <div class="kpi-sub">Procesadas</div>
-      </div>
-    </n-card>
-    <n-card class="tile" :bordered="true">
-      <template #header>
-        <div class="tile-header"><n-icon><PersonOutline /></n-icon><span>Usuarios activos</span></div>
-      </template>
-      <div class="kpi">
-        <div class="kpi-value">{{ activeUsers }}</div>
-        <div class="kpi-sub">Staff conectado</div>
-      </div>
-    </n-card>
-  </div>
-
-  <n-card class="mt" :bordered="true">
-    <template #header>
-      <div class="tile-header"><n-icon><TrendingUpOutline /></n-icon><span>Actividad reciente</span></div>
-    </template>
-    <n-data-table :columns="columns" :data="recent" size="small" :bordered="false" />
-  </n-card>
+  <!-- Tarjetas estáticas removidas: "Hoy", "Órdenes" (estáticas), "Usuarios activos" y "Actividad reciente" -->
   
   <!-- Stock alerts: out of stock and low stock -->
   <!-- Visible only to ADMIN and STOCK roles -->
@@ -92,42 +57,67 @@
     </div>
   </n-card>
   
+  <!-- Orders overview: role-based sections -->
+  <!-- CASHIER: shows orders waiting for payment -->
+  <!-- FULFILLER: shows orders waiting fulfillment (paid but not fulfilled) -->
+  <!-- ADMIN: sees both -->
+  <n-card class="mt" :bordered="true" v-if="canSeeCashier || canSeeFulfillment">
+    <template #header>
+      <div class="tile-header"><n-icon><ListOutline /></n-icon><span>Órdenes — Resumen</span></div>
+    </template>
+    <div class="orders-sections">
+      <!-- Cashier section -->
+      <div class="orders-panel" v-if="canSeeCashier">
+        <div class="panel-header">
+          <strong>Esperando pago</strong>
+          <n-tag type="warning" size="small">{{ pendingPaymentCount }}</n-tag>
+          <span class="spacer"></span>
+          <n-button size="small" tertiary :loading="loadingOrders" @click="refreshOrders">Refrescar</n-button>
+          <n-button size="small" type="primary" @click="goToCashier">Ir a Caja</n-button>
+        </div>
+        <div class="kpi">
+          <div class="kpi-value">{{ pendingPaymentCount }}</div>
+          <div class="kpi-sub">Ordenes con pago pendiente</div>
+        </div>
+      </div>
+
+      <!-- Fulfillment section -->
+      <div class="orders-panel" v-if="canSeeFulfillment">
+        <div class="panel-header">
+          <strong>En preparación/entrega</strong>
+          <n-tag type="info" size="small">{{ awaitingFulfillmentCount }}</n-tag>
+          <span class="spacer"></span>
+          <n-button size="small" tertiary :loading="loadingOrders" @click="refreshOrders">Refrescar</n-button>
+          <n-button size="small" type="primary" @click="goToFulfillment">Ir a Preparación</n-button>
+        </div>
+        <div class="kpi">
+          <div class="kpi-value">{{ awaitingFulfillmentCount }}</div>
+          <div class="kpi-sub">Ordenes pagadas sin completar</div>
+        </div>
+      </div>
+    </div>
+  </n-card>
+  
 </template>
 
 <script setup lang="ts">
 import { h, ref, computed, onMounted } from 'vue';
 import { NIcon, NTag, NButton, type DataTableColumns } from 'naive-ui';
-import { BarChartOutline, ListOutline, PersonOutline, TrendingUpOutline } from '@vicons/ionicons5';
+import { ListOutline } from '@vicons/ionicons5';
 import type { Item } from '../types';
 import { staffApi, authApi, type StaffUser } from '../lib/api';
 import { useRouter } from 'vue-router';
-
-const revenueToday = ref(235000);
-const ordersToday = ref(57);
-const activeUsers = ref(6);
-const recent = ref([
-  { time: '10:02', event: 'Orden #1245 aceptada', actor: 'Ana' },
-  { time: '09:51', event: 'Ingrediente "Tomate" repuesto', actor: 'Juan' },
-  { time: '09:33', event: 'Orden #1244 entregada', actor: 'Luis' },
-]);
-
-const columns: DataTableColumns<any> = [
-  { title: 'Hora', key: 'time', width: 120 },
-  { title: 'Evento', key: 'event' },
-  { title: 'Usuario', key: 'actor', width: 160 }
-];
-
-const currency = (v: number) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(v);
 
 // Stock alerts logic
 const router = useRouter();
 const loadingStock = ref(false);
 const items = ref<Item[]>([]);
 const currentUser = ref<StaffUser | null>(null);
-const canSeeStockAlerts = computed(() => {
-  const roles = currentUser.value?.roles || [];
-  return roles.includes('ADMIN') || roles.includes('STOCK');
-});
+const roles = computed(() => currentUser.value?.roles || []);
+const canSeeStockAlerts = computed(() => roles.value.includes('ADMIN') || roles.value.includes('STOCK'));
+const canSeeCashier = computed(() => roles.value.includes('ADMIN') || roles.value.includes('CASHIER'));
+// Align with App.vue which uses role key 'ORDER_FULFILLER'
+const canSeeFulfillment = computed(() => roles.value.includes('ADMIN') || roles.value.includes('ORDER_FULFILLER'));
 
 const outOfStock = computed(() =>
   items.value.filter(it => (it.stock ?? 0) <= 0).sort((a, b) => (a.name || '').localeCompare(b.name || ''))
@@ -156,6 +146,33 @@ async function loadStock() {
 
 function refreshStock() { return loadStock(); }
 function goToMenu() { router.push('/menu'); }
+function goToCashier() { router.push('/cashier'); }
+function goToFulfillment() { router.push('/fulfillment'); }
+
+// Orders overview logic
+const loadingOrders = ref(false);
+const pendingPaymentCount = ref<number>(0);
+const awaitingFulfillmentCount = ref<number>(0);
+async function refreshOrders() {
+  loadingOrders.value = true;
+  try {
+    // Fetch counts per state; keep lightweight
+    const [pendingList, paidList] = await Promise.all([
+      canSeeCashier.value ? staffApi.listOrders('pending_payment') : Promise.resolve([]),
+      canSeeFulfillment.value ? staffApi.listOrders('paid') : Promise.resolve([]),
+    ]);
+    pendingPaymentCount.value = (pendingList || []).length;
+    // In case backend returns some fulfilled within 'paid', filter by fulfillment flag if present
+    const awaiting = (paidList || []).filter((o: any) => !o.fulfillment);
+    awaitingFulfillmentCount.value = awaiting.length;
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn('Error loading order counts', e);
+    // Keep previous values on error
+  } finally {
+    loadingOrders.value = false;
+  }
+}
 
 onMounted(async () => {
   try {
@@ -167,6 +184,10 @@ onMounted(async () => {
   // Only load stock data when the user is allowed to see this section
   if (canSeeStockAlerts.value) {
     await loadStock();
+  }
+  // Load orders counts for visible sections
+  if (canSeeCashier.value || canSeeFulfillment.value) {
+    await refreshOrders();
   }
 });
 
@@ -200,4 +221,9 @@ const lowCols: DataTableColumns<Row> = [
 .panel-header { display:flex; align-items:center; gap:8px; margin-bottom: 8px; }
 .empty { color: rgba(0,0,0,.45); font-size: 13px; padding: 8px 0; }
 .muted { color: rgba(0,0,0,.45); font-size: 12px; }
+
+/* Orders overview */
+.orders-sections { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.orders-panel { display:flex; flex-direction:column; gap: 6px; }
+.spacer { flex:1; }
 </style>
