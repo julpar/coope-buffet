@@ -18,18 +18,7 @@
             <span class="dot" :class="apiStatusClass"></span>
             <span class="api-text">{{ apiLabel }}</span>
           </div>
-          <!-- Notifications: full on desktop, icon-only on mobile -->
-          <n-button class="hide-on-mobile" tertiary type="primary">
-            <template #icon>
-              <n-icon><NotificationsOutline /></n-icon>
-            </template>
-            Notifications
-          </n-button>
-          <n-button class="only-mobile" quaternary circle aria-label="Notificaciones">
-            <template #icon>
-              <n-icon><NotificationsOutline /></n-icon>
-            </template>
-          </n-button>
+          <!-- Notifications removed: no visible use -->
 
           <!-- Profile: full on desktop, icon-only on mobile -->
           <n-button class="hide-on-mobile" text>
@@ -142,7 +131,6 @@ import {
   RestaurantOutline,
   PersonOutline,
   CashOutline,
-  NotificationsOutline,
   CheckmarkDoneOutline,
   PowerOutline
 } from '@vicons/ionicons5';
