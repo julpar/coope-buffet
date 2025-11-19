@@ -13,7 +13,14 @@
     <div class="stock-toolbar">
       <div class="muted">Monitoreo de platos con stock agotado o cercano al umbral.</div>
       <div class="actions">
-        <n-button size="small" tertiary @click="refreshStock" :loading="loadingStock">Refrescar</n-button>
+        <n-tooltip trigger="hover">
+          <template #trigger>
+            <n-button size="small" tertiary circle :loading="loadingStock" @click="refreshStock">
+              <n-icon><RefreshOutline /></n-icon>
+            </n-button>
+          </template>
+          Refrescar
+        </n-tooltip>
         <n-button size="small" type="primary" @click="goToMenu">
           Ir a Inventario
         </n-button>
@@ -72,7 +79,14 @@
           <strong>Esperando pago</strong>
           <n-tag type="warning" size="small">{{ pendingPaymentCount }}</n-tag>
           <span class="spacer"></span>
-          <n-button size="small" tertiary :loading="loadingOrders" @click="refreshOrders">Refrescar</n-button>
+          <n-tooltip trigger="hover">
+            <template #trigger>
+              <n-button size="small" tertiary circle :loading="loadingOrders" @click="refreshOrders">
+                <n-icon><RefreshOutline /></n-icon>
+              </n-button>
+            </template>
+            Refrescar
+          </n-tooltip>
           <n-button size="small" type="primary" @click="goToCashier">Ir a Caja</n-button>
         </div>
         <div class="kpi">
@@ -87,7 +101,14 @@
           <strong>En preparación/entrega</strong>
           <n-tag type="info" size="small">{{ awaitingFulfillmentCount }}</n-tag>
           <span class="spacer"></span>
-          <n-button size="small" tertiary :loading="loadingOrders" @click="refreshOrders">Refrescar</n-button>
+          <n-tooltip trigger="hover">
+            <template #trigger>
+              <n-button size="small" tertiary circle :loading="loadingOrders" @click="refreshOrders">
+                <n-icon><RefreshOutline /></n-icon>
+              </n-button>
+            </template>
+            Refrescar
+          </n-tooltip>
           <n-button size="small" type="primary" @click="goToFulfillment">Ir a Preparación</n-button>
         </div>
         <div class="kpi">
@@ -102,8 +123,8 @@
 
 <script setup lang="ts">
 import { h, ref, computed, onMounted } from 'vue';
-import { NIcon, NTag, NButton, type DataTableColumns } from 'naive-ui';
-import { ListOutline } from '@vicons/ionicons5';
+import { NIcon, NTag, NButton, NTooltip, type DataTableColumns } from 'naive-ui';
+import { ListOutline, RefreshOutline } from '@vicons/ionicons5';
 import type { Item } from '../types';
 import { staffApi, authApi, type StaffUser } from '../lib/api';
 import { useRouter } from 'vue-router';

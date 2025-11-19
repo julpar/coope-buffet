@@ -17,11 +17,17 @@
   </div>
 
   <!-- Detalles de la orden -->
-  <n-modal v-model:show="detailsOpen" preset="card" :title="selected ? `Orden ${selected.raw?.shortCode || selected.id}` : 'Orden'" style="max-width: 720px; width: 95vw">
+  <n-modal v-model:show="detailsOpen" preset="card" style="max-width: 720px; width: 95vw">
+    <template #header>
+      <div class="card-header-line">
+        <n-tag v-if="selected" size="large" :type="statusTagType(selected)">{{ statusLabel(selected) }}</n-tag>
+        <div class="card-title">
+          {{ selected ? `Orden ${selected.raw?.shortCode || selected.id}` : 'Orden' }}
+        </div>
+      </div>
+    </template>
     <template v-if="selected">
       <div style="display:flex; gap: 8px; align-items:center; margin-bottom: 8px;">
-        <n-tag :type="statusTagType(selected)">{{ statusLabel(selected) }}</n-tag>
-        <span style="color:#666">•</span>
         <span>Creada: <strong>{{ fmtDateTime(selected.raw?.createdAt) }}</strong></span>
         <span v-if="selected.raw?.customerName" style="color:#666">•</span>
         <span v-if="selected.raw?.customerName">Cliente: <strong>{{ selected.raw.customerName }}</strong></span>
@@ -246,4 +252,7 @@ onMounted(() => { loadItemsLookup(); });
 .page { display: flex; flex-direction: column; gap: 12px; }
 .toolbar { display: flex; gap: 8px; align-items: center; }
 .grow { flex: 1; }
+/* Card header with status at the top next to title */
+.card-header-line { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.card-title { font-weight: 700; font-size: 18px; letter-spacing: .2px; }
 </style>

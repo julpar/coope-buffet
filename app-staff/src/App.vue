@@ -94,7 +94,7 @@
       <!-- Full app layout once authenticated -->
       <n-layout v-else has-sider>
         <!-- Desktop/tablet: keep sider; Mobile: hide sider and use drawer -->
-        <n-layout-sider v-if="!isMobile" :collapsed="collapsed" show-trigger bordered collapse-mode="width" :collapsed-width="64" width="220">
+        <n-layout-sider v-if="!isMobile" v-model:collapsed="collapsed" show-trigger bordered collapse-mode="width" :collapsed-width="64" width="220">
           <n-menu :value="$route.path" :options="menuOptions" @update:value="onMenu" :collapsed="collapsed" />
         </n-layout-sider>
         <n-layout-content class="main">
