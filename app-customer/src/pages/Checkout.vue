@@ -1,6 +1,11 @@
 <template>
   <div class="checkout">
     <h2>Finalizar pedido</h2>
+    <!-- Soft-offline notice: if status flips while here, block flow and inform -->
+    <n-alert v-if="isSoftOffline" type="warning" title="Pausa momentánea" class="soft-note">
+      <div>Por ahora no podés finalizar el pedido. {{ offlineMsg }}</div>
+      <small v-if="platform.offlineUntil" class="muted">Hasta: {{ new Date(platform.offlineUntil).toLocaleString() }}</small>
+    </n-alert>
     <div v-if="items.length === 0" class="empty">
       <div class="muted">No hay items en el carrito.</div>
       <n-button size="small" type="tertiary" @click="goHome">Volver al menú</n-button>
@@ -24,7 +29,7 @@
           </n-form>
           <div class="actions">
             <n-button tertiary @click="goHome">Volver</n-button>
-            <n-button type="primary" @click="goNext">Siguiente</n-button>
+            <n-button type="primary" :disabled="isSoftOffline" @click="goNext" :title="isSoftOffline ? 'La plataforma está en pausa momentánea' : ''">Siguiente</n-button>
           </div>
         </section>
       </template>
@@ -50,7 +55,7 @@
           <p class="muted">Por ahora solo en efectivo. El pedido quedará pendiente de validar manualmente por el personal.</p>
           <div class="actions">
             <n-button tertiary @click="step=1">Atrás</n-button>
-            <n-button type="primary" :loading="loading" :disabled="items.length===0" @click="placeOrder">Confirmar pedido y generar QR</n-button>
+            <n-button type="primary" :loading="loading" :disabled="items.length===0 || isSoftOffline" @click="placeOrder" :title="isSoftOffline ? 'La plataforma está en pausa momentánea' : ''">Confirmar pedido y generar QR</n-button>
           </div>
           <div v-if="error" class="error">{{ error }}</div>
         </section>
@@ -64,6 +69,7 @@ import { computed, ref, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { cart } from '../lib/cart';
 import { customerApi } from '../lib/api';
+import { platform } from '../lib/platform';
 
 const router = useRouter();
 const items = computed(() => cart.items.value);
@@ -75,6 +81,9 @@ const error = ref('');
 const step = ref<1|2>(1);
 // prevent auto-redirect during active submission flow
 const suppressEmptyRedirect = ref(false);
+
+const isSoftOffline = computed(() => platform.status.value === 'soft-offline');
+const offlineMsg = computed(() => platform.message.value || 'Volvemos en unos minutos.');
 
 // Monetary values are provided in ARS units (not cents)
 function currency(amount: number): string {
@@ -111,6 +120,12 @@ async function placeOrder() {
   loading.value = true; error.value = '';
   suppressEmptyRedirect.value = true;
   try {
+    // Last-moment check to avoid submitting during pause
+    await platform.fetch();
+    if (platform.status.value === 'soft-offline') {
+      error.value = 'Estamos en pausa momentánea. Intentá de nuevo en unos minutos.';
+      return;
+    }
     const res = await customerApi.createOrder({
       // Only pickup is supported as ordering modality
       channel: 'pickup',

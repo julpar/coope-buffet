@@ -33,6 +33,7 @@
           <div class="soft-card">
             <h3>Estamos en pausa momentánea</h3>
             <p>{{ platform.message || 'Volvemos en unos minutos.' }}</p>
+            <small v-if="platform.offlineUntil" class="muted">Hasta: {{ new Date(platform.offlineUntil).toLocaleString() }}</small>
           </div>
         </div>
 
@@ -173,6 +174,9 @@ function dec(id: string) { cart.decrease(id); }
 onMounted(() => {
   // Single initial fetch; ongoing checks are done just-in-time before API calls
   platform.fetch();
+  // Start lightweight polling so status stays fresh even when idle
+  const poll = () => platform.fetch();
+  const interval = window.setInterval(poll, 20000);
   const openCartHandler = () => {
     // Only open if there are items to show; otherwise just inform the user
     if (items.value.length === 0) {
@@ -215,6 +219,8 @@ onMounted(() => {
   window.__notifyHandler = notifyHandler;
   // @ts-expect-error store on window for teardown
   window.__setShortagesHandler = setShortagesHandler;
+  // @ts-expect-error store interval for teardown
+  window.__platformPoller = interval;
 });
 
 onBeforeUnmount(() => {
@@ -224,6 +230,8 @@ onBeforeUnmount(() => {
   if (window.__notifyHandler) window.removeEventListener('notify', window.__notifyHandler);
   // @ts-expect-error - custom global events
   if (window.__setShortagesHandler) window.removeEventListener('set-shortages', window.__setShortagesHandler);
+  // @ts-expect-error - clear polling interval
+  if (window.__platformPoller) clearInterval(window.__platformPoller);
 });
 
 // When user fixes all shortages, give a friendly hint that they can continue

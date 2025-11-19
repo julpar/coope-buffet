@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
+import { platform } from '../lib/platform';
 
 const routes: RouteRecordRaw[] = [
   { path: '/', component: () => import('../pages/Menu.vue') },
@@ -9,6 +10,26 @@ const routes: RouteRecordRaw[] = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+});
+
+// Guard: prevent entering checkout when platform is in soft-offline
+router.beforeEach(async (to) => {
+  try {
+    await platform.fetch();
+  } catch {}
+  if (to.path === '/checkout' && platform.status.value === 'soft-offline') {
+    // Inform the user using the global notify mechanism handled by App.vue
+    try {
+      // @ts-expect-error custom global event
+      window.dispatchEvent(
+        new CustomEvent('notify', {
+          detail: { type: 'warning', message: 'Estamos en pausa momentánea. Podrás finalizar tu pedido en unos minutos.' },
+        }),
+      );
+    } catch {}
+    return { path: '/' };
+  }
+  return true;
 });
 
 export default router;
