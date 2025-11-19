@@ -16,3 +16,4 @@ public-staff/
 app-customer/dist/
 app-staff/dist/
 /out/
+/.turbo/
