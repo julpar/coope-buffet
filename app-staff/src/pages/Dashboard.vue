@@ -360,7 +360,8 @@ const lowColsGrouped: DataTableColumns<Row> = [
 .kpi-sub { color: rgba(0,0,0,.45); }
 .mt { margin-top: 12px; }
 
-.stock-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 8px; }
+.stock-toolbar { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom: 8px; }
+.stock-toolbar .actions { display:flex; align-items:center; gap:8px; }
 .stock-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
 .panel-header { display:flex; align-items:center; gap:8px; margin-bottom: 8px; }
 .empty { color: rgba(0,0,0,.45); font-size: 13px; padding: 8px 0; }

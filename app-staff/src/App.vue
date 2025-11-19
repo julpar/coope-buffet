@@ -20,27 +20,25 @@
           </div>
           <!-- Notifications removed: no visible use -->
 
-          <!-- Profile: full on desktop, icon-only on mobile -->
+          <!-- Profile: full on desktop, show user name on mobile (no icon) -->
           <n-button class="hide-on-mobile" text>
             <template #icon>
               <n-icon><PersonOutline /></n-icon>
             </template>
             {{ currentUser?.nickname || 'Perfil' }}
           </n-button>
-          <n-button class="only-mobile" quaternary circle aria-label="Perfil">
-            <template #icon>
-              <n-icon><PersonOutline /></n-icon>
-            </template>
+          <!-- Mobile: show the nickname as text instead of the icon -->
+          <n-button class="only-mobile" text>
+            {{ currentUser?.nickname || 'Perfil' }}
           </n-button>
 
           <!-- Logout -->
           <n-button class="hide-on-mobile" type="default" strong :loading="loggingOut" @click="onLogout">
             Salir
           </n-button>
-          <n-button class="only-mobile" quaternary circle :loading="loggingOut" aria-label="Salir" @click="onLogout">
-            <template #icon>
-              <n-icon><PersonOutline /></n-icon>
-            </template>
+          <!-- Mobile: make logout a text button (label instead of icon) -->
+          <n-button class="only-mobile" type="default" size="small" :loading="loggingOut" @click="onLogout">
+            Salir
           </n-button>
         </div>
       </n-layout-header>
@@ -153,7 +151,7 @@ const menuOptions = computed(() => {
     opts.push({ label: 'Entrega', key: '/fulfillment', icon: renderIcon(CheckmarkDoneOutline) });
     opts.push({ label: 'Menú', key: '/menu', icon: renderIcon(RestaurantOutline) });
     opts.push({ label: 'Usuarios', key: '/users', icon: renderIcon(PersonOutline) });
-    opts.push({ label: 'Estado plataforma', key: '/platform', icon: renderIcon(PowerOutline) });
+    opts.push({ label: 'Estado', key: '/platform', icon: renderIcon(PowerOutline) });
     return opts;
   }
 
