@@ -25,8 +25,6 @@ services:
       - CORS_ALLOW_ALL=${CORS_ALLOW_ALL:-false}
     # Expose backend to host for local development and for web-staff/browser to reach it directly.
     # In production behind a reverse proxy you can remove this.
-    ports:
-      - "3000:3000"
 
   web-customer:
     build:
@@ -35,8 +33,6 @@ services:
     depends_on:
       - app
     restart: unless-stopped
-    ports:
-      - "8081:80"
 
   web-staff:
     build:
@@ -49,8 +45,6 @@ services:
     depends_on:
       - app
     restart: unless-stopped
-    ports:
-      - "8082:80"
 
 volumes:
   redis-data:
