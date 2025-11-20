@@ -4,6 +4,20 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Buffet Coope Grecia</title>
+    <style>
+      /* Global mobile readability tweaks (staff) */
+      :root { --app-base-font-size: 16px; }
+      html { font-size: var(--app-base-font-size); }
+      body { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+      /* Reverse behavior: bump sizes on wider screens (>= 501px) */
+      @media (min-width: 501px) {
+        :root { --app-base-font-size: 18px; }
+        .n-button, .n-input, .n-tag, .n-badge, .n-menu-item-content__icon { font-size: 1rem; }
+        .n-button--small { font-size: 1rem; padding: 8px 12px; }
+        .n-input--small .n-input__input-el { font-size: 1rem; }
+        .n-icon, [class^="n-icon"], [class*=" n-icon"], .n-menu-item-content__icon { font-size: 1.25rem; }
+      }
+    </style>
   </head>
   <body>
     <div id="app"></div>

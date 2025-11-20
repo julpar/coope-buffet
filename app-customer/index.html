@@ -24,6 +24,21 @@
     <meta name="twitter:image" content="https://www.buffetgrecia.com.ar/images/coope_logo.jpg" />
     <meta name="twitter:image:alt" content="Buffet Grecia" />
     <title>Buffet</title>
+    <style>
+      /* Global readability baseline */
+      :root { --app-base-font-size: 16px; }
+      html { font-size: var(--app-base-font-size); }
+      body { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+      /* Reverse behavior: make things bigger on wider screens (>= 501px) */
+      @media (min-width: 501px) {
+        :root { --app-base-font-size: 18px; }
+        /* Slightly increase default font size of common Naive UI controls */
+        .n-button, .n-input, .n-tag, .n-badge { font-size: 1rem; }
+        .n-button--small { font-size: 1rem; padding: 8px 12px; }
+        .n-input--small .n-input__input-el { font-size: 1rem; }
+        .n-icon, [class^="n-icon"], [class*=" n-icon"] { font-size: 1.25rem; }
+      }
+    </style>
   </head>
   <body>
     <div id="app"></div>

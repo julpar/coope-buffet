@@ -1,6 +1,6 @@
 <template>
   <n-message-provider>
-  <n-config-provider :theme-overrides="themeOverrides">
+  <n-config-provider :theme-overrides="themeOverrides" :size="uiSize">
     <n-layout class="layout">
       <n-layout-header v-if="ready && (adminExists && currentUser)" bordered class="header">
         <div class="brand">
@@ -132,6 +132,11 @@ const router = useRouter();
 const collapsed = ref(false);
 const drawerOpen = ref(false);
 const isMobile = ref(false);
+// Reverse behavior: make components larger on wider screens (>= 501px)
+const uiSize = ref<'small' | 'medium' | 'large'>('large');
+function updateUiSize() {
+  uiSize.value = window.matchMedia('(min-width: 501px)').matches ? 'large' : 'medium';
+}
 
 const renderIcon = (icon: any) => () => h(NIcon, null, { default: () => h(icon) });
 
@@ -316,6 +321,18 @@ onMounted(async () => {
   window.addEventListener('resize', updateIsMobile);
   // Store cleanup handler on instance via global to remove later
   (cleanupFns as any).push(() => window.removeEventListener('resize', updateIsMobile));
+  // Initialize UI size reactivity for Naive UI components (reverse behavior)
+  updateUiSize();
+  const mq = window.matchMedia('(min-width: 501px)');
+  const mqHandler = () => updateUiSize();
+  try { mq.addEventListener('change', mqHandler); } catch { /* Safari legacy */ // @ts-expect-error legacy API
+    mq.addListener(mqHandler);
+  }
+  (cleanupFns as any).push(() => {
+    try { mq.removeEventListener('change', mqHandler); } catch { // @ts-expect-error legacy API
+      mq.removeListener(mqHandler);
+    }
+  });
   // Start platform status polling
   startPlatformPolling();
   (cleanupFns as any).push(() => stopPlatformPolling());

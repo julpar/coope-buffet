@@ -1,6 +1,6 @@
 <template>
   <n-message-provider>
-    <n-config-provider>
+    <n-config-provider :size="uiSize">
       <n-layout class="layout">
         <n-layout-header bordered class="header">
           <div class="brand">
@@ -17,7 +17,7 @@
             @keydown.space.prevent="toggleCart"
           >
             <n-badge :value="cartQty" :max="99" type="success">
-              <n-button type="primary" size="small">
+              <n-button type="primary" size="medium">
                 <template #icon>
                   <n-icon><CartOutline /></n-icon>
                 </template>
@@ -120,6 +120,12 @@ const drawer = ref(false);
 // Use Naive UI discrete API so we don't depend on an outer provider in this component
 const { message } = createDiscreteApi(['message']);
 
+// UI size: reverse behavior — make things bigger on wider screens (>= 501px)
+const uiSize = ref<'small' | 'medium' | 'large'>('large');
+function updateUiSize() {
+  uiSize.value = window.matchMedia('(min-width: 501px)').matches ? 'large' : 'medium';
+}
+
 const items = computed(() => cart.items.value);
 const subtotal = computed(() => cart.subtotal.value);
 const cartQty = computed(() => cart.totalQty.value);
@@ -194,6 +200,20 @@ function inc(id: string) { cart.increase(id); }
 function dec(id: string) { cart.decrease(id); }
 
 onMounted(() => {
+  // Initialize responsive UI size and listen for changes
+  updateUiSize();
+  const mq = window.matchMedia('(min-width: 501px)');
+  const mqHandler = () => updateUiSize();
+  try {
+    mq.addEventListener('change', mqHandler);
+  } catch {
+    // Safari <14 fallback
+    // @ts-expect-error legacy API
+    mq.addListener(mqHandler);
+  }
+  // store for cleanup
+  // @ts-expect-error custom stash
+  window.__mqHandler500 = { mq, mqHandler };
   // Single initial fetch; ongoing checks are done just-in-time before API calls
   platform.fetch();
   // Start lightweight polling so status stays fresh even when idle
@@ -246,6 +266,19 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  // Remove matchMedia listener used for responsive UI size
+  try {
+    // @ts-expect-error custom stash
+    const stash = window.__mqHandler500 as { mq: MediaQueryList; mqHandler: () => void } | undefined;
+    if (stash) {
+      try { stash.mq.removeEventListener('change', stash.mqHandler); } catch {
+        // @ts-expect-error legacy API
+        stash.mq.removeListener(stash.mqHandler);
+      }
+      // @ts-expect-error cleanup
+      window.__mqHandler500 = undefined;
+    }
+  } catch {}
   // @ts-expect-error - custom global events
   if (window.__openCartHandler) window.removeEventListener('open-cart', window.__openCartHandler);
   // @ts-expect-error - custom global events
