@@ -209,21 +209,23 @@ const columns: DataTableColumns<Row> = [
       return h(NTooltip, { placement: 'top' }, { trigger: () => btn, default: () => 'Ver detalles' });
     }
   },
-  { title: '#', key: 'code', width: 120, className: 'col-code', titleClassName: 'col-code' },
+  { title: '#', key: 'code', minWidth: 120, className: 'col-code', titleClassName: 'col-code' },
   {
     title: 'Cliente',
     key: 'customer',
-    width: 200,
+    // Use minWidth so the column can expand and the table uses the full width
+    // of the page instead of staying constrained to the sum of fixed widths
+    minWidth: 200,
     className: 'col-customer',
     titleClassName: 'col-customer',
     render: (row: Row) => h('span', { class: 'cell-ellipsis' }, row.customer || '-')
   },
   { title: 'Items', key: 'items', width: 80, className: 'col-items', titleClassName: 'col-items' },
-  { title: 'Total', key: 'total', width: 120, className: 'col-total', titleClassName: 'col-total' },
+  { title: 'Total', key: 'total', minWidth: 120, className: 'col-total', titleClassName: 'col-total' },
   {
     title: 'Estado',
     key: 'fulfillment',
-    width: 160,
+    minWidth: 160,
     className: 'col-status',
     titleClassName: 'col-status',
     render: (row: Row) => h(NTag, { class: 'status-tag', type: statusTagType(row) }, { default: () => statusLabel(row) })
@@ -338,6 +340,9 @@ onMounted(() => { loadItemsLookup(); });
 
 <style scoped>
 .page { display: flex; flex-direction: column; gap: 12px; }
+/* Ensure the table stretches to full available width on this page */
+:deep(.n-data-table) { width: 100%; }
+:deep(.n-data-table-table) { width: 100%; }
 .toolbar { display: flex; gap: 8px; align-items: center; }
 .grow { flex: 1; }
 /* Make long customer names truncate nicely in narrow layouts */
