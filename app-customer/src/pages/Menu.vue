@@ -11,14 +11,14 @@
               <div class="meta">
                 <div class="title">
                   <strong>{{ it.name }}</strong>
-                  <n-tag v-if="it.isGlutenFree" type="success" size="medium">SIN TACC</n-tag>
+                  <n-tag v-if="it.isGlutenFree" type="success" size="small">SIN TACC</n-tag>
                 </div>
                 <div class="price">{{ currency(it.price) }}</div>
               </div>
               <div class="actions">
                 <small v-if="it.availability==='sold-out'" class="sold">Sin stock</small>
                 <small v-else-if="it.availability==='limited'" class="limited">Stock limitado</small>
-                <n-button size="medium" type="primary" :disabled="it.availability==='sold-out'" @click="add(it)">Agregar</n-button>
+                <n-button size="small" type="primary" :disabled="it.availability==='sold-out'" @click="add(it)">Agregar</n-button>
               </div>
             </div>
           </n-card>
