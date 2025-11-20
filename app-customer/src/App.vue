@@ -343,4 +343,12 @@ watch(
 .hard-card h1 { font-size: 28px; margin: 0 0 12px; }
 .hard-card .desc { opacity: .92; line-height: 1.4; }
 .hard-card .actions { margin-top: 16px; }
+
+/* Small screens with high pixel density: slightly enlarge text and buttons for readability */
+@media (max-width: 500px) and (min-resolution: 2dppx),
+       (max-width: 500px) and (-webkit-min-device-pixel-ratio: 2) {
+  .layout { font-size: 110%; }
+  :deep(.n-button) { font-size: 1.05em; }
+  :deep(.n-button.n-button--size-small) { font-size: 1.05em; }
+}
 </style>

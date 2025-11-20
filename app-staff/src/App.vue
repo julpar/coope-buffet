@@ -413,4 +413,14 @@ async function onLogout() {
   .api-indicator { padding: 2px 6px; gap: 4px; }
   .api-indicator .api-text { display: none; }
 }
+
+/* Small screens with high pixel density: slightly enlarge text and buttons for readability */
+@media (max-width: 500px) and (min-resolution: 2dppx),
+       (max-width: 500px) and (-webkit-min-device-pixel-ratio: 2) {
+  .layout { font-size: 110%; }
+  /* Naive UI buttons */
+  :deep(.n-button) { font-size: 1.05em; }
+  /* Make small buttons a bit larger too */
+  :deep(.n-button.n-button--size-small) { font-size: 1.05em; }
+}
 </style>
