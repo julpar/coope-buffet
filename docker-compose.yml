@@ -4,8 +4,6 @@ services:
     volumes:
       - redis-data:/data
     restart: unless-stopped
-    ports:
-      - "6379:6379"
 
   app:
     build:
