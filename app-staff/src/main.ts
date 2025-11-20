@@ -3,7 +3,7 @@ import App from './App.vue';
 import router from './router';
 
 // Register a subset of Naive UI components globally
-import { create, NConfigProvider, NLayout, NLayoutHeader, NLayoutSider, NLayoutContent, NMenu, NSwitch, NButton, NIcon, NCard, NDataTable, NInput, NInputNumber, NSelect, NTag, NMessageProvider, NModal, NForm, NFormItem, NCheckbox, NCheckboxGroup, NSpace, NDrawer, NDrawerContent } from 'naive-ui';
+import { create, NConfigProvider, NLayout, NLayoutHeader, NLayoutSider, NLayoutContent, NMenu, NSwitch, NButton, NIcon, NCard, NDataTable, NInput, NInputNumber, NSelect, NTag, NMessageProvider, NModal, NForm, NFormItem, NCheckbox, NCheckboxGroup, NSpace, NDrawer, NDrawerContent, NAlert } from 'naive-ui';
 
 const app = createApp(App);
 
@@ -25,6 +25,7 @@ const naive = create({
     NSelect,
     NTag,
     NMessageProvider,
+    NAlert,
     NModal,
     NForm,
     NFormItem,
