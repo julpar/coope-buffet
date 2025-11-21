@@ -27,12 +27,6 @@ services:
       - CORS_ORIGINS=${CORS_ORIGINS:-}
       # Set to true only if you want to allow any origin (not recommended for production)
       - CORS_ALLOW_ALL=${CORS_ALLOW_ALL:-false}
-    # Expose backend to host for local development and for web-staff/browser to reach it directly.
-    # For this to work you should have COMPOSE_PROFILES=dev set or run it like: docker compose --profile dev up
-    profiles:
-      - dev
-    ports:
-      - "3000:3000"
 
   web-customer:
     build:
