@@ -338,12 +338,22 @@ watch(
   min-width: 0;
   /* Prefer natural word boundaries; only break long tokens if needed */
   word-break: normal;
-  /* Allow browser to wrap very long tokens if necessary without creating horizontal scroll */
-  overflow-wrap: anywhere;
-  /* Enable hyphenation on supported browsers (requires proper lang on document) */
-  hyphens: auto;
+  /* Allow wrapping at word boundaries and break overly long tokens only as a last resort */
+  overflow-wrap: break-word;
+  /* Avoid auto-hyphenation to prevent mid-word splits like "Hamburguesa" */
+  hyphens: none;
+  -webkit-hyphens: none;
+  -ms-hyphens: none;
 }
-.cart-row .info * { min-width: 0; word-break: normal; }
+.cart-row .info * {
+  min-width: 0;
+  word-break: normal;
+  overflow-wrap: break-word;
+  white-space: normal;
+  hyphens: none;
+  -webkit-hyphens: none;
+  -ms-hyphens: none;
+}
 .cart-row .qty { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 .cart-row .q { min-width: 20px; text-align: center; }
 .row-total { font-weight: 600; white-space: nowrap; }
