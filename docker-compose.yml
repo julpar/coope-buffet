@@ -4,10 +4,6 @@ services:
     volumes:
       - redis-data:/data
     restart: unless-stopped
-    profiles:
-      - dev
-    ports:
-      - "6379:6379"
 
   app:
     build:
@@ -35,10 +31,6 @@ services:
     depends_on:
       - app
     restart: unless-stopped
-    profiles:
-      - dev
-    ports:
-      - "8010:80"
 
   web-staff:
     build:
@@ -51,10 +43,6 @@ services:
     depends_on:
       - app
     restart: unless-stopped
-    profiles:
-      - dev
-    ports:
-      - "8020:80"
 
 volumes:
   redis-data:
