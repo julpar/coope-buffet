@@ -321,13 +321,32 @@ watch(
 
 .muted { color: #666; }
 .cart-list { display: flex; flex-direction: column; gap: 10px; }
-.cart-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 8px; }
+/* Cart rows: ensure name wraps naturally and controls/prices don't wrap */
+.cart-row {
+  display: grid;
+  /* Allow the name column to grow and shrink properly without forcing weird word splits */
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+}
 .cart-row.highlight { background: #fff6e6; border-left: 4px solid #f0ad4e; transition: background 0.3s ease; }
 .inline-hint { margin-top: 4px; }
-.cart-row .info { display: flex; flex-direction: column; }
-.cart-row .qty { display: flex; align-items: center; gap: 6px; }
+.cart-row .info {
+  display: flex;
+  flex-direction: column;
+  /* Let the grid item shrink so long words can wrap instead of pushing columns */
+  min-width: 0;
+  /* Prefer natural word boundaries; only break long tokens if needed */
+  word-break: normal;
+  /* Allow browser to wrap very long tokens if necessary without creating horizontal scroll */
+  overflow-wrap: anywhere;
+  /* Enable hyphenation on supported browsers (requires proper lang on document) */
+  hyphens: auto;
+}
+.cart-row .info * { min-width: 0; word-break: normal; }
+.cart-row .qty { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 .cart-row .q { min-width: 20px; text-align: center; }
-.row-total { font-weight: 600; }
+.row-total { font-weight: 600; white-space: nowrap; }
 .totals { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 8px; }
 
 .shortage-banner { background: #fff3cd; color: #4a3c06; border: 1px solid #ffeeba; border-radius: 6px; padding: 8px; }
@@ -350,5 +369,15 @@ watch(
   .layout { font-size: 110%; }
   :deep(.n-button) { font-size: 1.05em; }
   :deep(.n-button.n-button--size-small) { font-size: 1.05em; }
+  /* Make icons a touch larger for readability/tap targets on high-DPI small screens */
+  :deep(.n-icon),
+  :deep(.n-base-icon) {
+    font-size: 1.15em;
+  }
+  /* But avoid making header cart icons too large, which can squeeze the name column */
+  .cart :deep(.n-icon),
+  .cart :deep(.n-base-icon) {
+    font-size: 1em;
+  }
 }
 </style>
