@@ -229,8 +229,26 @@ const columns: DataTableColumns<Row> = [
     titleClassName: 'col-customer',
     render: (row: Row) => h('span', { class: 'cell-ellipsis' }, row.customer || '-')
   },
-  { title: 'Items', key: 'items', width: 80, className: 'col-items', titleClassName: 'col-items' },
-  { title: 'Total', key: 'total', minWidth: 120, className: 'col-total', titleClassName: 'col-total' },
+  {
+    title: 'Items',
+    key: 'items',
+    // Two digits max → keep this column very narrow
+    width: 44,
+    align: 'right',
+    titleAlign: 'right',
+    className: 'col-items',
+    titleClassName: 'col-items'
+  },
+  {
+    title: 'Total',
+    key: 'total',
+    // Keep fixed so it won't collapse; values shouldn't wrap
+    width: 120,
+    align: 'right',
+    titleAlign: 'right',
+    className: 'col-total',
+    titleClassName: 'col-total'
+  },
   {
     title: 'Estado',
     key: 'fulfillment',
@@ -242,7 +260,10 @@ const columns: DataTableColumns<Row> = [
   {
     title: 'Pago',
     key: 'payment',
-    minWidth: 120,
+    // Compact: only two options (Online/Manual)
+    width: 88,
+    align: 'center',
+    titleAlign: 'center',
     className: 'col-payment',
     titleClassName: 'col-payment',
     render: (row: Row) => {
@@ -432,6 +453,36 @@ onMounted(() => { loadItemsLookup(); });
 
 /* Make button labels visible by default (desktop) */
 .label-text { display: inline; }
+
+/* Make narrow columns really compact */
+:deep(.n-data-table-th.col-items),
+:deep(.n-data-table-td.col-items) {
+  width: 44px; /* defensive: match column width */
+  padding-left: 8px;
+  padding-right: 8px;
+}
+:deep(.n-data-table-td.col-items) {
+  text-align: right;
+}
+
+/* Total column: fixed and non-wrapping, right-aligned */
+:deep(.n-data-table-th.col-total),
+:deep(.n-data-table-td.col-total) {
+  width: 120px; /* defensive: match column width */
+  white-space: nowrap;
+}
+:deep(.n-data-table-td.col-total) { text-align: right; }
+
+/* Payment column: only two options → keep tag slim */
+:deep(.n-data-table-th.col-payment),
+:deep(.n-data-table-td.col-payment) {
+  width: 88px; /* defensive: match column width */
+  text-align: center;
+}
+:deep(.n-data-table-td.col-payment .n-tag) {
+  padding: 0 6px; /* slimmer padding */
+  font-size: 12px;
+}
 
 /* Compact mode for medium screens (<900px): keep regular columns but make controls icon-first */
 @media (max-width: 899px) {
