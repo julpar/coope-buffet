@@ -53,6 +53,15 @@
         <span style="margin-left:8px">{{ selected.raw.note }}</span>
       </div>
 
+      <!-- Información de pago -->
+      <div class="payment-info">
+        <n-tag size="small" :type="selected.raw?.payment?.method === 'online' ? 'info' : 'default'">
+          Pago: {{ paymentLabel(selected.raw?.payment?.method) }}
+        </n-tag>
+        <span v-if="selected.raw?.payment?.externalId" class="kv"><span class="k">Ext. ID:</span> <span class="v mono">{{ selected.raw.payment.externalId }}</span></span>
+        <span v-if="selected.raw?.payment?.paidAt" class="kv"><span class="k">Pagado:</span> <span class="v">{{ fmtDateTime(selected.raw.payment.paidAt) }}</span></span>
+      </div>
+
       <n-table :single-line="false" size="small" bordered>
         <thead>
           <tr>
@@ -231,6 +240,19 @@ const columns: DataTableColumns<Row> = [
     render: (row: Row) => h(NTag, { class: 'status-tag', type: statusTagType(row) }, { default: () => statusLabel(row) })
   },
   {
+    title: 'Pago',
+    key: 'payment',
+    minWidth: 120,
+    className: 'col-payment',
+    titleClassName: 'col-payment',
+    render: (row: Row) => {
+      const method = row.raw?.payment?.method as ('online' | 'cash' | undefined);
+      const label = paymentLabel(method);
+      const tagType = method === 'online' ? 'info' : 'default';
+      return h(NTag, { size: 'small', type: tagType as any }, { default: () => label });
+    }
+  },
+  {
     title: 'Cambiar estado',
     key: 'action',
     width: 220,
@@ -327,6 +349,12 @@ function fmtDateTime(iso?: string): string {
   }
 }
 
+function paymentLabel(method?: 'online' | 'cash'): string {
+  if (method === 'online') return 'Online';
+  if (method === 'cash') return 'Efectivo';
+  return '-';
+}
+
 onMounted(() => { refresh(); });
 
 // Auto refresh when changing the state filter
@@ -358,6 +386,13 @@ onMounted(() => { loadItemsLookup(); });
 .customer-highlight { display:inline; padding:2px 6px; border-radius:6px; background: rgba(32,128,240,.08); color:#1f2d3d; line-height: 1.4; }
 .customer-highlight .label { color:#1a59b7; font-weight: 700; }
 .customer-highlight .name { font-weight: 700; word-break: break-word; }
+
+/* Payment info block */
+.payment-info { display:flex; flex-wrap: wrap; align-items:center; gap:8px; margin: 8px 0 12px 0; }
+.payment-info .kv { color:#333; }
+.payment-info .k { color:#666; margin-left: 6px; }
+.payment-info .v { font-weight: 600; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
 
 /* Ultra-compact two-line row layout for very narrow screens (~500px) */
 /* New grid layout for ≤500px to improve alignment and readability */

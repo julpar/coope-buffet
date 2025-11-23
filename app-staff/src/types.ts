@@ -37,6 +37,12 @@ export interface OrderItemRef {
 
 export type OrderStatus = 'received' | 'preparing' | 'ready' | 'out' | 'completed' | 'cancelled' | 'awaiting-cash';
 
+export type PaymentInfo = {
+  method: 'online' | 'cash';
+  externalId?: string | null;
+  paidAt?: string | null;
+};
+
 export interface StaffOrder {
   id: string;
   createdAt: string;
@@ -45,4 +51,6 @@ export interface StaffOrder {
   total: number;
   items: OrderItemRef[];
   note?: string;
+  // Optional payment block provided by backend
+  payment?: PaymentInfo;
 }
