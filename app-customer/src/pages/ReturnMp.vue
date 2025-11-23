@@ -1,0 +1,48 @@
+<template>
+  <div class="return-mp">
+    <h2>Procesando pago…</h2>
+    <div v-if="loading" class="muted">Redirigiendo a tu pedido…</div>
+    <div v-else-if="error" class="error">{{ error }}</div>
+    <div v-else class="muted">Listo. Si no fuiste redirigido automáticamente, <a href="#" @click.prevent="go">seguí acá</a>.</div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { onMounted, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { customerApi } from '../lib/api';
+
+const route = useRoute();
+const router = useRouter();
+const loading = ref(true);
+const error = ref('');
+let targetId: string | null = null;
+
+function go() {
+  if (targetId) router.replace(`/success/${encodeURIComponent(targetId)}`);
+}
+
+onMounted(async () => {
+  try {
+    const externalRef = String(route.query.external_reference || route.query.externalReference || '').trim();
+    if (!externalRef) {
+      error.value = 'No pudimos identificar tu pedido. Volvé al menú e intentá nuevamente.';
+      return;
+    }
+    // Resolve order by shortcode and navigate to the standard success page
+    const order = await customerApi.getOrderByCode(externalRef);
+    targetId = order.id as unknown as string;
+    await router.replace(`/success/${encodeURIComponent(targetId)}`);
+  } catch (e: any) {
+    error.value = e?.message || 'No se pudo recuperar el pedido.';
+  } finally {
+    loading.value = false;
+  }
+});
+</script>
+
+<style scoped>
+.return-mp { display: flex; flex-direction: column; gap: 8px; }
+.muted { color: #666; }
+.error { color: #b71c1c; }
+</style>

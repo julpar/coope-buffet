@@ -108,5 +108,9 @@ export const customerApi = {
   createOrder(input: { channel: OrderChannel; items: Array<{ id: string; qty: number }>; customerName?: string; paymentMethod?: 'online' | 'cash' }): Promise<CustomerOrder> {
     return http('/orders', { method: 'POST', body: JSON.stringify(input) });
   },
-  getOrder(id: string): Promise<CustomerOrder> { return http(`/orders/${id}`); }
+  getOrder(id: string): Promise<CustomerOrder> { return http(`/orders/${id}`); },
+  getOrderByCode(code: string): Promise<CustomerOrder> { return http(`/orders/code/${encodeURIComponent(code)}`); },
+  createMpPreference(orderId: string): Promise<{ preferenceId: string; initPoint: string }> {
+    return http('/payments/mercadopago/preference', { method: 'POST', body: JSON.stringify({ orderId }) });
+  }
 };

@@ -52,10 +52,17 @@
 
         <section class="pay">
           <h3>Pago</h3>
-          <p class="muted">Por ahora solo en efectivo. El pedido quedará pendiente de validar manualmente por el personal.</p>
-          <div class="actions">
+          <p class="muted">Elegí cómo querés pagar.</p>
+          <div class="actions stack">
             <n-button tertiary @click="step=1">Atrás</n-button>
-            <n-button type="primary" :loading="loading" :disabled="items.length===0 || isSoftOffline" @click="placeOrder" :title="isSoftOffline ? 'La plataforma está en pausa momentánea' : ''">Confirmar pedido y generar QR</n-button>
+            <!-- Main option: MercadoPago -->
+            <n-button type="primary" :loading="loading" :disabled="items.length===0 || isSoftOffline" @click="placeOrderMp" :title="isSoftOffline ? 'La plataforma está en pausa momentánea' : ''">
+              Pagar con MercadoPago
+            </n-button>
+            <!-- Secondary: efectivo/manual -->
+            <n-button secondary :loading="loading" :disabled="items.length===0 || isSoftOffline" @click="placeOrder" :title="isSoftOffline ? 'La plataforma está en pausa momentánea' : ''">
+              Confirmar en efectivo (validación manual)
+            </n-button>
           </div>
           <div v-if="error" class="error">{{ error }}</div>
         </section>
@@ -201,6 +208,57 @@ async function placeOrder() {
     suppressEmptyRedirect.value = false;
   }
 }
+
+async function placeOrderMp() {
+  loading.value = true; error.value = '';
+  suppressEmptyRedirect.value = true;
+  try {
+    await platform.fetch();
+    if (platform.status.value === 'soft-offline') {
+      error.value = 'Estamos en pausa momentánea. Intentá de nuevo en unos minutos.';
+      return;
+    }
+    // 1) Create pending order (online)
+    const order = await customerApi.createOrder({
+      channel: 'pickup',
+      items: cart.toOrderItems(),
+      customerName: customerName.value || undefined,
+      paymentMethod: 'online'
+    });
+    // 2) Ask backend for a MercadoPago preference
+    const pref = await customerApi.createMpPreference(order.id);
+    // 3) Clear cart and redirect to MP Checkout Pro
+    cart.clear();
+    window.location.href = pref.initPoint;
+  } catch (e: any) {
+    // Reuse shortage handling from placeOrder when applicable
+    if (e && e.code === 'INSUFFICIENT_STOCK' && Array.isArray(e.shortages)) {
+      try {
+        const lines: string[] = [];
+        for (const s of e.shortages) {
+          const avail = Math.max(0, Number(s.available ?? 0));
+          const req = Math.max(0, Number(s.requested ?? 0));
+          const name = s.name || s.id;
+          lines.push(`${name}: disponible ${avail} (pediste ${req})`);
+        }
+        router.replace('/');
+        setTimeout(() => {
+          const shortages = Array.isArray(e.shortages) ? e.shortages : [];
+          const shortageIds = shortages.map((s: any) => s.id).filter(Boolean);
+          // @ts-expect-error custom event
+          window.dispatchEvent(new CustomEvent('set-shortages', { detail: { shortages } }));
+          window.dispatchEvent(new CustomEvent('notify', { detail: { type: 'warning', message: 'No hay stock suficiente. Ajustá las cantidades:', description: lines.join(' · '), shortageIds, shortages } }));
+          window.dispatchEvent(new CustomEvent('open-cart'));
+        }, 50);
+        return;
+      } catch {}
+    }
+    error.value = e?.message || 'No se pudo iniciar el pago con MercadoPago.';
+  } finally {
+    loading.value = false;
+    suppressEmptyRedirect.value = false;
+  }
+}
 </script>
 
 <style scoped>
@@ -217,6 +275,7 @@ async function placeOrder() {
 .name { font-weight: 500; }
 .price { font-weight: 600; }
 .total { display: flex; justify-content: space-between; border-top: 1px dashed #ddd; padding-top: 8px; margin-top: 8px; }
-.actions { display: flex; gap: 8px; margin-top: 8px; }
+.actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.actions.stack { flex-direction: column; align-items: flex-start; }
 .error { margin-top: 8px; color: #b71c1c; }
 </style>

@@ -44,4 +44,12 @@ export class CustomerOrdersController {
     if (!o) throw new Error('order not found');
     return o;
   }
+
+  @Get('code/:code')
+  @Public()
+  async getByCode(@Param('code') code: string) {
+    const o = await this.orders.getByCode(code);
+    if (!o) throw new Error('order not found');
+    return o;
+  }
 }
