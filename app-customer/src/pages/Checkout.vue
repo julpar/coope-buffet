@@ -54,10 +54,9 @@
           <h3>Pago</h3>
           <p class="muted">Elegí cómo querés pagar.</p>
           <div class="actions stack">
-            <n-button tertiary @click="step=1">Atrás</n-button>
             <!-- Main option: MercadoPago -->
             <n-button
-              class="mp-button"
+              class="mp-button big-button"
               type="primary"
               :loading="loading"
               :disabled="items.length===0 || isSoftOffline"
@@ -70,9 +69,11 @@
               </div>
             </n-button>
             <!-- Secondary: efectivo/manual -->
-            <n-button secondary :loading="loading" :disabled="items.length===0 || isSoftOffline" @click="placeOrder" :title="isSoftOffline ? 'La plataforma está en pausa momentánea' : ''">
+            <n-button class="big-button" secondary :loading="loading" :disabled="items.length===0 || isSoftOffline" @click="placeOrder" :title="isSoftOffline ? 'La plataforma está en pausa momentánea' : ''">
               Pago Manual por Caja
             </n-button>
+            <!-- Back button at the bottom, same size -->
+            <n-button class="big-button" tertiary @click="step=1">Atrás</n-button>
           </div>
           <div v-if="error" class="error">{{ error }}</div>
         </section>
@@ -287,6 +288,12 @@ async function placeOrderMp() {
 .total { display: flex; justify-content: space-between; border-top: 1px dashed #ddd; padding-top: 8px; margin-top: 8px; }
 .actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
 .actions.stack { flex-direction: column; align-items: flex-start; }
+/* Make primary actions full-width, double-height */
+.big-button {
+  padding: 12px 16px;
+  min-height: 80px;
+  width: 100%;
+}
 .mp-button { 
   display: inline-flex; 
   align-items: stretch; 
