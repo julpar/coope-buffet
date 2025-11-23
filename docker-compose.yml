@@ -15,7 +15,7 @@ services:
     environment:
       - NODE_ENV=production
       - REDIS_URL=redis://redis:6379
-      - MP_ACCESS_TOKEN=${MERCADOPAGO_ACCESS_TOKEN:-}
+      - MP_ACCESS_TOKEN=${MP_ACCESS_TOKEN:-}
       - SERVICE_URL_APP=${SERVICE_URL_APP:-http://localhost:3000}
       - SERVICE_URL_WEB_CUSTOMER=${SERVICE_URL_WEB_CUSTOMER:-http://localhost:8080}
       - SERVICE_URL_WEB_STAFF=${SERVICE_URL_WEB_STAFF:-http://localhost:8081}
