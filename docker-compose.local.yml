@@ -1,0 +1,31 @@
+# Local-only overrides for Docker Compose.
+# Keep production zero-touch by NOT using this file on servers.
+# Usage (local):
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
+#
+# Notes:
+# - Host ports below are suggestions based on common defaults. Adjust if your
+#   containers listen on different internal ports.
+# - This file should not be referenced in production.
+
+services:
+  redis:
+    ports:
+      - "6379:6379"
+
+  app:
+    # Backend API. Common default for Node/Nest is 3000.
+    # If your app listens on a different internal port, adjust the right side.
+    ports:
+      - "3000:3000"
+
+  web-customer:
+    # Frontend (customer). Many Nginx-based images serve on container port 80.
+    # Expose on host 8080 for local access.
+    ports:
+      - "8080:80"
+
+  web-staff:
+    # Frontend (staff). Expose on host 8081 for local access.
+    ports:
+      - "8081:80"
