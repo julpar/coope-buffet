@@ -56,12 +56,22 @@
           <div class="actions stack">
             <n-button tertiary @click="step=1">Atrás</n-button>
             <!-- Main option: MercadoPago -->
-            <n-button type="primary" :loading="loading" :disabled="items.length===0 || isSoftOffline" @click="placeOrderMp" :title="isSoftOffline ? 'La plataforma está en pausa momentánea' : ''">
-              Pagar con MercadoPago
+            <n-button
+              class="mp-button"
+              type="primary"
+              :loading="loading"
+              :disabled="items.length===0 || isSoftOffline"
+              @click="placeOrderMp"
+              :title="isSoftOffline ? 'La plataforma está en pausa momentánea' : ''"
+            >
+              <div class="mp-btn">
+                <img src="/images/mp_logo.png" alt="" aria-hidden="true" class="mp-logo" />
+                <span class="mp-label">Pagar con Mercado Pago</span>
+              </div>
             </n-button>
             <!-- Secondary: efectivo/manual -->
             <n-button secondary :loading="loading" :disabled="items.length===0 || isSoftOffline" @click="placeOrder" :title="isSoftOffline ? 'La plataforma está en pausa momentánea' : ''">
-              Confirmar en efectivo (validación manual)
+              Pago Manual por Caja
             </n-button>
           </div>
           <div v-if="error" class="error">{{ error }}</div>
@@ -277,5 +287,43 @@ async function placeOrderMp() {
 .total { display: flex; justify-content: space-between; border-top: 1px dashed #ddd; padding-top: 8px; margin-top: 8px; }
 .actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
 .actions.stack { flex-direction: column; align-items: flex-start; }
+.mp-button { 
+  display: inline-flex; 
+  align-items: stretch; 
+  justify-content: center;
+  padding: 12px 16px; 
+  min-height: 80px; /* roughly double the default button height */
+  background-color: #009ee3 !important; /* Mercado Pago blue */
+  border-color: #009ee3 !important; 
+  color: #fff !important;
+}
+.mp-button:hover { 
+  background-color: #0089c9 !important; 
+  border-color: #0089c9 !important; 
+}
+.mp-button:active { 
+  background-color: #007bb4 !important; 
+  border-color: #007bb4 !important; 
+}
+/* Two-line content inside the button */
+.mp-btn { 
+  display: flex; 
+  flex-direction: column; 
+  align-items: center; 
+  justify-content: center; 
+  gap: 6px; 
+  width: 100%;
+}
+.mp-logo { 
+  width: 100%;
+  max-height: 44px; /* keep logo readable without making the button too tall */
+  object-fit: contain; 
+  display: block; 
+}
+.mp-label { 
+  font-weight: 700; 
+  font-size: 14px; 
+  line-height: 1.1; 
+}
 .error { margin-top: 8px; color: #b71c1c; }
 </style>
