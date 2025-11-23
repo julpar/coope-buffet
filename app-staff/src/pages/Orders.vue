@@ -351,7 +351,7 @@ function fmtDateTime(iso?: string): string {
 
 function paymentLabel(method?: 'online' | 'cash'): string {
   if (method === 'online') return 'Online';
-  if (method === 'cash') return 'Efectivo';
+  if (method === 'cash') return 'Manual';
   return '-';
 }
 
