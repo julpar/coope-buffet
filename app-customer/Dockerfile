@@ -13,8 +13,8 @@ COPY app-customer ./app-customer
 # This mirrors app-staff so docker-compose can pass API settings via build args.
 ARG VITE_SERVICE_URL_APP
 ARG VITE_API_VERSION
-ENV VITE_SERVICE_URL_APP=${VITE_SERVICE_URL_APP}
-ENV VITE_API_VERSION=${VITE_API_VERSION}
+ENV VITE_SERVICE_URL_APP=${SERVICE_URL_APP}
+ENV VITE_API_VERSION=${API_VERSION}
 RUN npm run build -w app-customer
 
 FROM nginx:1.27-alpine AS runtime
