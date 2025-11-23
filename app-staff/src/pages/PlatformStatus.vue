@@ -19,6 +19,17 @@
       </div>
 
       <div class="row">
+        <label>Métodos de pago</label>
+        <div class="pay-methods">
+          <n-checkbox-group v-model:value="form.paymentMethods" :disabled="loading">
+            <n-checkbox value="online" label="Online (Mercado Pago)" />
+            <n-checkbox value="cash" label="Efectivo en Caja" />
+          </n-checkbox-group>
+          <div v-if="form.status==='online' && (form.paymentMethods?.length||0)===0" class="field-error">Seleccioná al menos un método de pago para el modo Online.</div>
+        </div>
+      </div>
+
+      <div class="row">
         <label>Hasta (opcional)</label>
         <n-date-picker v-model:value="untilTs" type="datetime" clearable :disabled="loading" />
       </div>
@@ -32,6 +43,7 @@
         <div><strong>{{ label(current.status) }}</strong></div>
         <div v-if="current.message">Mensaje: {{ current.message }}</div>
         <div v-if="current.offlineUntil">Hasta: {{ formatTs(current.offlineUntil) }}</div>
+        <div>Métodos de pago: {{ (current.paymentMethods||[]).map(pmLabel).join(', ') || '—' }}</div>
       </n-alert>
     </n-card>
   </div>
@@ -39,7 +51,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
-import { useMessage, NCard, NRadioGroup, NRadio, NInput, NDatePicker, NButton, NAlert } from 'naive-ui';
+import { useMessage, NCard, NRadioGroup, NRadio, NInput, NDatePicker, NButton, NAlert, NCheckboxGroup, NCheckbox } from 'naive-ui';
 import { platformApi, type PlatformStatus, type PlatformStatusResponse } from '../lib/api';
 
 const msg = useMessage();
@@ -48,10 +60,11 @@ const loading = ref(false);
 const saving = ref(false);
 const current = ref<PlatformStatusResponse | null>(null);
 
-const form = ref<{ status: PlatformStatus; message: string; offlineUntil: number | null }>({
+const form = ref<{ status: PlatformStatus; message: string; offlineUntil: number | null; paymentMethods: Array<'online' | 'cash'> }>({
   status: 'online',
   message: '',
   offlineUntil: null,
+  paymentMethods: ['online', 'cash'],
 });
 const untilTs = computed({
   get: () => form.value.offlineUntil || null,
@@ -62,6 +75,10 @@ const untilTs = computed({
 
 function label(s: PlatformStatus) {
   return s === 'online' ? 'Online' : s === 'soft-offline' ? 'Pausa (soft-offline)' : 'Apagado total (hard-offline)';
+}
+
+function pmLabel(m: 'online' | 'cash') {
+  return m === 'online' ? 'Online (Mercado Pago)' : 'Efectivo en Caja';
 }
 
 function formatTs(ts: number) {
@@ -77,7 +94,7 @@ async function refresh() {
   try {
     const st = await platformApi.getStaffStatus();
     current.value = st;
-    form.value = { status: st.status, message: st.message || '', offlineUntil: st.offlineUntil || null };
+    form.value = { status: st.status, message: st.message || '', offlineUntil: st.offlineUntil || null, paymentMethods: (st.paymentMethods && st.paymentMethods.length ? st.paymentMethods : ['online','cash']) };
   } catch (e: any) {
     msg.error('No se pudo cargar el estado');
   } finally {
@@ -88,11 +105,29 @@ async function refresh() {
 async function save() {
   saving.value = true;
   try {
-    const body = { status: form.value.status, message: (form.value.message || '').trim(), offlineUntil: form.value.offlineUntil ?? null };
+    if (form.value.status === 'online' && (!form.value.paymentMethods || form.value.paymentMethods.length === 0)) {
+      msg.error('Seleccioná al menos un método de pago para el modo Online.');
+      return;
+    }
+    const body = { status: form.value.status, message: (form.value.message || '').trim(), offlineUntil: form.value.offlineUntil ?? null, paymentMethods: form.value.paymentMethods };
     const res = await platformApi.setStatus(body);
-    current.value = { status: res.status, message: res.message, offlineUntil: res.offlineUntil };
+    current.value = { status: res.status, message: res.message, offlineUntil: res.offlineUntil, paymentMethods: res.paymentMethods };
     msg.success('Estado actualizado');
   } catch (e: any) {
+    try {
+      const msgTxt = String(e?.message || '');
+      if (msgTxt.includes('{') && msgTxt.includes('}')) {
+        const start = msgTxt.indexOf('{');
+        const end = msgTxt.lastIndexOf('}');
+        if (end > start) {
+          const json = JSON.parse(msgTxt.slice(start, end + 1));
+          if (json && json.code === 'VALIDATION_ERROR') {
+            msg.error(json.message || 'Error de validación');
+            return;
+          }
+        }
+      }
+    } catch {}
     msg.error('No se pudo guardar');
   } finally {
     saving.value = false;

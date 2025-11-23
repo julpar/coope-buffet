@@ -1,7 +1,8 @@
-import { Body, Controller, Post, Logger, Query } from '@nestjs/common';
+import { Body, Controller, Post, Logger, Query, BadRequestException } from '@nestjs/common';
 import { Public } from '../../../common/auth/auth.decorators';
 import { OrdersService } from '../../core/orders.service';
 import { MercadoPagoService } from '../../payments/mercadopago.service';
+import { RedisService } from '../../core/redis.service';
 
 @Controller('payments/mercadopago')
 export class CustomerPaymentsController {
@@ -9,11 +10,30 @@ export class CustomerPaymentsController {
   constructor(
     private readonly orders: OrdersService,
     private readonly mp: MercadoPagoService,
+    private readonly redisSvc: RedisService,
   ) {}
 
   @Post('preference')
   @Public()
   async createPreference(@Body() body: { orderId: string }) {
+    // Validate platform status and allowed payment methods
+    const r = this.redisSvc.redis;
+    const status = (await r.get('platform:status')) || 'online';
+    let methods: Array<'online' | 'cash'> = ['online', 'cash'];
+    try {
+      const raw = await r.get('platform:payment_methods');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) methods = parsed.filter((m: any) => m === 'online' || m === 'cash');
+      }
+    } catch {}
+    if (status !== 'online') {
+      throw new BadRequestException({ code: 'PLATFORM_OFFLINE', message: 'La plataforma no está disponible para pagos online.' });
+    }
+    if (!methods.includes('online')) {
+      throw new BadRequestException({ code: 'PAYMENT_METHOD_DISABLED', message: 'El pago online está deshabilitado temporalmente.' });
+    }
+
     const order = await this.orders.get(body.orderId);
     if (!order) throw new Error('order not found');
     if (order.status !== 'pending_payment') throw new Error('order not pending');

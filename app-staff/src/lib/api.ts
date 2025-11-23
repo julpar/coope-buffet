@@ -261,14 +261,14 @@ export const usersApi = {
 
 // Platform status (global kill switch)
 export type PlatformStatus = 'online' | 'soft-offline' | 'hard-offline';
-export type PlatformStatusResponse = { status: PlatformStatus; message: string; offlineUntil: number | null };
+export type PlatformStatusResponse = { status: PlatformStatus; message: string; offlineUntil: number | null; paymentMethods: Array<'online' | 'cash'> };
 
 export const platformApi = {
   // Public endpoint, available to everyone
   getPublicStatus: () => http<PlatformStatusResponse>(`/platform/status`),
   // Admin-only staff endpoints
   getStaffStatus: () => http<PlatformStatusResponse>(`/staff/platform/status`),
-  setStatus: (data: { status: PlatformStatus; message?: string; offlineUntil?: number | null }) =>
+  setStatus: (data: { status: PlatformStatus; message?: string; offlineUntil?: number | null; paymentMethods?: Array<'online' | 'cash'> }) =>
     http<PlatformStatusResponse & { ok: true }>(`/staff/platform/status`, {
       method: 'PUT',
       body: JSON.stringify(data),
