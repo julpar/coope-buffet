@@ -48,7 +48,14 @@ export class CustomerOrdersController {
   @Get('code/:code')
   @Public()
   async getByCode(@Param('code') code: string) {
-    const o = await this.orders.getByCode(code);
+    // MercadoPago return URLs may include duplicated external_reference values,
+    // and some frameworks/joiners can concatenate them with commas.
+    // Normalize by taking the first non-empty token before querying.
+    const norm = String(code || '')
+      .split(',')
+      .map((s) => s.trim())
+      .find((s) => s.length > 0) || '';
+    const o = await this.orders.getByCode(norm);
     if (!o) throw new Error('order not found');
     return o;
   }

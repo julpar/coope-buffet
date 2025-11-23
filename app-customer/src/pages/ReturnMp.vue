@@ -24,7 +24,25 @@ function go() {
 
 onMounted(async () => {
   try {
-    const externalRef = String(route.query.external_reference || route.query.externalReference || '').trim();
+    // MercadoPago sometimes sends duplicated query params (e.g., external_reference twice)
+    // Vue Router represents duplicates as an array; also, some proxies join as comma-separated.
+    // Normalize by picking the first non-empty value and, if comma-separated, the first token.
+    function pickRef(val: any): string {
+      let raw = '';
+      if (Array.isArray(val)) {
+        raw = val.find((v) => !!String(v || '').trim()) ?? '';
+      } else {
+        raw = String(val || '');
+      }
+      raw = raw.trim();
+      if (raw.includes(',')) {
+        const first = raw.split(',').map((s) => s.trim()).find(Boolean) || '';
+        return first;
+      }
+      return raw;
+    }
+
+    const externalRef = pickRef(route.query.external_reference) || pickRef(route.query.externalReference);
     if (!externalRef) {
       error.value = 'No pudimos identificar tu pedido. Volvé al menú e intentá nuevamente.';
       return;
