@@ -297,6 +297,18 @@ async function placeOrderMp() {
   border-color: #009ee3 !important; 
   color: #fff !important;
 }
+.mp-button:focus,
+.mp-button:focus-visible,
+.mp-button:focus-within {
+  outline: none !important;
+  box-shadow: none !important; /* remove green focus ring */
+}
+.mp-button :deep(.n-button__border) {
+  border-color: #009ee3 !important; /* ensure border stays brand blue */
+}
+.mp-button :deep(.n-button__state-border) {
+  display: none !important; /* hide Naive UI state border that can appear green */
+}
 .mp-button:hover { 
   background-color: #0089c9 !important; 
   border-color: #0089c9 !important; 
