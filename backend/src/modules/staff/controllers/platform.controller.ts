@@ -54,7 +54,7 @@ export class StaffPlatformController {
 
     // Validate and normalize payment methods
     const provided = Array.isArray(body?.paymentMethods) ? body?.paymentMethods : undefined;
-    let paymentMethods: PaymentMethod[] = provided
+    let paymentMethods: PaymentMethod[] | undefined = provided
       ? provided.filter((m): m is PaymentMethod => m === 'online' || m === 'cash')
       : undefined;
     // If not provided, keep existing stored value (or default to both)
