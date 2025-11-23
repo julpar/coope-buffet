@@ -42,13 +42,23 @@ export class CustomerPaymentsController {
     const pendingUrl = `${customerBase}/return-mp?${query}`;
     const notificationUrl = `${publicBase}/v1/payments/mercadopago/webhook`;
 
+    // Show a generic title in MercadoPago instead of the first item's name.
+    // MP shows the first item's `title` as the checkout header, so we send a single
+    // synthetic item summarizing the whole order and titled with the short code.
+    const orderTotal = (order.items || []).reduce(
+      (acc, it) => acc + Number(it.unitPrice || 0) * Number(it.qty || 0),
+      0,
+    );
+
     const pref = await this.mp.createPreference({
       external_reference: order.shortCode,
-      items: order.items.map((it) => ({
-        title: it.name || it.id,
-        quantity: it.qty,
-        unit_price: it.unitPrice, // ARS units assumed
-      })),
+      items: [
+        {
+          title: `Orden ${order.shortCode}`,
+          quantity: 1,
+          unit_price: orderTotal, // ARS units assumed
+        },
+      ],
       successUrl,
       failureUrl,
       pendingUrl,
