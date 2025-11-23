@@ -46,7 +46,7 @@ export class UsersController {
         }
         const user = await this.users.createUser(nickname, roles);
 
-        const staffBase = (process.env.STAFF_BASE_URL || '').trim();
+        const staffBase = (process.env.SERVICE_URL_WEB_STAFF || '').trim();
         console.log(staffBase);
         const permToken = user.token.startsWith('perm:') ? user.token.slice(5) : user.token;
         let permUrl: string;
@@ -91,7 +91,7 @@ export class UsersController {
         const user = await this.users.getUserById(id);
         if (!user) throw new NotFoundException('user not found');
         // Build URL same way as in create()
-        const staffBase = (process.env.STAFF_BASE_URL || '').trim();
+        const staffBase = (process.env.SERVICE_URL_WEB_STAFF || '').trim();
         const baseUrl = (process.env.BASE_URL || '').trim();
         const permToken = user.token.startsWith('perm:') ? user.token.slice(5) : user.token;
         let permUrl: string;

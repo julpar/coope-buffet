@@ -16,9 +16,9 @@ services:
       - NODE_ENV=production
       - REDIS_URL=redis://redis:6379
       - MP_ACCESS_TOKEN=${MERCADOPAGO_ACCESS_TOKEN:-}
-      - API_PUBLIC_BASE_URL=${API_PUBLIC_BASE_URL:-http://localhost:3000}
-      - CUSTOMER_BASE_URL=${CUSTOMER_BASE_URL:-http://localhost:8080}
-      - STAFF_BASE_URL=${STAFF_BASE_URL:-http://localhost:8081}
+      - SERVICE_URL_APP=${SERVICE_URL_APP:-http://localhost:3000}
+      - SERVICE_URL_WEB_CUSTOMER=${SERVICE_URL_WEB_CUSTOMER:-http://localhost:8080}
+      - SERVICE_URL_WEB_STAFF=${SERVICE_URL_WEB_STAFF:-http://localhost:8081}
       # Comma-separated list of allowed CORS origins. Examples:
       # CORS_ORIGINS=https://staff.buffetgrecia.com.ar,https://customer.buffetgrecia.com.ar
       # For subdomains you can use suffix notation like ".buffetgrecia.com.ar"
@@ -40,7 +40,7 @@ services:
       dockerfile: app-staff/Dockerfile
       args:
         # Make the API URL/version available at build time for Vite (must be prefixed with VITE_)
-        VITE_API_BASE_URL: ${API_BASE_URL}
+        VITE_SERVICE_URL_APP: ${SERVICE_URL_APP}
         VITE_API_VERSION: v1
     depends_on:
       - app

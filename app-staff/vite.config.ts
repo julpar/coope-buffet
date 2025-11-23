@@ -9,7 +9,7 @@ export default defineConfig({
     strictPort: false,
     host: true,
     // Note: No API proxying. Frontend should call the full API URL directly
-    // using environment like VITE_API_BASE_URL (e.g., http://localhost:3000)
+    // using environment like VITE_SERVICE_URL_APP (e.g., http://localhost:3000)
     // and VITE_API_VERSION (e.g., v1) within the application code.
   },
 });

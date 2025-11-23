@@ -19,7 +19,7 @@ This file tracks implementation progress against SPECS.md, decisions, and next s
      - Inventario: list items with current stock, quick stock adjust buttons (-5/-1/+1/+5), inline low-stock threshold editing with persistence.
      - Menú: CRUD (upsert) for categorías and items (name, category, price, GF, active), and list with availability indicators.
      - Usuarios: placeholder explaining upcoming roles and permissions (Stock manager, Cashier, Platform Admin).
-   - API client (`app-staff/src/lib/api.ts`) that targets backend base URL and version via env (`VITE_API_BASE_URL`, default `http://localhost:3000`; `VITE_API_VERSION`, default `v1`). Includes a small local mock fallback for development if backend is offline.
+   - API client (`app-staff/src/lib/api.ts`) that targets backend base URL and version via env (`VITE_SERVICE_URL_APP`, default `http://localhost:3000`; `VITE_API_VERSION`, default `v1`). Includes a small local mock fallback for development if backend is offline.
    - Minimal state for orders (`app-staff/src/store/orders.ts`) with `localStorage` seed to simulate real flows while backend is under construction.
    - Vite config includes Vue plugin and a dev proxy for `/api` so the app can switch to the live backend by running it on port 3000.
 
@@ -52,9 +52,9 @@ npm run dev
 ```
 
 - Open http://localhost:5174
-- The app will call the backend directly using `VITE_API_BASE_URL` and `VITE_API_VERSION`.
+- The app will call the backend directly using `VITE_SERVICE_URL_APP` and `VITE_API_VERSION`.
   - Defaults are `http://localhost:3000` and `v1`, so no extra config is needed for local dev.
-  - Optionally set `VITE_API_BASE_URL` and/or `VITE_API_VERSION` to point to a different server/version.
+  - Optionally set `VITE_SERVICE_URL_APP` and/or `VITE_API_VERSION` to point to a different server/version.
 
 Key interactions to validate:
 - Dashboard shows counters seeded from mock orders and low-stock alerts from mock menu items.
@@ -166,7 +166,7 @@ npm run dev
 ```
 
 - Open http://localhost:5173
-- The app targets backend base `VITE_API_BASE_URL` (default `http://localhost:3000`) and version `VITE_API_VERSION` (default `v1`).
+- The app targets backend base `VITE_SERVICE_URL_APP` (default `http://localhost:3000`) and version `VITE_API_VERSION` (default `v1`).
 - Flow to validate:
   - Browse Menú, add items to cart, open cart drawer, go to Checkout.
   - Confirm pedido (cash) → redirected to Success with QR. Show QR to staff to validate and collect cash (manual).

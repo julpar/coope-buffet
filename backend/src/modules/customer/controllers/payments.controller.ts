@@ -19,19 +19,19 @@ export class CustomerPaymentsController {
     if (order.status !== 'pending_payment') throw new Error('order not pending');
 
     // Build and validate absolute return URLs for MercadoPago
-    const rawCustomerBase = String(process.env.CUSTOMER_BASE_URL || '').trim();
+    const rawCustomerBase = String(process.env.SERVICE_URL_WEB_CUSTOMER || '').trim();
     if (!rawCustomerBase) {
-      throw new Error('CONFIG_ERROR: Set CUSTOMER_BASE_URL to a full http(s) URL (e.g., https://customer.example.com)');
+      throw new Error('CONFIG_ERROR: Set SERVICE_URL_WEB_CUSTOMER to a full http(s) URL (e.g., https://customer.example.com)');
     }
     const customerBase = rawCustomerBase.replace(/\/$/, '');
     if (!/^https?:\/\//i.test(customerBase)) {
       // Fail fast with a clear configuration error instead of sending an invalid MP request
-      throw new Error('CONFIG_ERROR: Set CUSTOMER_BASE_URL to a full http(s) URL (e.g., https://customer.example.com)');
+      throw new Error('CONFIG_ERROR: Set SERVICE_URL_WEB_CUSTOMER to a full http(s) URL (e.g., https://customer.example.com)');
     }
 
-    const rawPublicBase = String(process.env.API_PUBLIC_BASE_URL || '').trim();
+    const rawPublicBase = String(process.env.SERVICE_URL_APP || '').trim();
     if (!rawPublicBase) {
-      throw new Error('CONFIG_ERROR: Set API_PUBLIC_BASE_URL to a full http(s) URL (e.g., https://api.example.com)');
+      throw new Error('CONFIG_ERROR: Set SERVICE_URL_APP to a full http(s) URL (e.g., https://api.example.com)');
     }
     const publicBase = rawPublicBase.replace(/\/$/, '');
 

@@ -3,7 +3,7 @@ import { ref } from 'vue';
 
 // Build absolute API base from environment variables.
 // In dev, defaults to http://localhost:3000 and version v1
-const API_BASE_URL = ((import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:3000') as string;
+const SERVICE_URL_APP = ((import.meta as any).env?.VITE_SERVICE_URL_APP || 'http://localhost:3000') as string;
 const API_VERSION = ((import.meta as any).env?.VITE_API_VERSION || 'v1') as string;
 
 function buildBase(base: string, version: string): string {
@@ -12,7 +12,7 @@ function buildBase(base: string, version: string): string {
   return `${trimmedBase}/${trimmedVer}`;
 }
 
-const ABS_BASE = buildBase(API_BASE_URL, API_VERSION);
+const ABS_BASE = buildBase(SERVICE_URL_APP, API_VERSION);
 export const API_BASE = ABS_BASE;
 // Reactive API online flag: null (unknown), true (reachable), false (errors observed)
 export const apiOnline = ref<boolean | null>(null);
