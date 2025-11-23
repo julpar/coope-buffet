@@ -69,11 +69,13 @@
                 <span class="mp-label">Pagar con Mercado Pago</span>
               </div>
             </n-button>
-            <!-- Secondary: efectivo/manual (only render if method is available) -->
+            <!-- Secondary: efectivo/manual (only render if method is available)
+                 Highlight as primary when it is the ONLY available method (cash-only) -->
             <n-button
               v-if="canPayCash"
               class="big-button"
-              secondary
+              :type="!canPayOnline ? 'primary' : 'default'"
+              :secondary="!!canPayOnline"
               :loading="loading"
               :disabled="items.length===0 || isSoftOffline"
               @click="placeOrder"
