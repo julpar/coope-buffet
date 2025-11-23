@@ -7,6 +7,7 @@ export const platform = {
   status: ref<Status>('online'),
   message: ref<string>(''),
   offlineUntil: ref<number | null>(null),
+  paymentMethods: ref<Array<'online' | 'cash'>>(['online', 'cash']),
   _inFlight: null as Promise<void> | null,
   async fetch() {
     // Coalesce concurrent calls to avoid duplicate requests
@@ -18,6 +19,8 @@ export const platform = {
         platform.status.value = data.status as Status;
         platform.message.value = data.message || '';
         platform.offlineUntil.value = data.offlineUntil ?? null;
+        const pm = Array.isArray(data.paymentMethods) ? data.paymentMethods : ['online','cash'];
+        platform.paymentMethods.value = pm.filter((m: any) => m === 'online' || m === 'cash');
       } catch {}
     })().finally(() => {
       platform._inFlight = null;

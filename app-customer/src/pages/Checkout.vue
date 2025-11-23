@@ -54,8 +54,9 @@
           <h3>Pago</h3>
           <p class="muted">Elegí cómo querés pagar.</p>
           <div class="actions stack">
-            <!-- Main option: MercadoPago -->
+            <!-- Main option: MercadoPago (only render if method is available) -->
             <n-button
+              v-if="canPayOnline"
               class="mp-button big-button"
               type="primary"
               :loading="loading"
@@ -68,10 +69,22 @@
                 <span class="mp-label">Pagar con Mercado Pago</span>
               </div>
             </n-button>
-            <!-- Secondary: efectivo/manual -->
-            <n-button class="big-button" secondary :loading="loading" :disabled="items.length===0 || isSoftOffline" @click="placeOrder" :title="isSoftOffline ? 'La plataforma está en pausa momentánea' : ''">
+            <!-- Secondary: efectivo/manual (only render if method is available) -->
+            <n-button
+              v-if="canPayCash"
+              class="big-button"
+              secondary
+              :loading="loading"
+              :disabled="items.length===0 || isSoftOffline"
+              @click="placeOrder"
+              :title="isSoftOffline ? 'La plataforma está en pausa momentánea' : ''"
+            >
               Pago Manual por Caja
             </n-button>
+            <!-- Empty state when no payment method is available -->
+            <div v-if="!canPayOnline && !canPayCash" class="muted">
+              Por el momento no hay métodos de pago disponibles.
+            </div>
             <!-- Back button at the bottom, same size -->
             <n-button class="big-button" tertiary @click="step=1">Atrás</n-button>
           </div>
@@ -102,6 +115,8 @@ const suppressEmptyRedirect = ref(false);
 
 const isSoftOffline = computed(() => platform.status.value === 'soft-offline');
 const offlineMsg = computed(() => platform.message.value || 'Volvemos en unos minutos.');
+const canPayOnline = computed(() => (platform.paymentMethods.value || []).includes('online'));
+const canPayCash = computed(() => (platform.paymentMethods.value || []).includes('cash'));
 
 // Monetary values are provided in ARS units (not cents)
 function currency(amount: number): string {
@@ -142,6 +157,10 @@ async function placeOrder() {
     await platform.fetch();
     if (platform.status.value === 'soft-offline') {
       error.value = 'Estamos en pausa momentánea. Intentá de nuevo en unos minutos.';
+      return;
+    }
+    if (!canPayCash.value) {
+      error.value = 'El pago en efectivo está deshabilitado temporalmente.';
       return;
     }
     const res = await customerApi.createOrder({
@@ -227,6 +246,10 @@ async function placeOrderMp() {
     await platform.fetch();
     if (platform.status.value === 'soft-offline') {
       error.value = 'Estamos en pausa momentánea. Intentá de nuevo en unos minutos.';
+      return;
+    }
+    if (!canPayOnline.value) {
+      error.value = 'El pago online está deshabilitado temporalmente.';
       return;
     }
     // 1) Create pending order (online)
