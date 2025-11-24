@@ -29,7 +29,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { onMounted, onBeforeUnmount, reactive, ref } from 'vue';
 import type { MenuResponse, Item } from '../types';
 import { customerApi } from '../lib/api';
 import { cart } from '../lib/cart';
@@ -53,7 +53,8 @@ function currency(amount: number): string {
 
 function add(it: Item) { cart.add(it, 1); }
 
-onMounted(async () => {
+async function fetchMenu() {
+  loading.value = true;
   try {
     const res = await customerApi.getMenu();
     data.categories = res.categories.map(c => ({
@@ -62,10 +63,24 @@ onMounted(async () => {
     }));
     data.glutenFree = (res.glutenFree || []).map(normalizeAvailability);
   } catch (e) {
-    // leave empty
+    // keep previous data if request fails
   } finally {
     loading.value = false;
   }
+}
+
+function onRefreshMenu() {
+  // Re-fetch the menu when the header triggers a refresh
+  fetchMenu();
+}
+
+onMounted(() => {
+  fetchMenu();
+  window.addEventListener('refresh-menu', onRefreshMenu as EventListener);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('refresh-menu', onRefreshMenu as EventListener);
 });
 </script>
 

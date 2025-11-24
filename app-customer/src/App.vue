@@ -7,24 +7,34 @@
             <span class="logo">🍽️</span>
             <span>Buffet</span>
           </div>
-          <div
-            class="cart"
-            role="button"
-            tabindex="0"
-            :aria-label="cartQty > 0 ? `Abrir carrito. ${cartQty} items, subtotal ${currency(subtotal)}` : 'Abrir carrito, vacío'"
-            @click="toggleCart"
-            @keydown.enter="toggleCart"
-            @keydown.space.prevent="toggleCart"
-          >
-            <n-badge :value="cartQty" :max="99" type="success">
-              <n-button type="primary" size="small">
-                <template #icon>
-                  <n-icon><CartOutline /></n-icon>
-                </template>
-                <span class="hide-on-mobile">Carrito</span>
-              </n-button>
-            </n-badge>
-            <span class="subtotal" v-if="cartQty > 0">{{ currency(subtotal) }}</span>
+          <div class="header-actions">
+            <!-- Refresh menu: placed to the LEFT of the cart -->
+            <n-button class="refresh" size="small" tertiary @click="refreshMenu" aria-label="Actualizar menú">
+              <template #icon>
+                <n-icon><RefreshOutline /></n-icon>
+              </template>
+              <span class="hide-on-mobile">Actualizar</span>
+            </n-button>
+
+            <div
+              class="cart"
+              role="button"
+              tabindex="0"
+              :aria-label="cartQty > 0 ? `Abrir carrito. ${cartQty} items, subtotal ${currency(subtotal)}` : 'Abrir carrito, vacío'"
+              @click="toggleCart"
+              @keydown.enter="toggleCart"
+              @keydown.space.prevent="toggleCart"
+            >
+              <n-badge :value="cartQty" :max="99" type="success">
+                <n-button type="primary" size="small">
+                  <template #icon>
+                    <n-icon><CartOutline /></n-icon>
+                  </template>
+                  <span class="hide-on-mobile">Carrito</span>
+                </n-button>
+              </n-badge>
+              <span class="subtotal" v-if="cartQty > 0">{{ currency(subtotal) }}</span>
+            </div>
           </div>
         </n-layout-header>
 
@@ -110,7 +120,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { CartOutline } from '@vicons/ionicons5';
+import { CartOutline, RefreshOutline } from '@vicons/ionicons5';
 import { cart } from './lib/cart';
 import { platform } from './lib/platform';
 import { createDiscreteApi } from 'naive-ui';
@@ -180,6 +190,10 @@ function toggleCart() {
     return;
   }
   drawer.value = !drawer.value;
+}
+function refreshMenu() {
+  // Notify the Menu page to refetch its data
+  window.dispatchEvent(new CustomEvent('refresh-menu'));
 }
 function goCheckout() {
   // Clear shortage warnings when proceeding to checkout (they're already fixed)
@@ -299,6 +313,8 @@ watch(
 }
 .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; }
 .logo { font-size: 18px; }
+.header-actions { display: flex; align-items: center; gap: 8px; }
+.refresh { margin-right: 4px; }
 .cart {
   display: flex;
   align-items: center;
