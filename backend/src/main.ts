@@ -17,6 +17,11 @@ import { UserService } from './modules/core/user.service';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  // Trust upstream reverse proxy (Coolify/Traefik, and optionally CDN) so req.ip reflects the real client IP
+  // This enables Express to use X-Forwarded-For (added by the proxy) to determine the client IP.
+  // Only enable this when the app is always behind a trusted proxy.
+  app.set('trust proxy', true);
+
   // Explicit CORS configuration to support local apps (e.g., Vite on :5175) and cookies
   // Allow overriding/adding CORS origins from env.
   // Use CORS_ORIGINS as a comma-separated list, e.g.:
