@@ -102,6 +102,7 @@
         <div class="panel-header">
           <strong>Esperando pago</strong>
           <span class="spacer"></span>
+          <n-tag size="small" type="info" style="margin-right:8px">Mostrando órdenes de los últimos 15 minutos</n-tag>
           <n-tooltip trigger="hover">
             <template #trigger>
               <n-button size="small" tertiary circle :loading="loadingOrders" @click="refreshOrders">
@@ -283,6 +284,15 @@ watch(includeDonation, (val) => {
 const loadingOrders = ref(false);
 const pendingPaymentCount = ref<number>(0);
 const awaitingFulfillmentCount = ref<number>(0);
+// Time window for recent orders (in minutes)
+const WINDOW_MINUTES = 15;
+function isWithinWindow(createdAt?: string | number | Date): boolean {
+  if (!createdAt) return false;
+  const ts = typeof createdAt === 'number' ? createdAt : Date.parse(String(createdAt));
+  if (!Number.isFinite(ts)) return false;
+  const threshold = Date.now() - WINDOW_MINUTES * 60 * 1000;
+  return ts >= threshold;
+}
 async function refreshOrders() {
   loadingOrders.value = true;
   try {
@@ -291,9 +301,12 @@ async function refreshOrders() {
       canSeeCashier.value ? staffApi.listOrders('pending_payment') : Promise.resolve([]),
       canSeeFulfillment.value ? staffApi.listOrders('paid') : Promise.resolve([]),
     ]);
-    pendingPaymentCount.value = (pendingList || []).length;
+    // Limit to last WINDOW_MINUTES minutes
+    const recentPending = (pendingList || []).filter((o: any) => isWithinWindow(o?.createdAt));
+    pendingPaymentCount.value = recentPending.length;
     // In case backend returns some fulfilled within 'paid', filter by fulfillment flag if present
     const awaiting = (paidList || []).filter((o: any) => !o.fulfillment);
+    // For fulfillment we want ALL awaiting orders (no time window)
     awaitingFulfillmentCount.value = awaiting.length;
   } catch (e) {
     // eslint-disable-next-line no-console
