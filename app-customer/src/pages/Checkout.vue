@@ -103,6 +103,7 @@ import { useRouter } from 'vue-router';
 import { cart } from '../lib/cart';
 import { customerApi } from '../lib/api';
 import { platform } from '../lib/platform';
+import { handleInsufficientStock } from '../lib/stockShortage';
 
 const router = useRouter();
 const items = computed(() => cart.items.value);
@@ -178,62 +179,8 @@ async function placeOrder() {
     await router.replace(`/success/${id}`);
     cart.clear();
   } catch (e: any) {
-    // Gracefully handle stock shortages so the customer can fix the cart manually (do NOT auto-adjust)
-    if (e && e.code === 'INSUFFICIENT_STOCK' && Array.isArray(e.shortages)) {
-      try {
-        const lines: string[] = [];
-        for (const s of e.shortages) {
-          const avail = Math.max(0, Number(s.available ?? 0));
-          const req = Math.max(0, Number(s.requested ?? 0));
-          const name = s.name || s.id;
-          lines.push(`${name}: disponible ${avail} (pediste ${req})`);
-        }
-        // Navigate back to the menu and open the cart for editing
-        router.replace('/');
-        // Inform app about shortages and open cart; do not modify quantities
-        setTimeout(() => {
-          const shortages = Array.isArray(e.shortages) ? e.shortages : [];
-          const shortageIds = shortages.map((s: any) => s.id).filter(Boolean);
-          // Persistent cues will be handled by App.vue upon this event
-          // @ts-expect-error custom event
-          window.dispatchEvent(new CustomEvent('set-shortages', { detail: { shortages } }));
-          window.dispatchEvent(new CustomEvent('notify', { detail: { type: 'warning', message: 'No hay stock suficiente. Ajustá las cantidades:', description: lines.join(' · '), shortageIds, shortages } }));
-          window.dispatchEvent(new CustomEvent('open-cart'));
-        }, 50);
-        return;
-      } catch {}
-    }
-    // Fallback: some environments still return the raw text "HTTP 400 Bad Request: { ... }".
-    // If so, try to extract the JSON object from the error message and run the same recovery flow.
-    try {
-      const msg = String(e?.message || '');
-      if (msg.includes('{') && msg.includes('}')) {
-        const start = msg.indexOf('{');
-        const end = msg.lastIndexOf('}');
-        if (end > start) {
-          const json = JSON.parse(msg.slice(start, end + 1));
-          if (json && json.code === 'INSUFFICIENT_STOCK' && Array.isArray(json.shortages)) {
-            const lines: string[] = [];
-            for (const s of json.shortages) {
-              const avail = Math.max(0, Number(s.available ?? 0));
-              const req = Math.max(0, Number(s.requested ?? 0));
-              const name = s.name || s.id;
-              lines.push(`${name}: disponible ${avail} (pediste ${req})`);
-            }
-            router.replace('/');
-            setTimeout(() => {
-              const shortages = Array.isArray(json.shortages) ? json.shortages : [];
-              const shortageIds = shortages.map((s: any) => s.id).filter(Boolean);
-              // @ts-expect-error custom event
-              window.dispatchEvent(new CustomEvent('set-shortages', { detail: { shortages } }));
-              window.dispatchEvent(new CustomEvent('notify', { detail: { type: 'warning', message: 'No hay stock suficiente. Ajustá las cantidades:', description: lines.join(' · '), shortageIds, shortages } }));
-              window.dispatchEvent(new CustomEvent('open-cart'));
-            }, 50);
-            return;
-          }
-        }
-      }
-    } catch {}
+    // Centralized handling for stock shortages
+    if (handleInsufficientStock(e, router)) return;
     error.value = e?.message || 'No se pudo crear el pedido.';
   } finally {
     loading.value = false;
@@ -267,28 +214,8 @@ async function placeOrderMp() {
     cart.clear();
     window.location.href = pref.initPoint;
   } catch (e: any) {
-    // Reuse shortage handling from placeOrder when applicable
-    if (e && e.code === 'INSUFFICIENT_STOCK' && Array.isArray(e.shortages)) {
-      try {
-        const lines: string[] = [];
-        for (const s of e.shortages) {
-          const avail = Math.max(0, Number(s.available ?? 0));
-          const req = Math.max(0, Number(s.requested ?? 0));
-          const name = s.name || s.id;
-          lines.push(`${name}: disponible ${avail} (pediste ${req})`);
-        }
-        router.replace('/');
-        setTimeout(() => {
-          const shortages = Array.isArray(e.shortages) ? e.shortages : [];
-          const shortageIds = shortages.map((s: any) => s.id).filter(Boolean);
-          // @ts-expect-error custom event
-          window.dispatchEvent(new CustomEvent('set-shortages', { detail: { shortages } }));
-          window.dispatchEvent(new CustomEvent('notify', { detail: { type: 'warning', message: 'No hay stock suficiente. Ajustá las cantidades:', description: lines.join(' · '), shortageIds, shortages } }));
-          window.dispatchEvent(new CustomEvent('open-cart'));
-        }, 50);
-        return;
-      } catch {}
-    }
+    // Centralized handling for stock shortages
+    if (handleInsufficientStock(e, router)) return;
     error.value = e?.message || 'No se pudo iniciar el pago con MercadoPago.';
   } finally {
     loading.value = false;
