@@ -6,7 +6,7 @@
           <n-icon size="16"><SearchOutline /></n-icon>
         </template>
       </n-input>
-      <n-select v-model:value="state" :options="stateOptions" placeholder="Estado" style="width:200px" />
+      <n-select v-model:value="state" :options="stateOptions" placeholder="Estado" style="width:260px; margin-right: 8px;" />
       <n-button type="primary" tertiary :loading="loading" @click="refresh">
         <template #icon><n-icon><RefreshOutline /></n-icon></template>
         Actualizar
@@ -76,7 +76,10 @@
             <td>{{ it.qty }}</td>
             <td>
               <div style="display:flex; flex-direction:column">
-                <strong>{{ it.name || itemName(it.id) }}</strong>
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap">
+                  <strong>{{ it.name || itemName(it.id) }}</strong>
+                  <n-tag v-if="it.stockWarning" size="small" type="warning">Posible problema de stock</n-tag>
+                </div>
                 <small style="color:#888">ID: {{ it.id }}</small>
               </div>
             </td>
@@ -103,7 +106,7 @@ import { RefreshOutline, SearchOutline, CheckmarkDoneOutline, CashOutline } from
 import { staffApi } from '../lib/api';
 import type { Item } from '../types';
 
-type State = 'pending_payment' | 'paid' | 'fulfilled' | 'all';
+type State = 'pending_payment' | 'paid' | 'fulfilled' | 'all' | 'warnings';
 type Fulfillment = boolean | undefined;
 const q = ref('');
 // Default to showing all orders (previously defaulted to 'paid')
@@ -138,14 +141,23 @@ const stateOptions = [
   { label: 'Esperando pago', value: 'pending_payment' },
   { label: 'Pagadas (en preparación)', value: 'paid' },
   { label: 'Completadas', value: 'fulfilled' },
+  { label: 'Con posible problema de stock', value: 'warnings' },
 ];
+
+function rowHasStockWarning(row: Row): boolean {
+  const items = ((row?.raw?.items) || []) as Array<any>;
+  return items.some((it) => !!it?.stockWarning);
+}
 
 const filtered = computed(() => rows.value.filter(r => {
   const term = q.value?.toLowerCase() || '';
-  if (!term) return true;
-  return `${r.code}`.toLowerCase().includes(term)
+  const textOk = !term
+    || `${r.code}`.toLowerCase().includes(term)
     || `${r.id}`.toLowerCase().includes(term)
     || `${r.customer || ''}`.toLowerCase().includes(term);
+  // If status dropdown is set to "warnings", only include rows with stock warning
+  const warnOk = state.value !== 'warnings' || rowHasStockWarning(r);
+  return textOk && warnOk;
 }));
 
 function statusLabel(row: Row): string {
@@ -286,7 +298,9 @@ const columns: DataTableColumns<Row> = [
 async function refresh() {
   loading.value = true;
   try {
-    const list = await staffApi.listOrders(state.value);
+    // For the synthetic "warnings" state we need the full list to filter client-side
+    const backendState = state.value === 'warnings' ? 'all' : state.value;
+    const list = await staffApi.listOrders(backendState as any);
     // Always sort newest -> oldest by createdAt (also applies when filters change)
     const sorted = (list || []).slice().sort((a: any, b: any) => {
       const ta = a?.createdAt ? Date.parse(a.createdAt) : 0;
@@ -360,6 +374,21 @@ function openDetails(row: Row) {
 function itemName(id: string): string {
   return itemsById.value[id]?.name || '(sin nombre)';
 }
+
+// Persist dropdown stock-warning filter between visits in this session
+onMounted(() => {
+  try {
+    const savedState = sessionStorage.getItem('orders-state');
+    if (savedState === 'pending_payment' || savedState === 'paid' || savedState === 'fulfilled' || savedState === 'all' || savedState === 'warnings') {
+      state.value = savedState as State;
+    }
+  } catch {}
+});
+watch(state, (v) => {
+  try { sessionStorage.setItem('orders-state', v); } catch {}
+  // When switching states, refresh the list so server-side filtering applies when relevant
+  refresh();
+});
 function fmtDateTime(iso?: string): string {
   if (!iso) return '-';
   try {

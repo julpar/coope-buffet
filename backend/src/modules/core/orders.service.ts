@@ -9,6 +9,11 @@ export type OrderItem = {
   name?: string;
   unitPrice: number; // cents
   qty: number;
+  // When true, signals to fulfillment that this item likely has a stock issue
+  // (e.g., stock went out between order creation and payment). The order is
+  // accepted as paid, but the fulfiller should resolve by refunding or offering
+  // a replacement.
+  stockWarning?: boolean;
 };
 
 export interface Order {
@@ -173,21 +178,28 @@ export class OrdersService {
     if (!o) return null;
     if (o.status === 'paid') return o;
     if (o.status !== 'pending_payment') return o;
-    // Re-validate stock at payment time to avoid overselling if stock changed
-    const shortages: StockShortage[] = [];
-    for (const it of o.items) {
+    // Re-validate stock at payment time. New behavior: accept the order even if
+    // some items are short; flag those items and only deduct the stock that is
+    // actually available to avoid leaving phantom inventory.
+    for (let i = 0; i < o.items.length; i++) {
+      const it = o.items[i];
       const item = await this.menu.getItem(it.id);
       const available = Math.max(0, item?.stock ?? 0);
       const active = item?.active !== false;
-      if (!item || !active || it.qty > available) {
-        shortages.push({ id: it.id, name: item?.name, requested: it.qty, available: active ? available : 0 });
+      const canFulfill = !!item && active && available >= it.qty;
+      if (canFulfill) {
+        // Deduct full quantity
+        await this.menu.adjustStock(it.id, -it.qty);
+        // Clear any prior flag just in case
+        if (it.stockWarning) it.stockWarning = false;
+      } else {
+        // Flag the item as a probable stock problem for the fulfiller UI
+        it.stockWarning = true;
+        // Deduct whatever is available to keep inventory consistent (down to 0)
+        const toDeduct = Math.min(available, it.qty);
+        if (toDeduct > 0) await this.menu.adjustStock(it.id, -toDeduct);
       }
     }
-    if (shortages.length > 0) {
-      throw new InsufficientStockError(shortages);
-    }
-    // Adjust stock now that validation passed
-    for (const it of o.items) await this.menu.adjustStock(it.id, -it.qty);
     o.status = 'paid';
     o.fulfillment = false;
     if (o.payment) {

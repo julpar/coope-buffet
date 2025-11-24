@@ -33,6 +33,8 @@ export interface OrderItemRef {
   id: string;
   qty: number;
   price: number;
+  // When present, signals a probable stock problem to fulfillers
+  stockWarning?: boolean;
 }
 
 export type OrderStatus = 'received' | 'preparing' | 'ready' | 'out' | 'completed' | 'cancelled' | 'awaiting-cash';

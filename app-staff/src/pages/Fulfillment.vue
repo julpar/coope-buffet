@@ -39,6 +39,13 @@
         <div class="row"><strong>Cliente:</strong> <span>{{ order.customerName || '-' }}</span></div>
         <div class="row"><strong>Estado:</strong> <n-tag :type="order.status === 'paid' ? 'info' : order.status === 'fulfilled' ? 'success' : 'warning'">{{ statusLabel }}</n-tag></div>
       </div>
+      <!-- Stock warning banner if any item is flagged -->
+      <div v-if="hasStockWarnings" class="prominent-warning">
+        <n-alert type="warning" title="Posible problema de stock" :show-icon="true">
+          Uno o más artículos podrían no estar disponibles. Seguí el protocolo manual: verificar stock,
+          ofrecer reemplazo o realizar reembolso parcial según corresponda.
+        </n-alert>
+      </div>
       <div class="items">
         <div class="items-header">
           <div class="items-title">Artículos del pedido</div>
@@ -71,7 +78,10 @@
           :style="rowStyle(it.id)"
         >
           <span class="qty" :title="'Cantidad'">x{{ it.qty }}</span>
-          <span class="name">{{ it.name || it.id }}</span>
+          <span class="name" style="display:inline-flex; align-items:center; gap:8px;">
+            {{ it.name || it.id }}
+            <n-tag v-if="it.stockWarning" size="small" type="warning">Posible problema de stock</n-tag>
+          </span>
         </div>
 
         <!-- Checked items moved under a secondary section and greyed out -->
@@ -96,7 +106,10 @@
           :style="rowStyle(it.id)"
         >
           <span class="qty" :title="'Cantidad'">x{{ it.qty }}</span>
-          <span class="name">{{ it.name || it.id }}</span>
+          <span class="name" style="display:inline-flex; align-items:center; gap:8px;">
+            {{ it.name || it.id }}
+            <n-tag v-if="it.stockWarning" size="small" type="warning">Posible problema de stock</n-tag>
+          </span>
         </div>
       </div>
       <template #action>
@@ -164,6 +177,11 @@ async function lookup() {
 }
 
 const isFulfillable = computed(() => !!order.value && order.value.status === 'paid');
+// True if any line item is flagged with a probable stock problem
+const hasStockWarnings = computed(() => {
+  const items = (order.value?.items ?? []) as Array<any>;
+  return items.some((it) => !!it?.stockWarning);
+});
 const statusLabel = computed(() => {
   const st = order.value?.status;
   if (st === 'pending_payment') return 'Pago pendiente';

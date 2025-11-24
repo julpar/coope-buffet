@@ -35,6 +35,8 @@ export interface OrderItemRef {
   name?: string;
   unitPrice: number; // ARS units (not cents)
   qty: number;
+  // Optional flag to indicate the item may have a stock problem post-payment
+  stockWarning?: boolean;
 }
 
 export interface CustomerOrder {
