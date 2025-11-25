@@ -20,7 +20,7 @@
       <div class="manual-code" v-if="order.shortCode">
         <div class="code-label">Código</div>
         <div class="code-value" :aria-label="`Código ${order.shortCode}`">{{ order.shortCode }}</div>
-        <n-button size="small" tertiary class="copy-btn" @click="copyCode">
+        <n-button size="small" quaternary class="copy-btn" @click="copyCode">
           Copiar
         </n-button>
       </div>
@@ -301,6 +301,11 @@ function statusClass(status?: CustomerOrder['status'] | string | null): string {
 .manual-code .code-label { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; opacity: .8; }
 .manual-code .code-value { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-weight: 800; font-size: 40px; line-height: 1; letter-spacing: .06em; padding: 6px 10px; background: #fff; color: #111; border-radius: 8px; border: 2px solid #000; min-width: 6ch; text-align: center; }
 .manual-code .copy-btn { position: relative; }
+/* Make the quaternary (text-like) copy button readable on dark background */
+.manual-code .copy-btn { color: rgba(255, 255, 255, 0.85); }
+.manual-code .copy-btn:hover,
+.manual-code .copy-btn:focus { color: #fff; }
+.manual-code .copy-btn:focus-visible { outline: 2px solid #66afe9; outline-offset: 2px; border-radius: 6px; }
 @media (max-width: 480px) {
   .manual-code { padding: 8px 10px; gap: 8px; }
   .manual-code .code-value { font-size: 32px; padding: 4px 8px; }
