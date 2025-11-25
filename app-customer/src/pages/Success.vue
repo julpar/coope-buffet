@@ -61,12 +61,20 @@ import type { CustomerOrder } from '../types';
 import { customerApi } from '../lib/api';
 import { statusLabel, statusDescription } from '../lib/status';
 import { createDiscreteApi } from 'naive-ui';
+// Local QR generation (no external service)
+import { useQRCode } from '@vueuse/integrations/useQRCode';
 
 const route = useRoute();
 const router = useRouter();
 const loading = ref(true);
 const order = ref<CustomerOrder | null>(null);
-const qrSrc = ref('');
+// QR code data URL generated locally. We feed it with the short alphanumeric code only.
+const qrData = ref('');
+const qrSrc = useQRCode(qrData, {
+  width: 320,
+  margin: 1,
+  errorCorrectionLevel: 'M'
+});
 let pollTimer: number | null = null;
 let pollDeadline = 0; // epoch ms when we should stop polling
 // Local flag to allow programmatic navigation without showing the paid warning twice
@@ -148,14 +156,8 @@ onMounted(async () => {
     // Generamos el QR de "cumplimiento" (y caja) REUTILIZANDO el mismo código corto
     // usado para pagar. No debe ser una URL, solo el código alfanumérico.
     const code = o?.shortCode || o?.id;
-    if (code) {
-      // Importante: el data del QR debe ser únicamente el código, sin URL.
-      qrSrc.value = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(
-        String(code)
-      )}`;
-    } else {
-      qrSrc.value = '';
-    }
+    // Importante: el data del QR debe ser únicamente el código, sin URL.
+    qrData.value = code ? String(code) : '';
 
     // Si el pedido quedó en pendiente de pago o pagado (pendiente de preparación),
     // iniciar polling por 20 minutos máx, cada 3s. Para 'paid' seguimos hasta fulfilled/cancelled.

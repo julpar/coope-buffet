@@ -44,6 +44,7 @@ import { PersonAddOutline, TrashOutline, SearchOutline } from '@vicons/ionicons5
 import { usersApi, authApi, type StaffUser } from '../lib/api';
 import InviteUserModal from '../components/InviteUserModal.vue';
 import EditUserModal from '../components/EditUserModal.vue';
+import { useQRCode } from '@vueuse/integrations/useQRCode';
 
 const q = ref('');
 const rows = ref<StaffUser[]>([]);
@@ -116,17 +117,18 @@ async function removeUser(u: StaffUser) {
 const showQR = ref(false);
 const loadingQR = ref(false);
 const permUrl = ref('');
-const qrSrc = ref('');
+const qrData = ref('');
+const qrSrc = useQRCode(qrData, { width: 320, margin: 1, errorCorrectionLevel: 'M' });
 async function viewQR(u: StaffUser) {
   if (!isAdmin.value) return;
   showQR.value = true;
   loadingQR.value = true;
   permUrl.value = '';
-  qrSrc.value = '';
+  qrData.value = '';
   try {
     const res = await usersApi.getPermUrl(u.id);
     permUrl.value = res.permUrl;
-    qrSrc.value = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(permUrl.value)}`;
+    qrData.value = permUrl.value;
   } catch {
     message.error('No se pudo obtener el QR');
     showQR.value = false;

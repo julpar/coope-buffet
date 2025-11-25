@@ -49,6 +49,7 @@
 import { ref, watch, nextTick } from 'vue';
 import { useMessage, NModal, NForm, NFormItem, NInput, NButton, NCheckbox, NCheckboxGroup, NSpace } from 'naive-ui';
 import { usersApi } from '../lib/api';
+import { useQRCode } from '@vueuse/integrations/useQRCode';
 
 const props = defineProps<{
   show: boolean;
@@ -69,7 +70,8 @@ const roles = ref<string[]>([]);
 const roleOptions = ['ADMIN', 'STOCK', 'CASHIER', 'ORDER_FULFILLER'];
 const creating = ref(false);
 const permUrl = ref('');
-const qrSrc = ref('');
+const qrData = ref('');
+const qrSrc = useQRCode(qrData, { width: 320, margin: 1, errorCorrectionLevel: 'M' });
 const canShare = (typeof navigator !== 'undefined' && 'share' in navigator) as boolean;
 
 watch(show, async (v) => {
@@ -77,7 +79,7 @@ watch(show, async (v) => {
     // Reset state each time it opens
     step.value = 'form';
     permUrl.value = '';
-    qrSrc.value = '';
+    qrData.value = '';
     await nextTick();
   }
 });
@@ -96,7 +98,7 @@ async function tryCreate() {
   try {
     const res = await usersApi.create(nickname.value, roles.value);
     permUrl.value = res.permUrl;
-    qrSrc.value = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(permUrl.value)}`;
+    qrData.value = permUrl.value;
     emit('created', { id: res.user.id, nickname: res.user.nickname, roles: res.user.roles, permUrl: res.permUrl });
     step.value = 'success';
     message.success('Usuario creado');
@@ -139,7 +141,7 @@ function close() {
 function createAnother() {
   step.value = 'form';
   permUrl.value = '';
-  qrSrc.value = '';
+  qrData.value = '';
 }
 </script>
 
