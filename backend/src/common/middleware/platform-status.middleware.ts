@@ -47,22 +47,16 @@ export function platformStatusMiddleware() {
     }
 
     if (status === 'hard-offline') {
-      // Serve a minimal offline page (SPA can override with its own route if present)
-      res.status(503).send(`<!doctype html>
-<html lang="es">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Fuera de servicio</title>
-    <style>body{margin:0;font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#111;color:#fff;text-align:center;padding:24px} .card{max-width:640px} h1{font-size:28px;margin:0 0 12px} p{opacity:.85;line-height:1.4}</style>
-  </head>
-  <body>
-    <div class="card">
-      <h1>Servicio no disponible</h1>
-      <p>El buffet está temporalmente fuera de servicio. Intenta nuevamente más tarde.</p>
-    </div>
-  </body>
-</html>`);
+      // Return JSON instead of HTML when platform is hard-offline
+      res.status(503).json({
+        status: 'hard-offline',
+        error: 'Service Unavailable',
+        message:
+          'El buffet está temporalmente fuera de servicio. Intenta nuevamente más tarde.',
+        code: 503,
+        path: req.path,
+        timestamp: new Date().toISOString(),
+      });
       return;
     }
 
