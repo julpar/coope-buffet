@@ -25,6 +25,12 @@ services:
       - CORS_ORIGINS=${CORS_ORIGINS:-}
       # Set to true only if you want to allow any origin (not recommended for production)
       - CORS_ALLOW_ALL=${CORS_ALLOW_ALL:-false}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/v1/platform/status || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
 
   web-customer:
     build:
@@ -33,6 +39,12 @@ services:
     depends_on:
       - app
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
 
   web-staff:
     build:
@@ -45,6 +57,12 @@ services:
     depends_on:
       - app
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/healthz || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
 
 volumes:
   redis-data:
