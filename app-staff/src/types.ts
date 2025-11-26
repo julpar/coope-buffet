@@ -19,16 +19,6 @@ export interface Item {
   availability?: Availability;
 }
 
-export interface MenuResponse {
-  categories: Array<{
-    id: string;
-    name: string;
-    order?: number;
-    items: Item[];
-  }>;
-  glutenFree: Item[];
-}
-
 export interface OrderItemRef {
   id: string;
   qty: number;

@@ -1,4 +1,4 @@
-import type { Category, Item, MenuResponse } from '../types';
+import type { Category, Item } from '../types';
 import { ref } from 'vue';
 
 // Build absolute API base from environment variables.
@@ -72,10 +72,8 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
   return undefined;
 }
 
-// Public
-export const getPublicMenu = () => http<MenuResponse>('/menu');
-
-// Staff endpoints (from DONE.md) are exposed below via `staffApi` with graceful fallback
+// Note: Staff app does not consume the public customer menu directly.
+// All staff features use /staff/* endpoints below.
 
 // Mock helpers for when backend is not available
 export async function tryApi<T>(fn: () => Promise<T>, fallback: () => Promise<T> | T): Promise<T> {
@@ -276,10 +274,11 @@ export const platformApi = {
 };
 
 // Background probe on startup to eagerly detect backend availability and show the banner early.
+// Uses the public platform status endpoint instead of the public menu to avoid confusion.
 // Skips when forced mock is enabled or when a previous session already detected mock mode.
 if (typeof window !== 'undefined' && !FORCE_MOCK && !SESSION_MOCK) {
   // Use a lightweight fetch; failures turn on mock mode and persist the flag for the session.
-  fetch(ABS_BASE + '/menu', { method: 'GET' })
+  fetch(ABS_BASE + '/platform/status', { method: 'GET' })
     .then((r) => {
       if (!r.ok) throw new Error('unavailable');
       apiOnline.value = true;
