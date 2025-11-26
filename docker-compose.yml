@@ -26,7 +26,7 @@ services:
       # Set to true only if you want to allow any origin (not recommended for production)
       - CORS_ALLOW_ALL=${CORS_ALLOW_ALL:-false}
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/v1/platform/status || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/v1/platform/status || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -40,7 +40,7 @@ services:
       - app
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/health || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 3
@@ -58,7 +58,7 @@ services:
       - app
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/health || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 3
