@@ -14,14 +14,9 @@ function buildBase(base: string, version: string): string {
 
 const ABS_BASE = buildBase(SERVICE_URL_APP, API_VERSION);
 export const API_BASE = ABS_BASE;
-// Reactive API online flag: null (unknown), true (reachable), false (errors observed)
+// Single source of truth for API reachability:
+// null (unknown), true (reachable), false (unreachable/errors observed)
 export const apiOnline = ref<boolean | null>(null);
-
-// Reactive flag to indicate whether the app is currently relying on mocked data
-// Initialized from env/session so the banner can render immediately on load.
-const FORCE_MOCK = ((import.meta as any).env?.VITE_FORCE_MOCK === '1');
-const SESSION_MOCK = typeof window !== 'undefined' && sessionStorage.getItem('mock-mode') === '1';
-export const isMocked = ref<boolean>(FORCE_MOCK || SESSION_MOCK);
 
 export class HttpError extends Error {
   status: number;
@@ -60,12 +55,8 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
     err.bodyText = text;
     throw err;
   }
-  // Successful response: consider the API online and, unless forced, exit mock mode
+  // Successful response: consider the API online and exit offline state
   apiOnline.value = true;
-  if (!FORCE_MOCK) {
-    isMocked.value = false;
-    try { sessionStorage.removeItem('mock-mode'); } catch {}
-  }
   const ct = res.headers.get('content-type') || '';
   if (ct.includes('application/json')) return res.json();
   // @ts-expect-error
@@ -75,129 +66,53 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
 // Note: Staff app does not consume the public customer menu directly.
 // All staff features use /staff/* endpoints below.
 
-// Mock helpers for when backend is not available
-export async function tryApi<T>(fn: () => Promise<T>, fallback: () => Promise<T> | T): Promise<T> {
+// Helper that marks offline on network/5xx errors and rethrows (no mock fallback)
+async function callApi<T>(fn: () => Promise<T>): Promise<T> {
   try {
     const res = await fn();
-    // Any successful backend call should mark API online and disable mock mode (unless forced)
     apiOnline.value = true;
-    if (!FORCE_MOCK) {
-      isMocked.value = false;
-      try { sessionStorage.removeItem('mock-mode'); } catch {}
-    }
     return res;
   } catch (e: any) {
-    // For 4xx application errors, do not toggle offline/mock; just rethrow
     const status = typeof e?.status === 'number' ? e.status : undefined;
-    if (status && status >= 400 && status < 500) {
-      throw e;
+    if (!status || status >= 500) {
+      apiOnline.value = false;
     }
-    // Network errors or 5xx → enable mocked mode and fallback
-    isMocked.value = true;
-    apiOnline.value = false;
-    try { sessionStorage.setItem('mock-mode', '1'); } catch {}
-    return await fallback();
+    throw e;
   }
 }
 
-// Simple mock data (localStorage-backed)
-const LS_KEY = 'staff-mock';
-type MockState = { categories: Category[]; items: Item[] };
-function loadMock(): MockState {
-  const raw = localStorage.getItem(LS_KEY);
-  if (raw) return JSON.parse(raw);
-  const initial: MockState = {
-    categories: [
-      { id: 'parrilla', name: 'PARRILLA', order: 1 },
-      { id: 'platos', name: 'FERIA DEL PLATO', order: 2 },
-      { id: 'bebidas', name: 'BEBIDAS', order: 3 },
-      { id: 'otros', name: 'OTROS', order: 4 },
-    ],
-    items: [
-      { id: 'choripan', name: 'Choripán', categoryId: 'parrilla', price: 2500, stock: 10, lowStockThreshold: 3, isGlutenFree: false },
-      { id: 'ensalada', name: 'Ensalada', categoryId: 'platos', price: 2000, stock: 2, lowStockThreshold: 5, isGlutenFree: true },
-      { id: 'cola', name: 'Gaseosa cola', categoryId: 'bebidas', price: 1200, stock: 0, lowStockThreshold: 5 },
-    ],
-  };
-  localStorage.setItem(LS_KEY, JSON.stringify(initial));
-  return initial;
-}
-function saveMock(s: MockState) { localStorage.setItem(LS_KEY, JSON.stringify(s)); }
+// All mock/localStorage functionality removed: the staff app no longer uses mock data.
 
-export const mockApi = {
-  async getCategories(): Promise<Category[]> { return loadMock().categories; },
-  async upsertCategory(id: string, data: Partial<Category>): Promise<Category> {
-    const s = loadMock();
-    const idx = s.categories.findIndex(c => c.id === id);
-    const next: Category = { id, name: data.name || id, order: data.order };
-    if (idx >= 0) s.categories[idx] = { ...s.categories[idx], ...next };
-    else s.categories.push(next);
-    saveMock(s);
-    return next;
-  },
-  async getItems(): Promise<Item[]> { return loadMock().items; },
-  async upsertItem(id: string, data: Partial<Item>): Promise<Item> {
-    const s = loadMock();
-    const idx = s.items.findIndex(i => i.id === id);
-    const next: Item = { id, name: data.name || id, categoryId: data.categoryId || 'otros', price: data.price || 0, ...data } as Item;
-    if (idx >= 0) s.items[idx] = { ...s.items[idx], ...next };
-    else s.items.push(next);
-    saveMock(s);
-    return next;
-  },
-  async deleteItem(id: string): Promise<{ ok: true }>{
-    const s = loadMock();
-    const idx = s.items.findIndex(i => i.id === id);
-    if (idx >= 0) {
-      s.items.splice(idx, 1);
-      saveMock(s);
-    }
-    return { ok: true };
-  },
-  async adjustStock(id: string, delta: number): Promise<{ id: string; stock: number }> {
-    const s = loadMock();
-    const it = s.items.find(i => i.id === id);
-    if (!it) throw new Error('Item not found');
-    const cur = Math.max(0, (it.stock || 0) + delta);
-    it.stock = cur;
-    saveMock(s);
-    return { id, stock: cur };
-  }
-};
-
-// Staff API with graceful fallback to mock when backend is unavailable
+// Staff API without any mock fallback. Errors will propagate and the offline banner will show.
 export const staffApi = {
-  getCategories: () => tryApi<Category[]>(() => http('/staff/menu/categories'), () => mockApi.getCategories()),
+  getCategories: () => callApi<Category[]>(() => http('/staff/menu/categories')),
   upsertCategory: (id: string, data: Partial<Category>) =>
-    tryApi<Category>(() => http(`/staff/menu/categories/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(data) }),
-      () => mockApi.upsertCategory(id, data)),
-  getItems: () => tryApi<Item[]>(() => http('/staff/menu/items'), () => mockApi.getItems()),
+    callApi<Category>(() => http(`/staff/menu/categories/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(data) })),
+  getItems: () => callApi<Item[]>(() => http('/staff/menu/items')),
   upsertItem: (id: string, data: Partial<Item>) =>
-    tryApi<Item>(() => http(`/staff/menu/items/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(data) }),
-      () => mockApi.upsertItem(id, data)),
+    callApi<Item>(() => http(`/staff/menu/items/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(data) })),
   deleteItem: (id: string) =>
-    tryApi<{ ok: true }>(() => http(`/staff/menu/items/${encodeURIComponent(id)}`, { method: 'DELETE' }), () => mockApi.deleteItem(id)),
+    callApi<{ ok: true }>(() => http(`/staff/menu/items/${encodeURIComponent(id)}`, { method: 'DELETE' })),
   adjustStock: (id: string, delta: number) =>
-    tryApi<{ id: string; stock: number }>(
-      () => http(`/staff/menu/items/${encodeURIComponent(id)}/stock`, { method: 'POST', body: JSON.stringify({ delta }) }),
-      () => mockApi.adjustStock(id, delta)
+    callApi<{ id: string; stock: number }>(
+      () => http(`/staff/menu/items/${encodeURIComponent(id)}/stock`, { method: 'POST', body: JSON.stringify({ delta }) })
     ),
-  // Orders (no mock fallback provided on purpose; shows offline banner instead)
+  // Orders (no fallback; banner indicates offline)
   listOrders: (state: 'pending_payment' | 'paid' | 'fulfilled' | 'all' = 'paid') =>
-    tryApi<any[]>(() => {
+    callApi<any[]>(() => {
       const qs = state ? `?state=${encodeURIComponent(state)}` : '';
       return http(`/staff/orders${qs}`);
-    }, async () => []),
+    }),
   lookupOrderByCode: (code: string) =>
-    tryApi<any>(() => http(`/staff/orders/lookup?code=${encodeURIComponent(code)}`), async () => { throw new Error('offline'); }),
+    callApi<any>(() => http(`/staff/orders/lookup?code=${encodeURIComponent(code)}`)),
   markOrderPaid: (id: string, externalId?: string | null) =>
-    tryApi<any>(() => http(`/staff/orders/${encodeURIComponent(id)}/paid`, { method: 'POST', body: JSON.stringify({ externalId: externalId ?? null }) }), async () => { throw new Error('offline'); }),
+    callApi<any>(() => http(`/staff/orders/${encodeURIComponent(id)}/paid`, { method: 'POST', body: JSON.stringify({ externalId: externalId ?? null }) })),
   markOrderPaidByCode: (code: string, externalId?: string | null) =>
-    tryApi<any>(() => http(`/staff/orders/paid-by-code`, { method: 'POST', body: JSON.stringify({ code, externalId: externalId ?? null }) }), async () => { throw new Error('offline'); }),
+    callApi<any>(() => http(`/staff/orders/paid-by-code`, { method: 'POST', body: JSON.stringify({ code, externalId: externalId ?? null }) })),
   setOrderFulfillment: (id: string, fulfilled: boolean) =>
-    tryApi<any>(() => http(`/staff/orders/${encodeURIComponent(id)}/fulfillment`, { method: 'POST', body: JSON.stringify({ fulfilled }) }), async () => { throw new Error('offline'); }),
+    callApi<any>(() => http(`/staff/orders/${encodeURIComponent(id)}/fulfillment`, { method: 'POST', body: JSON.stringify({ fulfilled }) })),
   cancelOrder: (id: string) =>
-    tryApi<any>(() => http(`/staff/orders/${encodeURIComponent(id)}/cancel`, { method: 'POST' }), async () => { throw new Error('offline'); }),
+    callApi<any>(() => http(`/staff/orders/${encodeURIComponent(id)}/cancel`, { method: 'POST' })),
   // Images: request a presigned upload URL and upload the file, returning the public URL
   uploadImage: async (file: File): Promise<{ url: string }> => {
     // 1) Ask backend for a presigned URL
@@ -293,19 +208,15 @@ export const platformApi = {
 };
 
 // Background probe on startup to eagerly detect backend availability and show the banner early.
-// Uses the public platform status endpoint instead of the public menu to avoid confusion.
-// Skips when forced mock is enabled or when a previous session already detected mock mode.
-if (typeof window !== 'undefined' && !FORCE_MOCK && !SESSION_MOCK) {
-  // Use a lightweight fetch; failures turn on mock mode and persist the flag for the session.
+// Uses the public platform status endpoint.
+if (typeof window !== 'undefined') {
   fetch(ABS_BASE + '/platform/status', { method: 'GET' })
     .then((r) => {
       if (!r.ok) throw new Error('unavailable');
       apiOnline.value = true;
     })
     .catch(() => {
-      isMocked.value = true;
       apiOnline.value = false;
-      try { sessionStorage.setItem('mock-mode', '1'); } catch {}
     });
 }
 

@@ -43,13 +43,13 @@
         </div>
       </n-layout-header>
 
-      <!-- Prominent banner when running in mocked mode -->
-      <div v-if="ready && isMocked && !bannerDismissed" class="mock-banner" role="alert">
+      <!-- Prominent banner when API is offline  -->
+      <div v-if="ready && apiOnline === false && !bannerDismissed" class="mock-banner" role="alert">
         <div class="mock-banner__content">
           <div class="mock-banner__text">
-            <strong>Mock mode activo.</strong>
+            <strong>API fuera de línea.</strong>
             <span>
-              Usando datos locales porque la API no está disponible.
+              La aplicación no puede conectarse con el servidor en este momento.
               <small class="muted">Destino configurado: {{ apiBase }}</small>
             </span>
           </div>
@@ -126,7 +126,7 @@ import {
   CheckmarkDoneOutline,
   PowerOutline
 } from '@vicons/ionicons5';
-import { isMocked as apiIsMocked, API_BASE, apiOnline, authApi, type StaffUser, platformApi, type PlatformStatusResponse } from './lib/api';
+import { API_BASE, apiOnline, authApi, type StaffUser, platformApi, type PlatformStatusResponse } from './lib/api';
 
 const router = useRouter();
 const collapsed = ref(false);
@@ -187,7 +187,6 @@ const themeOverrides: GlobalThemeOverrides = {
 
 // Mock banner state
 const apiBase = API_BASE;
-const isMocked = apiIsMocked;
 const bannerDismissed = ref(sessionStorage.getItem('hide-mock-banner') === '1');
 function dismissBanner() {
   bannerDismissed.value = true;
