@@ -72,6 +72,20 @@
           <n-form-item label="Activo" path="active">
             <n-switch v-model:value="form.active" />
           </n-form-item>
+          <n-form-item label="Imagen" path="imageUrl">
+            <div style="display:flex; flex-direction:column; gap:8px; width:100%">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input ref="fileInput" type="file" accept="image/*" @change="onPickImage" style="display:none" />
+                <n-button :loading="uploadingImage" @click="() => fileInput?.click()">Seleccionar imagen</n-button>
+                <n-button quaternary v-if="form.imageUrl" @click="clearImage">Quitar imagen</n-button>
+              </div>
+              <div v-if="form.imageUrl" style="display:flex; gap:8px; align-items:center;">
+                <img :src="form.imageUrl as string" alt="preview" style="max-width:160px; max-height:100px; object-fit:cover; border-radius:6px; border:1px solid #ddd;" />
+                <a :href="form.imageUrl as string" target="_blank" rel="noreferrer">Abrir</a>
+              </div>
+              <div v-else style="color:#777; font-size:12px;">No hay imagen. Formatos recomendados: JPG/PNG, máx. 5MB.</div>
+            </div>
+          </n-form-item>
         </n-form>
       </div>
       <template #action>
@@ -100,6 +114,8 @@ const showEditor = ref(false);
 const saving = ref(false);
 const editing = ref<Item | null>(null);
 const form = ref<Partial<Item & { id: string }>>({ id: '', name: '', categoryId: '', price: 0, stock: 0, lowStockThreshold: 0, isGlutenFree: false, active: true });
+const uploadingImage = ref(false);
+const fileInput = ref<HTMLInputElement | null>(null);
 
 function availabilityOf(it: Item): 'in-stock' | 'limited' | 'sold-out' {
   const stock = it.stock ?? 0;
@@ -179,7 +195,7 @@ function openCreate() {
 
 function openEdit(row: Item) {
   editing.value = row;
-  form.value = { id: row.id, name: row.name, categoryId: row.categoryId, price: row.price, stock: row.stock || 0, lowStockThreshold: row.lowStockThreshold || 0, isGlutenFree: !!row.isGlutenFree, active: row.active !== false };
+  form.value = { id: row.id, name: row.name, categoryId: row.categoryId, price: row.price, stock: row.stock || 0, lowStockThreshold: row.lowStockThreshold || 0, isGlutenFree: !!row.isGlutenFree, active: row.active !== false, imageUrl: row.imageUrl || undefined };
   showEditor.value = true;
 }
 
@@ -187,6 +203,33 @@ function openDuplicate(row: Item) {
   editing.value = null;
   form.value = { id: randomId(), name: row.name + ' (copia)', categoryId: row.categoryId, price: row.price, stock: row.stock || 0, lowStockThreshold: row.lowStockThreshold || 0, isGlutenFree: !!row.isGlutenFree, active: row.active !== false };
   showEditor.value = true;
+}
+
+async function onPickImage(e: Event) {
+  const el = e.target as HTMLInputElement;
+  const file = el.files && el.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) {
+    message.warning('La imagen supera los 5MB');
+    el.value = '';
+    return;
+  }
+  try {
+    uploadingImage.value = true;
+    const { url } = await staffApi.uploadImage(file);
+    form.value.imageUrl = url;
+    message.success('Imagen subida');
+  } catch (err: any) {
+    console.error(err);
+    message.error('No se pudo subir la imagen');
+  } finally {
+    uploadingImage.value = false;
+    try { el.value = ''; } catch {}
+  }
+}
+
+function clearImage() {
+  form.value.imageUrl = undefined;
 }
 
 async function saveItem() {
@@ -204,6 +247,7 @@ async function saveItem() {
       lowStockThreshold: Number(form.value.lowStockThreshold || 0),
       isGlutenFree: !!form.value.isGlutenFree,
       active: form.value.active !== false,
+      imageUrl: form.value.imageUrl ?? null,
     });
     message.success(isEditing.value ? 'Plato actualizado' : 'Plato creado');
     showEditor.value = false;

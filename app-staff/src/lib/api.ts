@@ -198,6 +198,25 @@ export const staffApi = {
     tryApi<any>(() => http(`/staff/orders/${encodeURIComponent(id)}/fulfillment`, { method: 'POST', body: JSON.stringify({ fulfilled }) }), async () => { throw new Error('offline'); }),
   cancelOrder: (id: string) =>
     tryApi<any>(() => http(`/staff/orders/${encodeURIComponent(id)}/cancel`, { method: 'POST' }), async () => { throw new Error('offline'); }),
+  // Images: request a presigned upload URL and upload the file, returning the public URL
+  uploadImage: async (file: File): Promise<{ url: string }> => {
+    // 1) Ask backend for a presigned URL
+    const presigned = await http<{ uploadUrl: string; fileUrl: string }>(`/staff/upload-url`, {
+      method: 'POST',
+      body: JSON.stringify({ filename: file.name, contentType: file.type || 'application/octet-stream' }),
+    });
+    // 2) Upload file directly to R2 via PUT
+    const putRes = await fetch(presigned.uploadUrl, {
+      method: 'PUT',
+      body: file,
+      headers: file.type ? { 'Content-Type': file.type } : undefined,
+    });
+    if (!putRes.ok) {
+      const t = await putRes.text().catch(() => '');
+      throw new Error(`Upload failed: ${putRes.status} ${putRes.statusText} ${t}`);
+    }
+    return { url: presigned.fileUrl };
+  },
 };
 
 // Auth and Users management
