@@ -43,6 +43,7 @@
   <div v-if="showImage" class="img-modal" role="dialog" aria-modal="true" :aria-label="imageTitle || 'Imagen'" @click="closeImage">
     <div class="img-modal-content" @click.stop>
       <button class="img-modal-close" type="button" aria-label="Cerrar" @click="closeImage">×</button>
+      <div v-if="imageTitle" class="img-modal-title">{{ imageTitle }}</div>
       <img v-if="imageUrl" :src="imageUrl" :alt="imageTitle" />
       <div v-else class="img-modal-fallback">Sin imagen</div>
     </div>
@@ -155,4 +156,23 @@ function onKeyDown(e: KeyboardEvent) {
 .img-modal-content img { max-width: 90vw; max-height: 80vh; object-fit: contain; display: block; border-radius: 6px; box-shadow: 0 6px 30px rgba(0,0,0,0.4); }
 .img-modal-fallback { color: #fff; }
 .img-modal-close { position: absolute; top: -10px; right: -10px; background: #000c; color: #fff; border: none; width: 32px; height: 32px; border-radius: 16px; font-size: 20px; line-height: 32px; cursor: pointer; }
+/* Modal title */
+.img-modal-title {
+  position: absolute;
+  top: -42px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #fff;
+  font-weight: 600;
+  text-align: center;
+  max-width: 86vw;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* Solid background for readability over any image */
+  background: #111;
+  padding: 6px 10px;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
 </style>
