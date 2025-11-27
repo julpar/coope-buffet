@@ -33,10 +33,8 @@ export class AuthController {
   @Get('perm')
   @Public()
   async perm(@Query('token') token: string, @Res() res: Response) {
-    // Accept `token` (canonical) and keep `fixef` as backward-compatible alias
-    const raw = (token || '').trim();
-    if (!raw) return res.status(403).json({ error: 'forbidden' });
-    const tok = raw.startsWith('perm:') ? raw : `perm:${raw}`;
+    if (!token) return res.status(403).json({ error: 'forbidden' });
+    const tok = token.startsWith('perm:') ? token : `perm:${token}`;
     const user = await this.users.getUserByToken(tok);
     if (!user) return res.status(403).json({ error: 'forbidden' });
     this.setSessionCookie(res, user.token);
