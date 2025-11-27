@@ -376,7 +376,15 @@ const lowColsGrouped: DataTableColumns<Row> = [
 .stock-toolbar { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom: 8px; }
 .stock-toolbar .actions { display:flex; align-items:center; gap:8px; }
 .stock-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
-.panel-header { display:flex; align-items:center; gap:8px; margin-bottom: 8px; }
+.panel-header { display:flex; align-items:center; gap:8px; margin-bottom: 8px; flex-wrap: wrap; }
+.panel-header > strong { flex: 0 0 auto; }
+/* Allow the info tag to wrap on small screens so it doesn't squeeze the first column */
+.panel-header :deep(.n-tag) { white-space: normal; line-height: 1.1; }
+/* When wrapping, push controls to the next line cleanly */
+@media (max-width: 720px) {
+  .panel-header { row-gap: 6px; }
+  .panel-header .spacer { flex-basis: 100%; }
+}
 .empty { color: rgba(0,0,0,.45); font-size: 13px; padding: 8px 0; }
 .muted { color: rgba(0,0,0,.45); font-size: 12px; display:flex; align-items:center; gap:8px; flex-wrap: wrap; }
 
