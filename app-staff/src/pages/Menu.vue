@@ -16,7 +16,7 @@
       </n-button>
     </div>
     <div class="table-wrap">
-      <n-data-table :columns="columns" :data="filtered" :loading="loading" :bordered="true" :scroll-x="760" />
+      <n-data-table :columns="columns" :data="filtered" :loading="loading" :bordered="true" :scroll-x="840" />
     </div>
 
     <!-- Add/Edit item modal -->
@@ -208,6 +208,20 @@ const rows = computed(() => items.value.map(it => ({
 const filtered = computed(() => rows.value.filter(r => !q.value || r.name.toLowerCase().includes(q.value.toLowerCase())));
 
 const columns: DataTableColumns<any> = [
+  // Thumbnail column on the left
+  { title: '', key: 'thumb', width: 64, render: (row: any) => {
+      const url = row.imageUrl as string | null | undefined;
+      if (url) {
+        // Use inline styles to guarantee constraint even if scoped CSS fails to apply inside DataTable
+        return h('div', { class: 'thumb-cell', style: 'width:40px;height:40px;border-radius:6px;overflow:hidden;background:#f3f3f3;border:1px solid #e5e5e5;display:flex;align-items:center;justify-content:center;' }, [
+          h('img', { src: url, alt: row.name, loading: 'lazy', class: 'thumb-img', style: 'width:100%;height:100%;object-fit:cover;display:block;' })
+        ]);
+      }
+      // Placeholder when no image
+      const letter = (row.name || '?').toString().trim().charAt(0).toUpperCase() || '?';
+      return h('div', { class: 'thumb-cell placeholder', style: 'width:40px;height:40px;border-radius:6px;overflow:hidden;background:#f5f5f5;border:1px solid #e5e5e5;display:flex;align-items:center;justify-content:center;color:#555;font-weight:600;font-size:12px;' }, letter);
+    }
+  },
   { title: 'Plato', key: 'name', minWidth: 200, ellipsis: true },
   { title: 'Precio', key: 'priceFmt', width: 140 },
   { title: 'Stock', key: 'stock', width: 100 },
@@ -428,4 +442,8 @@ async function confirmDelete(row: Item) {
 .form { display:flex; flex-direction:column; gap:8px; }
 .row { display:flex; gap:8px; }
 .row > * { flex:1; }
+/* Thumbnail cell styles */
+.thumb-cell { width:40px; height:40px; border-radius:6px; overflow:hidden; background:#f3f3f3; border:1px solid #e5e5e5; display:flex; align-items:center; justify-content:center; color:#555; font-weight:600; font-size:12px; }
+.thumb-cell.placeholder { background:#f5f5f5; }
+.thumb-img { width:100%; height:100%; object-fit:cover; display:block; }
 </style>
