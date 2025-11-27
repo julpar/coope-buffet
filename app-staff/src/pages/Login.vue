@@ -14,10 +14,23 @@
       </ul>
 
       <div class="or">— También puedes pegar manualmente tu token —</div>
-      <div class="row">
-        <n-input v-model:value="token" placeholder="Token permanente (xyz...)" />
-        <n-button type="primary" :loading="submitting" :disabled="!token" @click="loginWithToken">Iniciar</n-button>
-      </div>
+      <form class="row" @submit.prevent="loginWithToken">
+        <n-input
+          :type="showToken ? 'text' : 'password'"
+          v-model:value="token"
+          placeholder="Token permanente (xyz...)"
+          @keyup.enter="loginWithToken"
+        >
+          <template #suffix>
+            <n-button quaternary circle size="small" @click.prevent="toggleShowToken" :title="showToken ? 'Ocultar' : 'Mostrar'">
+              <n-icon size="18">
+                <component :is="showToken ? EyeOffOutline : EyeOutline" />
+              </n-icon>
+            </n-button>
+          </template>
+        </n-input>
+        <n-button type="primary" :loading="submitting" :disabled="!token" attr-type="submit">Iniciar</n-button>
+      </form>
       <p v-if="error" class="error">{{ error }}</p>
     </n-card>
   </div>
@@ -25,6 +38,8 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { NIcon } from 'naive-ui';
+import { EyeOutline, EyeOffOutline } from '@vicons/ionicons5';
 import { useRouter } from 'vue-router';
 import { authApi } from '../lib/api';
 
@@ -32,6 +47,7 @@ const router = useRouter();
 const token = ref('');
 const submitting = ref(false);
 const error = ref('');
+const showToken = ref(false);
 
 async function loginWithToken() {
   error.value = '';
@@ -44,6 +60,10 @@ async function loginWithToken() {
   } finally {
     submitting.value = false;
   }
+}
+
+function toggleShowToken() {
+  showToken.value = !showToken.value;
 }
 </script>
 
