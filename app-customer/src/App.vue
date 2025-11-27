@@ -61,6 +61,25 @@
           </div>
         </div>
 
+        <!-- Generic API error banner (technical difficulties) shown when an API request fails
+             and we're not in hard/soft offline maintenance modes. -->
+        <div
+          v-if="showApiErrorBanner"
+          class="api-error-banner"
+          role="alert"
+          aria-live="polite"
+        >
+          <div class="api-error__content">
+            <div class="api-error__text">
+              <strong>Estamos teniendo dificultades técnicas</strong>
+              <span>Algunos pedidos o el menú podrían no cargarse correctamente.</span>
+            </div>
+            <div class="api-error__actions">
+              <n-button size="small" type="primary" @click="retryNow">Reintentar</n-button>
+            </div>
+          </div>
+        </div>
+
         <n-layout-content class="main">
           <RouterView />
         </n-layout-content>
@@ -124,6 +143,7 @@ import { CartOutline, RefreshOutline } from '@vicons/ionicons5';
 import { cart } from './lib/cart';
 import { platform } from './lib/platform';
 import { createDiscreteApi } from 'naive-ui';
+import { apiOnline } from './lib/api';
 
 const router = useRouter();
 const drawer = ref(false);
@@ -141,6 +161,15 @@ const isSuccessRoute = computed(() => {
   return path === '/success' || path.startsWith('/success/');
 });
 const showSoftOverlay = computed(() => platform.status.value === 'soft-offline' && !isSuccessRoute.value);
+
+// Show technical difficulties banner when latest API call reported 5xx/network failure,
+// but we are not in maintenance modes.
+const showApiErrorBanner = computed(() => {
+  if (platform.status.value === 'hard-offline') return false;
+  // On soft-offline, we still may want to inform about transient errors, but the overlay already explains the pause.
+  if (platform.status.value === 'soft-offline') return false;
+  return apiOnline.value === false;
+});
 
 // Shortages state provided by Checkout on error; we keep available amounts here
 type ShortageInfo = { id: string; name?: string; available: number };
@@ -278,7 +307,9 @@ watch(activeShortageIds, (set) => {
 });
 
 function retryNow() {
+  // Re-check platform status and notify pages to refresh their data
   platform.fetch();
+  window.dispatchEvent(new CustomEvent('refresh-menu'));
 }
 
 // If the cart becomes empty while the drawer is open, close it to avoid blocking the UI
@@ -311,6 +342,27 @@ watch(
   background: #fff;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
+
+/* API technical difficulties banner */
+.api-error-banner {
+  position: sticky;
+  top: 48px; /* below fixed header height */
+  z-index: 14;
+  background: #fff8e1;
+  border-bottom: 1px solid #ffe082;
+}
+.api-error__content {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.api-error__text { color: #7a5d00; display: flex; flex-direction: column; gap: 2px; }
+.api-error__text strong { color: #6d4c00; }
+.api-error__actions { flex: 0 0 auto; }
 .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; }
 .logo { font-size: 18px; }
 .header-actions { display: flex; align-items: center; gap: 8px; }

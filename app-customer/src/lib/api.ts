@@ -22,7 +22,9 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
     throw e;
   }
   if (!res.ok) {
-    apiOnline.value = false;
+    // Only consider the API "offline" for network-level issues (handled above)
+    // or server errors (5xx). Do not flip the flag on 4xx business errors.
+    if (res.status >= 500) apiOnline.value = false;
     // If the backend is in hard-offline, middleware returns 503 with an HTML page.
     // In that case, proactively refresh the public platform status so the UI can
     // switch to the full-screen offline overlay instead of showing raw HTML.
