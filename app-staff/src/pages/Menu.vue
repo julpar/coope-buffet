@@ -76,14 +76,17 @@
             <div style="display:flex; flex-direction:column; gap:8px; width:100%">
               <div style="display:flex; align-items:center; gap:8px;">
                 <input ref="fileInput" type="file" accept="image/*" @change="onPickImage" style="display:none" />
+                <!-- Camera capture input (mobile devices will offer camera) -->
+                <input ref="cameraInput" type="file" accept="image/*;capture=camera" capture="environment" @change="onPickImage" style="display:none" />
                 <n-button :loading="uploadingImage" @click="() => fileInput?.click()">Seleccionar imagen</n-button>
+                <n-button :loading="uploadingImage" tertiary @click="openCamera">Tomar foto</n-button>
                 <n-button quaternary v-if="form.imageUrl" @click="clearImage">Quitar imagen</n-button>
               </div>
               <div v-if="form.imageUrl" style="display:flex; gap:8px; align-items:center;">
                 <img :src="form.imageUrl as string" alt="preview" style="max-width:160px; max-height:100px; object-fit:cover; border-radius:6px; border:1px solid #ddd;" />
                 <a :href="form.imageUrl as string" target="_blank" rel="noreferrer">Abrir</a>
               </div>
-              <div v-else style="color:#777; font-size:12px;">No hay imagen. Formatos recomendados: JPG/PNG, máx. 5MB.</div>
+              <div v-else style="color:#777; font-size:12px;">No hay imagen. Puede seleccionar un archivo o tomar una foto. Formatos recomendados: JPG/PNG, máx. 5MB.</div>
             </div>
           </n-form-item>
         </n-form>
@@ -94,6 +97,16 @@
           <n-button type="primary" :loading="saving" @click="saveItem">Guardar</n-button>
         </div>
       </template>
+    </n-modal>
+    <!-- Camera modal -->
+    <n-modal v-model:show="showCamera" preset="card" title="Tomar foto" style="max-width:520px; width:92vw;">
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <video ref="videoEl" autoplay playsinline style="width:100%; max-height:360px; background:#000; border-radius:6px;"></video>
+        <div style="display:flex; gap:8px; justify-content:flex-end;">
+          <n-button @click="closeCamera">Cancelar</n-button>
+          <n-button type="primary" :loading="uploadingImage" @click="capturePhoto">Tomar</n-button>
+        </div>
+      </div>
     </n-modal>
   </div>
 </template>
@@ -116,6 +129,10 @@ const editing = ref<Item | null>(null);
 const form = ref<Partial<Item & { id: string }>>({ id: '', name: '', categoryId: '', price: 0, stock: 0, lowStockThreshold: 0, isGlutenFree: false, active: true });
 const uploadingImage = ref(false);
 const fileInput = ref<HTMLInputElement | null>(null);
+const cameraInput = ref<HTMLInputElement | null>(null);
+const showCamera = ref(false);
+const videoEl = ref<HTMLVideoElement | null>(null);
+let _mediaStream: MediaStream | null = null;
 
 function availabilityOf(it: Item): 'in-stock' | 'limited' | 'sold-out' {
   const stock = it.stock ?? 0;
@@ -203,6 +220,70 @@ function openDuplicate(row: Item) {
   editing.value = null;
   form.value = { id: randomId(), name: row.name + ' (copia)', categoryId: row.categoryId, price: row.price, stock: row.stock || 0, lowStockThreshold: row.lowStockThreshold || 0, isGlutenFree: !!row.isGlutenFree, active: row.active !== false };
   showEditor.value = true;
+}
+
+async function openCamera() {
+  // Prefer in-app camera using MediaDevices when available
+  try {
+    if (!('mediaDevices' in navigator) || !navigator.mediaDevices.getUserMedia) {
+      // Fallback to native file input with capture hint
+      cameraInput.value?.click();
+      return;
+    }
+    showCamera.value = true;
+    // A tiny delay to let modal mount the video element
+    await new Promise((r) => setTimeout(r, 50));
+    _mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+    if (videoEl.value) {
+      videoEl.value.srcObject = _mediaStream;
+      await videoEl.value.play().catch(() => {});
+    }
+  } catch (err) {
+    console.warn('getUserMedia failed, falling back to input', err);
+    showCamera.value = false;
+    cameraInput.value?.click();
+  }
+}
+
+function stopStream() {
+  if (_mediaStream) {
+    _mediaStream.getTracks().forEach((t) => t.stop());
+    _mediaStream = null;
+  }
+}
+
+function closeCamera() {
+  stopStream();
+  showCamera.value = false;
+}
+
+async function capturePhoto() {
+  try {
+    if (!videoEl.value) return;
+    const video = videoEl.value;
+    const w = video.videoWidth || 1280;
+    const h = video.videoHeight || 720;
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, w, h);
+    uploadingImage.value = true;
+    const blob: Blob = await new Promise((resolve, reject) => {
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('no blob'))), 'image/jpeg', 0.9);
+    });
+    const file = new File([blob], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
+    const { url } = await staffApi.uploadImage(file);
+    form.value.imageUrl = url;
+    message.success('Foto subida');
+    closeCamera();
+  } catch (err) {
+    console.error(err);
+    message.error('No se pudo tomar/subir la foto');
+  } finally {
+    uploadingImage.value = false;
+  }
 }
 
 async function onPickImage(e: Event) {
