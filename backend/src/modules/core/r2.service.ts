@@ -19,6 +19,7 @@ export class R2Service {
   private s3: S3Client | null = null;
   private bucket: string | null = null;
   private publicBase: string | null = null;
+  private keyPrefix: string = 'menu';
 
   private ensureClient() {
     if (this.s3) return;
@@ -28,6 +29,13 @@ export class R2Service {
     const bucket = process.env.R2_BUCKET;
     const endpoint = process.env.R2_S3_ENDPOINT || (accountId ? `https://${accountId}.r2.cloudflarestorage.com` : undefined);
     this.publicBase = process.env.R2_PUBLIC_BASE || null;
+    // Allow configuring the object key prefix (defaults to "menu")
+    const rawPrefix = process.env.R2_UPLOAD_PREFIX;
+    if (rawPrefix != null) {
+      // normalize: trim spaces and slashes to avoid duplicate separators
+      const normalized = rawPrefix.trim().replace(/^\/+|\/+$/g, '');
+      this.keyPrefix = normalized.length ? normalized : '';
+    }
     if (!accessKeyId || !secretAccessKey || !bucket || !endpoint) {
       // Leave s3 null to signal disabled; callers should handle gracefully.
       this.s3 = null;
@@ -55,8 +63,9 @@ export class R2Service {
     const safeName = (opts.filename || 'file').replace(/[^a-zA-Z0-9_.-]/g, '_');
     const ext = safeName.includes('.') ? safeName.split('.').pop() : undefined;
     const uid = Math.random().toString(36).slice(2, 10);
-    // Flat path under /menu as requested (no date subfolders)
-    const key = `menu/${uid}-${safeName}`;
+    // Flat path under configured prefix (no date subfolders)
+    const prefix = this.keyPrefix ? `${this.keyPrefix.replace(/\/+$/,'')}/` : '';
+    const key = `${prefix}${uid}-${safeName}`;
     const cmd = new PutObjectCommand({
       Bucket: this.bucket,
       Key: key,
