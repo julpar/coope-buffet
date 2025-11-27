@@ -1,11 +1,18 @@
 <template>
   <div class="page">
     <div class="toolbar">
-      <n-input v-model:value="q" placeholder="Buscar plato..." clearable class="grow">
+      <n-input v-model:value="q" placeholder="Buscar plato..." clearable class="grow2">
         <template #prefix>
           <n-icon size="16"><SearchOutline /></n-icon>
         </template>
       </n-input>
+      <n-select
+        v-model:value="selectedCategory"
+        :options="categoryFilterOptions"
+        placeholder="Todas las categorías"
+        class="filter"
+        :style="categorySelectStyle"
+      />
       <n-button type="primary" @click="openCreate">
         <template #icon><n-icon><AddOutline /></n-icon></template>
         Nuevo plato
@@ -123,6 +130,7 @@ const loading = ref(false);
 const items = ref<Item[]>([]);
 const message = useMessage();
 const categories = ref<Category[]>([]);
+const selectedCategory = ref<string>('all');
 const showEditor = ref(false);
 const saving = ref(false);
 const editing = ref<Item | null>(null);
@@ -205,7 +213,11 @@ const rows = computed(() => items.value.map(it => ({
   availability: it.availability || availabilityOf(it),
 })));
 
-const filtered = computed(() => rows.value.filter(r => !q.value || r.name.toLowerCase().includes(q.value.toLowerCase())));
+const filtered = computed(() => rows.value.filter(r => {
+  const byCat = selectedCategory.value === 'all' || r.categoryId === selectedCategory.value;
+  const byText = !q.value || r.name.toLowerCase().includes(q.value.toLowerCase());
+  return byCat && byText;
+}));
 
 const columns: DataTableColumns<any> = [
   // Thumbnail column on the left
@@ -267,6 +279,25 @@ function currency(v: number) {
 const isEditing = computed(() => !!editing.value);
 const editorTitle = computed(() => (isEditing.value ? 'Editar plato' : 'Nuevo plato'));
 const categoryOptions = computed(() => categories.value.map(c => ({ label: c.name, value: c.id })));
+const categoryFilterOptions = computed(() => [{ label: 'Todas', value: 'all' }, ...categoryOptions.value]);
+
+// Dynamically size the category filter to the longest label so it doesn't look oversized
+const categorySelectCh = computed(() => {
+  const labels = categoryFilterOptions.value.map(o => String((o as any).label || ''));
+  const longest = labels.reduce((m, s) => Math.max(m, s.length), 0);
+  // Ensure a sane minimum (e.g., 6ch) and cap the maximum width (e.g., 26ch)
+  const min = 6, max = 26;
+  return Math.min(Math.max(longest, min), max);
+});
+const categorySelectStyle = computed(() => {
+  // Add extra pixels for the dropdown arrow and paddings (~56px works well in Naive UI)
+  const extraPx = 56;
+  return {
+    width: `calc(${categorySelectCh.value}ch + ${extraPx}px)`,
+    flex: '0 0 auto',
+    whiteSpace: 'nowrap',
+  } as any;
+});
 
 function randomId(len = 5) {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -436,6 +467,7 @@ async function confirmDelete(row: Item) {
 .page { display:flex; flex-direction:column; gap:12px; }
 .toolbar { display:flex; gap:8px; align-items:center; }
 .grow { flex:1; }
+.grow2 { flex:2; }
 .table-wrap { overflow-x: auto; }
 /* Prevent header letters stacking vertically when space is tight */
 :deep(.n-data-table-th) { white-space: nowrap; }
