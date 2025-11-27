@@ -55,6 +55,7 @@ import { onMounted, onBeforeUnmount, reactive, ref } from 'vue';
 import type { MenuResponse, Item } from '../types';
 import { customerApi } from '../lib/api';
 import { cart } from '../lib/cart';
+import { HIDE_ZERO_STOCK_CATEGORIES } from '../constants';
 
 const loading = ref(true);
 const data = reactive<MenuResponse>({ categories: [], glutenFree: [] });
@@ -92,10 +93,17 @@ async function fetchMenu() {
   loading.value = true;
   try {
     const res = await customerApi.getMenu();
-    data.categories = res.categories.map(c => ({
-      ...c,
-      items: (c.items || []).map(normalizeAvailability)
-    }));
+    data.categories = res.categories.map((c) => {
+      const normalized = (c.items || []).map(normalizeAvailability);
+      // Hide zero-stock items for specific categories defined in constants
+      const catId = String(c.id || '').trim().toLowerCase();
+      const hideZeroStock = HIDE_ZERO_STOCK_CATEGORIES.has(catId);
+      const items = hideZeroStock
+        // Use stock to decide visibility to be resilient to any availability mismatches
+        ? normalized.filter((it) => (it.stock ?? 0) > 0)
+        : normalized;
+      return { ...c, items };
+    });
     data.glutenFree = (res.glutenFree || []).map(normalizeAvailability);
   } catch (e) {
     // keep previous data if request fails
