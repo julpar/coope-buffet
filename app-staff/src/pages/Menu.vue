@@ -86,7 +86,7 @@
                 <img :src="form.imageUrl as string" alt="preview" style="max-width:160px; max-height:100px; object-fit:cover; border-radius:6px; border:1px solid #ddd;" />
                 <a :href="form.imageUrl as string" target="_blank" rel="noreferrer">Abrir</a>
               </div>
-              <div v-else style="color:#777; font-size:12px;">No hay imagen. Puede seleccionar un archivo o tomar una foto. Formatos recomendados: JPG/PNG, máx. 5MB.</div>
+              <div v-else style="color:#777; font-size:12px;">No hay imagen. Puede seleccionar un archivo o tomar una foto. Las imágenes se redimensionan a un máximo de 1024px por lado (límite 5MB).</div>
             </div>
           </n-form-item>
         </n-form>
@@ -133,6 +133,63 @@ const cameraInput = ref<HTMLInputElement | null>(null);
 const showCamera = ref(false);
 const videoEl = ref<HTMLVideoElement | null>(null);
 let _mediaStream: MediaStream | null = null;
+
+// Resize helper: ensures the longest side is <= 1024px. Returns a new File (JPEG by default) or the original file if not an image.
+async function resizeToMax1024(input: File | Blob, filename = 'image.jpg', contentType?: string): Promise<File> {
+  const type = (contentType || (input as File).type || 'image/jpeg');
+  if (!type.startsWith('image/')) {
+    // Not an image; return original as File if possible
+    if (input instanceof File) return input;
+    return new File([input], filename, { type });
+  }
+  // Read into an HTMLImageElement
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result as string);
+    fr.onerror = () => reject(fr.error || new Error('read error'));
+    fr.readAsDataURL(input);
+  });
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const im = new Image();
+    im.onload = () => resolve(im);
+    im.onerror = () => reject(new Error('image load error'));
+    im.src = dataUrl;
+  });
+  let { width: w, height: h } = img;
+  if (!w || !h) {
+    // Fallback to original blob
+    return input instanceof File ? input : new File([input], filename, { type });
+  }
+  const MAX = 1024;
+  let newW = w;
+  let newH = h;
+  if (w > h && w > MAX) {
+    newW = MAX;
+    newH = Math.round((h * MAX) / w);
+  } else if (h >= w && h > MAX) {
+    newH = MAX;
+    newW = Math.round((w * MAX) / h);
+  }
+  // If no resizing needed, just return original
+  if (newW === w && newH === h) {
+    return input instanceof File ? input : new File([input], filename, { type });
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = newW;
+  canvas.height = newH;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return input instanceof File ? input : new File([input], filename, { type });
+  ctx.drawImage(img, 0, 0, newW, newH);
+  const outType = type === 'image/png' ? 'image/png' : 'image/jpeg';
+  const quality = outType === 'image/jpeg' ? 0.9 : undefined;
+  const blob: Blob = await new Promise((resolve, reject) => {
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('encode error'))), outType, quality as any);
+  });
+  const outName = filename.endsWith('.png') && outType === 'image/png'
+    ? filename
+    : filename.replace(/\.(jpe?g|png)$/i, '') + (outType === 'image/png' ? '.png' : '.jpg');
+  return new File([blob], outName, { type: outType });
+}
 
 function availabilityOf(it: Item): 'in-stock' | 'limited' | 'sold-out' {
   const stock = it.stock ?? 0;
@@ -263,12 +320,17 @@ async function capturePhoto() {
     const video = videoEl.value;
     const w = video.videoWidth || 1280;
     const h = video.videoHeight || 720;
+    // Compute target dims within 1024px box
+    const MAX = 1024;
+    let tw = w, th = h;
+    if (w > h && w > MAX) { tw = MAX; th = Math.round((h * MAX) / w); }
+    else if (h >= w && h > MAX) { th = MAX; tw = Math.round((w * MAX) / h); }
     const canvas = document.createElement('canvas');
-    canvas.width = w;
-    canvas.height = h;
+    canvas.width = tw;
+    canvas.height = th;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    ctx.drawImage(video, 0, 0, w, h);
+    ctx.drawImage(video, 0, 0, tw, th);
     uploadingImage.value = true;
     const blob: Blob = await new Promise((resolve, reject) => {
       canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('no blob'))), 'image/jpeg', 0.9);
@@ -297,7 +359,9 @@ async function onPickImage(e: Event) {
   }
   try {
     uploadingImage.value = true;
-    const { url } = await staffApi.uploadImage(file);
+    // Ensure max 1024px on the longest side before uploading
+    const resized = await resizeToMax1024(file, file.name, file.type);
+    const { url } = await staffApi.uploadImage(resized);
     form.value.imageUrl = url;
     message.success('Imagen subida');
   } catch (err: any) {
