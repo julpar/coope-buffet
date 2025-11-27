@@ -3,8 +3,8 @@ import { ref } from 'vue';
 
 // Build absolute API base from environment variables.
 // In dev, defaults to http://localhost:3000 and version v1
-const SERVICE_URL_APP = ((import.meta as any).env?.VITE_SERVICE_URL_APP || 'http://localhost:3000') as string;
-const API_VERSION = ((import.meta as any).env?.VITE_API_VERSION || 'v1') as string;
+const SERVICE_URL_APP = import.meta.env.VITE_SERVICE_URL_APP || 'http://localhost:3000';
+const API_VERSION = import.meta.env.VITE_API_VERSION || 'v1';
 
 function buildBase(base: string, version: string): string {
   const trimmedBase = base.replace(/\/$/, '');
@@ -14,9 +14,12 @@ function buildBase(base: string, version: string): string {
 
 const ABS_BASE = buildBase(SERVICE_URL_APP, API_VERSION);
 export const API_BASE = ABS_BASE;
-// Single source of truth for API reachability:
-// null (unknown), true (reachable), false (unreachable/errors observed)
+// Reactive API online flag: null (unknown), true (reachable), false (errors observed)
 export const apiOnline = ref<boolean | null>(null);
+
+// Reactive flag kept for backwards-compatibility with the existing banner.
+// It now simply means: API is offline/unreachable (no mock data is used).
+export const isApiOffline = ref<boolean>(false);
 
 export class HttpError extends Error {
   status: number;
@@ -43,6 +46,7 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
   } catch (e) {
     // Network error or CORS failure → mark offline and rethrow
     apiOnline.value = false;
+    isApiOffline.value = true;
     throw e;
   }
   if (!res.ok) {
@@ -50,6 +54,7 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
     // Do NOT mark offline for 4xx — treat as normal application errors
     if (res.status >= 500) {
       apiOnline.value = false;
+      isApiOffline.value = true;
     }
     const err = new HttpError(res.status, res.statusText, `HTTP ${res.status} ${res.statusText}`);
     err.bodyText = text;
@@ -57,9 +62,9 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
   }
   // Successful response: consider the API online and exit offline state
   apiOnline.value = true;
+  isApiOffline.value = false;
   const ct = res.headers.get('content-type') || '';
   if (ct.includes('application/json')) return res.json();
-  // @ts-expect-error
   return undefined;
 }
 
@@ -71,11 +76,13 @@ async function callApi<T>(fn: () => Promise<T>): Promise<T> {
   try {
     const res = await fn();
     apiOnline.value = true;
+    isApiOffline.value = false;
     return res;
   } catch (e: any) {
     const status = typeof e?.status === 'number' ? e.status : undefined;
     if (!status || status >= 500) {
       apiOnline.value = false;
+      isApiOffline.value = true; // reuse flag to toggle the existing offline banner
     }
     throw e;
   }
@@ -214,9 +221,11 @@ if (typeof window !== 'undefined') {
     .then((r) => {
       if (!r.ok) throw new Error('unavailable');
       apiOnline.value = true;
+      isApiOffline.value = false;
     })
     .catch(() => {
       apiOnline.value = false;
+      isApiOffline.value = true;
     });
 }
 
