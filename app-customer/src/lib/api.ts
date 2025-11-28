@@ -12,6 +12,15 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
     // Just-in-time platform status check before any server communication
     // Debounced inside platform implementation to avoid bursts
     await platform.fetch();
+    // If the platform is known to be in hard-offline, avoid hitting any
+    // customer endpoints at all. The backend would return a 503 HTML page
+    // anyway, so short‑circuit here to prevent unnecessary network noise.
+    if (platform.status.value === 'hard-offline') {
+      const err: any = new Error('Servicio no disponible');
+      err.status = 503;
+      err.code = 'HARD_OFFLINE';
+      throw err;
+    }
     res = await fetch(url, {
       headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
       credentials: 'include',
