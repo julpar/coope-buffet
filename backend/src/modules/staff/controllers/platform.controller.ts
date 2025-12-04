@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Put, BadRequestException } from '@nestjs/common';
 import { Roles } from '../../../common/auth/auth.decorators';
 import { RedisService } from '../../core/redis.service';
+import { MpPaymentType, MP_DEFAULT_ALLOWED_TYPES } from '../../payments/mp.types';
 
 type PlatformStatus = 'online' | 'soft-offline' | 'hard-offline';
 type PaymentMethod = 'online' | 'cash';
@@ -17,6 +18,7 @@ export class StaffPlatformController {
     const message = (await r.get('platform:offline_message')) || '';
     const until = await r.get('platform:offline_until');
     let paymentMethods: PaymentMethod[] = ['online', 'cash'];
+    let mpAllowedPaymentTypes: MpPaymentType[] = [...MP_DEFAULT_ALLOWED_TYPES];
     try {
       const raw = await r.get('platform:payment_methods');
       if (raw) {
@@ -26,11 +28,28 @@ export class StaffPlatformController {
         }
       }
     } catch {}
+    try {
+      const rawTypes = await r.get('platform:mp_allowed_types');
+      if (rawTypes) {
+        const parsed = JSON.parse(rawTypes);
+        if (Array.isArray(parsed)) {
+          const set = new Set<string>(MP_DEFAULT_ALLOWED_TYPES as unknown as string[]);
+          const filtered = parsed
+            .map((v: any) => (typeof v === 'string' ? v.trim() : ''))
+            .filter((s: string) => !!s && set.has(s));
+          if (filtered.length > 0) {
+            if (!filtered.includes('account_money')) filtered.unshift('account_money');
+            mpAllowedPaymentTypes = Array.from(new Set(filtered)) as MpPaymentType[];
+          }
+        }
+      }
+    } catch {}
     return {
       status,
       message,
       offlineUntil: until ? Number(until) : null,
       paymentMethods,
+      mpAllowedPaymentTypes,
     };
   }
 
@@ -42,6 +61,7 @@ export class StaffPlatformController {
       message?: string;
       offlineUntil?: number | null;
       paymentMethods?: PaymentMethod[];
+      mpAllowedPaymentTypes?: MpPaymentType[];
     },
   ) {
     const r = this.redis.redis;
@@ -75,12 +95,26 @@ export class StaffPlatformController {
       throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'Seleccione al menos un método de pago cuando la plataforma está Online.' });
     }
 
+    // Normalize MP allowed payment types (type-level, fixed set)
+    let mpAllowedPaymentTypes: MpPaymentType[] | undefined = undefined;
+    if (Array.isArray(body?.mpAllowedPaymentTypes)) {
+      const set = new Set<string>(MP_DEFAULT_ALLOWED_TYPES as unknown as string[]);
+      const filtered = body.mpAllowedPaymentTypes
+        .map((v) => (typeof v === 'string' ? v.trim() : ''))
+        .filter((s): s is MpPaymentType => !!s && set.has(s));
+      const withAccount = Array.from(new Set(['account_money', ...filtered]));
+      mpAllowedPaymentTypes = (withAccount.length > 0 ? (withAccount as MpPaymentType[]) : ([...MP_DEFAULT_ALLOWED_TYPES] as MpPaymentType[])) as MpPaymentType[];
+    }
+
     await r.set('platform:status', status);
     await r.set('platform:offline_message', msg);
     if (until) await r.set('platform:offline_until', String(until));
     else await r.del('platform:offline_until');
     try { await r.set('platform:payment_methods', JSON.stringify(paymentMethods)); } catch {}
+    if (mpAllowedPaymentTypes) {
+      try { await r.set('platform:mp_allowed_types', JSON.stringify(mpAllowedPaymentTypes)); } catch {}
+    }
 
-    return { ok: true, status, message: msg, offlineUntil: until, paymentMethods };
+    return { ok: true, status, message: msg, offlineUntil: until, paymentMethods, mpAllowedPaymentTypes: mpAllowedPaymentTypes ?? undefined };
   }
 }

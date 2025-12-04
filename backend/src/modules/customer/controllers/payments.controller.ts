@@ -2,6 +2,7 @@ import { Body, Controller, Post, Logger, Query, BadRequestException } from '@nes
 import { Public } from '../../../common/auth/auth.decorators';
 import { OrdersService } from '../../core/orders.service';
 import { MercadoPagoService } from '../../payments/mercadopago.service';
+import { MpPaymentType, MP_DEFAULT_ALLOWED_TYPES, MP_TOGGLEABLE_ALLOWED_TYPES } from '../../payments/mp.types';
 import { RedisService } from '../../core/redis.service';
 
 @Controller('payments/mercadopago')
@@ -70,6 +71,25 @@ export class CustomerPaymentsController {
       0,
     );
 
+    // Optional: allowed payment types controlled from staff panel (defaults to the four allowed types)
+    let allowedPaymentTypes: MpPaymentType[] = [...MP_DEFAULT_ALLOWED_TYPES];
+    try {
+      const raw = await r.get('platform:mp_allowed_types');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          const toggleable = new Set<string>(MP_TOGGLEABLE_ALLOWED_TYPES as unknown as string[]);
+          const filtered = parsed
+            .map((v: any) => (typeof v === 'string' ? v.trim() : ''))
+            .filter((s: string) => !!s && toggleable.has(s));
+          if (filtered.length > 0) {
+            const withAccount = Array.from(new Set(['account_money', ...filtered]));
+            allowedPaymentTypes = withAccount as MpPaymentType[];
+          }
+        }
+      }
+    } catch {}
+
     const pref = await this.mp.createPreference({
       external_reference: order.shortCode,
       items: [
@@ -83,6 +103,7 @@ export class CustomerPaymentsController {
       failureUrl,
       pendingUrl,
       notificationUrl,
+      allowedPaymentTypes,
     });
 
     this.logger.log(`Created MP preference for order ${order.id} code=${order.shortCode} pref=${pref.id}`);

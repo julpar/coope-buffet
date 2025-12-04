@@ -200,14 +200,26 @@ export const usersApi = {
 
 // Platform status (global kill switch)
 export type PlatformStatus = 'online' | 'soft-offline' | 'hard-offline';
-export type PlatformStatusResponse = { status: PlatformStatus; message: string; offlineUntil: number | null; paymentMethods: Array<'online' | 'cash'> };
+export type PlatformStatusResponse = {
+  status: PlatformStatus;
+  message: string;
+  offlineUntil: number | null;
+  paymentMethods: Array<'online' | 'cash'>;
+  mpAllowedPaymentTypes?: Array<'account_money' | 'credit_card' | 'debit_card' | 'prepaid_card'>;
+};
 
 export const platformApi = {
   // Public endpoint, available to everyone
   getPublicStatus: () => http<PlatformStatusResponse>(`/platform/status`),
   // Admin-only staff endpoints
   getStaffStatus: () => http<PlatformStatusResponse>(`/staff/platform/status`),
-  setStatus: (data: { status: PlatformStatus; message?: string; offlineUntil?: number | null; paymentMethods?: Array<'online' | 'cash'> }) =>
+  setStatus: (data: {
+    status: PlatformStatus;
+    message?: string;
+    offlineUntil?: number | null;
+    paymentMethods?: Array<'online' | 'cash'>;
+    mpAllowedPaymentTypes?: Array<'account_money' | 'credit_card' | 'debit_card' | 'prepaid_card'>;
+  }) =>
     http<PlatformStatusResponse & { ok: true }>(`/staff/platform/status`, {
       method: 'PUT',
       body: JSON.stringify(data),

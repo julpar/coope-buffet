@@ -1,4 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
+import {
+  MpPaymentType,
+  MP_ALL_PAYMENT_TYPES,
+  MP_DEFAULT_ALLOWED_TYPES,
+} from './mp.types';
 
 type PreferenceItem = {
   title: string;
@@ -25,8 +30,19 @@ export class MercadoPagoService {
     failureUrl: string;
     pendingUrl: string;
     notificationUrl: string;
+    // Optional: explicitly allow a subset of payment types (from the hardcoded list below).
+    // If not provided, defaults to ['account_money','credit_card','debit_card','prepaid_card']
+    allowedPaymentTypes?: MpPaymentType[];
   }): Promise<{ id: string; init_point: string; sandbox_init_point?: string }>
   {
+    const allowedSet = new Set(
+      Array.isArray(input.allowedPaymentTypes) && input.allowedPaymentTypes.length
+        ? input.allowedPaymentTypes.filter((t): t is MpPaymentType => (MP_ALL_PAYMENT_TYPES as readonly string[]).includes(String(t)))
+        : MP_DEFAULT_ALLOWED_TYPES,
+    );
+    // Mercado Pago does not allow excluding account_money. Ensure it is never listed under excluded_payment_types
+    const excludedTypes = MP_ALL_PAYMENT_TYPES.filter((t) => t !== MpPaymentType.AccountMoney && !allowedSet.has(t)).map((id) => ({ id }));
+
     const body = {
       items: input.items.map((i) => ({
         title: i.title,
@@ -42,6 +58,12 @@ export class MercadoPagoService {
       },
       auto_return: 'approved',
       notification_url: input.notificationUrl,
+      // Restrict available payment types in Checkout Pro using a fixed hardcoded list.
+      // By default allow only: account money (balance), credit card, debit card, prepaid card.
+      // Exclude all others, or compute from provided allowedPaymentTypes.
+      payment_methods: {
+        excluded_payment_types: excludedTypes,
+      },
     } as any;
 
     const resp = await fetch(`${this.apiBase}/checkout/preferences`, {
