@@ -78,12 +78,13 @@ export class CustomerPaymentsController {
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          const toggleable = new Set<string>(MP_TOGGLEABLE_ALLOWED_TYPES as unknown as string[]);
+          // Accept only the fixed set of allow-able types (default 4) and honor the case of only account_money
+          const set = new Set<string>(MP_DEFAULT_ALLOWED_TYPES as unknown as string[]);
           const filtered = parsed
             .map((v: any) => (typeof v === 'string' ? v.trim() : ''))
-            .filter((s: string) => !!s && toggleable.has(s));
-          if (filtered.length > 0) {
-            const withAccount = Array.from(new Set(['account_money', ...filtered]));
+            .filter((s: string) => !!s && set.has(s));
+          const withAccount = Array.from(new Set(['account_money', ...filtered]));
+          if (withAccount.length > 0) {
             allowedPaymentTypes = withAccount as MpPaymentType[];
           }
         }
