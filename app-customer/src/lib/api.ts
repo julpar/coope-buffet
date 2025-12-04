@@ -123,5 +123,10 @@ export const customerApi = {
   getOrderByCode(code: string): Promise<CustomerOrder> { return http(`/orders/code/${encodeURIComponent(code)}`); },
   createMpPreference(orderId: string): Promise<{ preferenceId: string; initPoint: string }> {
     return http('/payments/mercadopago/preference', { method: 'POST', body: JSON.stringify({ orderId }) });
-  }
+  },
+  // Feedback API
+  getFeedbackStatus(orderId: string): Promise<{ submitted: boolean }> { return http(`/feedback/status/${encodeURIComponent(orderId)}`); },
+  submitFeedback(input: { orderId: string; ease: number; speed: number; quality: number; comment?: string }): Promise<{ ok: true }> {
+    return http('/feedback', { method: 'POST', body: JSON.stringify(input) });
+  },
 };

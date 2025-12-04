@@ -46,3 +46,21 @@ export interface StaffOrder {
   // Optional payment block provided by backend
   payment?: PaymentInfo;
 }
+
+export interface FeedbackRecord {
+  orderId: string;
+  shortCode: string;
+  ease: number;
+  speed: number;
+  quality: number;
+  avg: number;
+  comment?: string;
+  createdAt: string;
+}
+
+export interface FeedbackSummary {
+  count: number;
+  overallAvg: number;
+  perCategory: { ease: number; speed: number; quality: number };
+  latestBad: FeedbackRecord[];
+}
