@@ -1,6 +1,6 @@
 <template>
-  <div class="success">
-    <h2>Pedido generado</h2>
+  <div class="success" :inert="showFeedback">
+    <h2 ref="pageTitleRef" tabindex="-1">Pedido generado</h2>
     <div v-if="loading" class="muted">Cargando…</div>
     <div v-else-if="!order" class="error">No se encontró el pedido.</div>
     <div v-else class="content">
@@ -51,11 +51,52 @@
         <n-button v-else quaternary @click="goToMenu">Volver al menú</n-button>
       </div>
       </div>
+
+    <!-- Feedback modal -->
+    <n-modal
+      v-model:show="showFeedback"
+      preset="card"
+      :mask-closable="false"
+      :closable="false"
+      :trap-focus="false"
+      :block-scroll="true"
+      style="max-width:520px;width:90vw"
+    >
+      <template #header>
+        <strong ref="fbHeaderRef" tabindex="-1">Tu opinión</strong>
+      </template>
+      <div v-if="feedbackStep === 1" class="fb-wrap">
+        <p class="fb-intro">Calificá tu experiencia</p>
+        <div class="fb-row">
+          <div class="fb-label">Facilidad</div>
+          <n-rate size="large" :count="5" :allow-half="false" v-model:value="ease" />
+        </div>
+        <div class="fb-row">
+          <div class="fb-label">Velocidad</div>
+          <n-rate size="large" :count="5" :allow-half="false" v-model:value="speed" />
+        </div>
+        <div class="fb-row">
+          <div class="fb-label">Calidad</div>
+          <n-rate size="large" :count="5" :allow-half="false" v-model:value="quality" />
+        </div>
+        <div class="fb-actions">
+          <n-button type="primary" :disabled="!canContinue" @click="onFeedbackContinue">Continuar</n-button>
+        </div>
+      </div>
+      <div v-else class="fb-wrap">
+        <p class="fb-intro">Contanos lo que salió mal</p>
+        <n-input v-model:value="comment" type="textarea" :autosize="{ minRows: 3, maxRows: 6 }" placeholder="Escribí tu comentario" />
+        <div class="fb-actions">
+          <n-button tertiary @click="skipComment">Omitir</n-button>
+          <n-button type="primary" :loading="submitting" @click="submitFeedback">Enviar</n-button>
+        </div>
+      </div>
+    </n-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, h } from 'vue';
+import { onMounted, onUnmounted, ref, h, watch, computed, nextTick } from 'vue';
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
 import type { CustomerOrder } from '../types';
 import { customerApi } from '../lib/api';
@@ -164,6 +205,10 @@ onMounted(async () => {
     if (o && (o.status === 'pending_payment' || o.status === 'paid')) {
       startPolling(id);
     }
+    // If already fulfilled on load, try to show feedback
+    if (o && o.status === 'fulfilled') {
+      void maybePromptFeedback(o.id);
+    }
   } catch {
     order.value = null;
   } finally {
@@ -204,6 +249,9 @@ function startPolling(id: string) {
       // Considerar final cuando pase a 'fulfilled' o 'cancelled'.
       if (fresh.status === 'fulfilled' || fresh.status === 'cancelled') {
         stopPolling();
+        if (fresh.status === 'fulfilled') {
+          void maybePromptFeedback(fresh.id);
+        }
         return;
       }
     } catch {
@@ -278,6 +326,167 @@ function statusClass(status?: CustomerOrder['status'] | string | null): string {
   if (st === 'cancelled') return 'is-cancelled';
   return 'is-default';
 }
+
+// --- Feedback modal logic ---
+const showFeedback = ref(false);
+const fbHeaderRef = ref<HTMLElement | null>(null);
+const pageTitleRef = ref<HTMLElement | null>(null);
+const feedbackStep = ref<1 | 2>(1);
+const ease = ref(0);
+const speed = ref(0);
+const quality = ref(0);
+const comment = ref('');
+const submitting = ref(false);
+
+const canContinue = computed(() => ease.value > 0 && speed.value > 0 && quality.value > 0);
+
+// --- Feedback persistence helpers ---
+type FbState = {
+  state: 'open' | 'submitted' | 'dismissed';
+  step: 1 | 2;
+  ease: number;
+  speed: number;
+  quality: number;
+  comment?: string;
+  ts: number;
+};
+function fbKey(orderId: string) { return `fb:state:${orderId}`; }
+function loadFbState(orderId: string): FbState | null {
+  try {
+    const raw = localStorage.getItem(fbKey(orderId));
+    return raw ? (JSON.parse(raw) as FbState) : null;
+  } catch { return null; }
+}
+function saveFbState(orderId: string, s: FbState) {
+  try { localStorage.setItem(fbKey(orderId), JSON.stringify(s)); } catch {}
+}
+function setFbSubmitted(orderId: string) {
+  saveFbState(orderId, {
+    state: 'submitted',
+    step: 1,
+    ease: 0,
+    speed: 0,
+    quality: 0,
+    comment: '',
+    ts: Date.now(),
+  });
+}
+
+async function maybePromptFeedback(orderId: string) {
+  try {
+    // 1) If backend says it's already submitted, persist that and stop
+    const st = await customerApi.getFeedbackStatus(orderId);
+    if (st?.submitted) { setFbSubmitted(orderId); return; }
+
+    // 2) Restore local state if present and not completed/dismissed
+    const loc = loadFbState(orderId);
+    if (loc && (loc.state === 'submitted' || loc.state === 'dismissed')) return;
+
+    if (loc && loc.state === 'open') {
+      feedbackStep.value = loc.step;
+      ease.value = loc.ease;
+      speed.value = loc.speed;
+      quality.value = loc.quality;
+      comment.value = loc.comment || '';
+    } else {
+      feedbackStep.value = 1;
+      ease.value = speed.value = quality.value = 0;
+      comment.value = '';
+    }
+    showFeedback.value = true;
+    // persist as open right away so a reload will re-open it with selections
+    saveFbState(orderId, {
+      state: 'open',
+      step: feedbackStep.value,
+      ease: ease.value,
+      speed: speed.value,
+      quality: quality.value,
+      comment: comment.value,
+      ts: Date.now(),
+    });
+  } catch {
+    // ignore network errors silently
+  }
+}
+
+function onFeedbackContinue() {
+  const avg = (ease.value + speed.value + quality.value) / 3;
+  if (avg < 3) {
+    feedbackStep.value = 2;
+  } else {
+    // Submit immediately without comment
+    submitFeedback();
+  }
+}
+
+function skipComment() {
+  submitFeedback();
+}
+
+async function submitFeedback() {
+  if (!order.value) return;
+  try {
+    submitting.value = true;
+    await customerApi.submitFeedback({
+      orderId: order.value.id,
+      ease: ease.value,
+      speed: speed.value,
+      quality: quality.value,
+      comment: comment.value?.trim() || undefined,
+    });
+    showFeedback.value = false;
+    message.success('¡Gracias por tu opinión!');
+    // Mark as submitted so we don't prompt again on reload
+    setFbSubmitted(order.value.id);
+  } catch (e: any) {
+    // If already submitted, just close
+    showFeedback.value = false;
+  } finally {
+    submitting.value = false;
+  }
+}
+
+// Prevent aria-hidden/focus conflict by managing focus manually when modal toggles
+watch(showFeedback, async (open) => {
+  if (open) {
+    // Blur any focused element before the modal applies aria-hidden to background
+    const el = document.activeElement as HTMLElement | null;
+    if (el && typeof el.blur === 'function') el.blur();
+    await nextTick();
+    // Move focus into the modal header for accessibility
+    fbHeaderRef.value?.focus();
+    // Persist current state as open
+    if (order.value) {
+      saveFbState(order.value.id, {
+        state: 'open',
+        step: feedbackStep.value,
+        ease: ease.value,
+        speed: speed.value,
+        quality: quality.value,
+        comment: comment.value,
+        ts: Date.now(),
+      });
+    }
+  } else {
+    // Restore focus to the page title after closing the modal
+    await nextTick();
+    pageTitleRef.value?.focus();
+  }
+});
+
+// Persist user selections live while the modal stays open so they survive reloads
+watch([ease, speed, quality, comment, feedbackStep], () => {
+  if (!showFeedback.value || !order.value) return;
+  saveFbState(order.value.id, {
+    state: 'open',
+    step: feedbackStep.value,
+    ease: ease.value,
+    speed: speed.value,
+    quality: quality.value,
+    comment: comment.value,
+    ts: Date.now(),
+  });
+});
 </script>
 
 <style scoped>
@@ -324,4 +533,10 @@ function statusClass(status?: CustomerOrder['status'] | string | null): string {
 .actions { margin-top: 8px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .paid-warning { border: 2px solid #f5c542; background: #fff8e1; color: #6d4c00; padding: 12px; border-radius: 8px; max-width: 440px; text-align: center; }
 .warn-title { font-weight: 700; margin-bottom: 4px; }
+/* Feedback modal styles */
+.fb-wrap { display:flex; flex-direction: column; gap: 12px; }
+.fb-intro { margin: 0; font-weight: 600; }
+.fb-row { display:flex; align-items:center; justify-content: space-between; gap: 8px; }
+.fb-label { min-width: 100px; }
+.fb-actions { display:flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
 </style>

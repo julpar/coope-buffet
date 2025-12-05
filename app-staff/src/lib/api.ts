@@ -110,6 +110,8 @@ export const staffApi = {
       const qs = state ? `?state=${encodeURIComponent(state)}` : '';
       return http(`/staff/orders${qs}`);
     }),
+  // Feedback summary for dashboard (all logged-in roles can access)
+  getFeedbackSummary: () => callApi<any>(() => http('/staff/feedback/summary')),
   lookupOrderByCode: (code: string) =>
     callApi<any>(() => http(`/staff/orders/lookup?code=${encodeURIComponent(code)}`)),
   markOrderPaid: (id: string, externalId?: string | null) =>
