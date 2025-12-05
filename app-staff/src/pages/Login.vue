@@ -13,25 +13,48 @@
         </li>
       </ul>
 
-      <div class="or">— También puedes pegar manualmente tu token —</div>
-      <form class="row" @submit.prevent="loginWithToken">
+      <div class="or">
+        — También puedes pegar manualmente tu token —
+      </div>
+      <form
+        class="row"
+        @submit.prevent="loginWithToken"
+      >
         <n-input
-          :type="showToken ? 'text' : 'password'"
           v-model:value="token"
+          :type="showToken ? 'text' : 'password'"
           placeholder="Token permanente (xyz...)"
           @keyup.enter="loginWithToken"
         >
           <template #suffix>
-            <n-button quaternary circle size="small" @click.prevent="toggleShowToken" :title="showToken ? 'Ocultar' : 'Mostrar'">
+            <n-button
+              quaternary
+              circle
+              size="small"
+              :title="showToken ? 'Ocultar' : 'Mostrar'"
+              @click.prevent="toggleShowToken"
+            >
               <n-icon size="18">
                 <component :is="showToken ? EyeOffOutline : EyeOutline" />
               </n-icon>
             </n-button>
           </template>
         </n-input>
-        <n-button type="primary" :loading="submitting" :disabled="!token" attr-type="submit">Iniciar</n-button>
+        <n-button
+          type="primary"
+          :loading="submitting"
+          :disabled="!token"
+          attr-type="submit"
+        >
+          Iniciar
+        </n-button>
       </form>
-      <p v-if="error" class="error">{{ error }}</p>
+      <p
+        v-if="error"
+        class="error"
+      >
+        {{ error }}
+      </p>
     </n-card>
   </div>
 </template>

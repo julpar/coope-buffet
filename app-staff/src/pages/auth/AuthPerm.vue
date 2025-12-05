@@ -1,12 +1,32 @@
 <template>
   <div class="auth-perm">
     <n-card title="Iniciando sesión…">
-      <div v-if="state === 'loading'" class="msg">Verificando token y creando sesión segura…</div>
-      <div v-else-if="state === 'ok'" class="msg">Listo. Redirigiendo…</div>
-      <div v-else class="error">
+      <div
+        v-if="state === 'loading'"
+        class="msg"
+      >
+        Verificando token y creando sesión segura…
+      </div>
+      <div
+        v-else-if="state === 'ok'"
+        class="msg"
+      >
+        Listo. Redirigiendo…
+      </div>
+      <div
+        v-else
+        class="error"
+      >
         <p>No se pudo iniciar sesión con este enlace.</p>
-        <p class="hint">El token puede haber expirado o ser inválido. Pide un QR nuevo al ADMIN.</p>
-        <n-button type="primary" @click="goLogin">Ir a iniciar sesión</n-button>
+        <p class="hint">
+          El token puede haber expirado o ser inválido. Pide un QR nuevo al ADMIN.
+        </p>
+        <n-button
+          type="primary"
+          @click="goLogin"
+        >
+          Ir a iniciar sesión
+        </n-button>
       </div>
     </n-card>
   </div>

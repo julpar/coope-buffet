@@ -1,14 +1,33 @@
 <template>
   <div class="page">
     <div class="toolbar">
-      <n-input v-model:value="q" placeholder="Buscar orden..." clearable class="grow">
+      <n-input
+        v-model:value="q"
+        placeholder="Buscar orden..."
+        clearable
+        class="grow"
+      >
         <template #prefix>
-          <n-icon size="16"><SearchOutline /></n-icon>
+          <n-icon size="16">
+            <SearchOutline />
+          </n-icon>
         </template>
       </n-input>
-      <n-select v-model:value="state" :options="stateOptions" placeholder="Estado" style="width:260px; margin-right: 8px;" />
-      <n-button type="primary" tertiary :loading="loading" @click="refresh">
-        <template #icon><n-icon><RefreshOutline /></n-icon></template>
+      <n-select
+        v-model:value="state"
+        :options="stateOptions"
+        placeholder="Estado"
+        style="width:260px; margin-right: 8px;"
+      />
+      <n-button
+        type="primary"
+        tertiary
+        :loading="loading"
+        @click="refresh"
+      >
+        <template #icon>
+          <n-icon><RefreshOutline /></n-icon>
+        </template>
         Actualizar
       </n-button>
     </div>
@@ -23,10 +42,20 @@
   </div>
 
   <!-- Detalles de la orden -->
-  <n-modal v-model:show="detailsOpen" preset="card" style="max-width: 720px; width: 95vw">
+  <n-modal
+    v-model:show="detailsOpen"
+    preset="card"
+    style="max-width: 720px; width: 95vw"
+  >
     <template #header>
       <div class="card-header-line">
-        <n-tag v-if="selected" size="large" :type="statusTagType(selected)">{{ statusLabel(selected) }}</n-tag>
+        <n-tag
+          v-if="selected"
+          size="large"
+          :type="statusTagType(selected)"
+        >
+          {{ statusLabel(selected) }}
+        </n-tag>
         <div class="card-title">
           {{ selected ? `Orden ${selected.raw?.shortCode || selected.id}` : 'Orden' }}
         </div>
@@ -35,68 +64,120 @@
     <template v-if="selected">
       <div class="meta-row">
         <!-- Cliente primero: como texto pero resaltado -->
-        <span v-if="selected.raw?.customerName" class="customer-highlight">
+        <span
+          v-if="selected.raw?.customerName"
+          class="customer-highlight"
+        >
           <span class="label">Cliente:</span>
           <span class="name">{{ selected.raw.customerName }}</span>
         </span>
-        <span v-if="selected.raw?.customerName" style="color:#666">•</span>
+        <span
+          v-if="selected.raw?.customerName"
+          style="color:#666"
+        >•</span>
 
         <span>Creada: <strong>{{ fmtDateTime(selected.raw?.createdAt) }}</strong></span>
         <span style="color:#666">•</span>
         <span>ID: <strong>{{ selected.raw?.id }}</strong></span>
-        <span class="flex-spacer"></span>
+        <span class="flex-spacer" />
         <span>Total: <strong>{{ selected.total }}</strong></span>
       </div>
 
-      <div v-if="selected.raw?.note" style="margin: 6px 0 12px 0;">
-        <n-tag size="small" type="default">Nota</n-tag>
+      <div
+        v-if="selected.raw?.note"
+        style="margin: 6px 0 12px 0;"
+      >
+        <n-tag
+          size="small"
+          type="default"
+        >
+          Nota
+        </n-tag>
         <span style="margin-left:8px">{{ selected.raw.note }}</span>
       </div>
 
       <!-- Información de pago -->
       <div class="payment-info">
-        <n-tag size="small" :type="selected.raw?.payment?.method === 'online' ? 'info' : 'default'">
+        <n-tag
+          size="small"
+          :type="selected.raw?.payment?.method === 'online' ? 'info' : 'default'"
+        >
           Pago: {{ paymentLabel(selected.raw?.payment?.method) }}
         </n-tag>
-        <span v-if="selected.raw?.payment?.externalId" class="kv"><span class="k">Ext. ID:</span> <span class="v mono">{{ selected.raw.payment.externalId }}</span></span>
-        <span v-if="selected.raw?.payment?.paidAt" class="kv"><span class="k">Pagado:</span> <span class="v">{{ fmtDateTime(selected.raw.payment.paidAt) }}</span></span>
+        <span
+          v-if="selected.raw?.payment?.externalId"
+          class="kv"
+        ><span class="k">Ext. ID:</span> <span class="v mono">{{ selected.raw.payment.externalId }}</span></span>
+        <span
+          v-if="selected.raw?.payment?.paidAt"
+          class="kv"
+        ><span class="k">Pagado:</span> <span class="v">{{ fmtDateTime(selected.raw.payment.paidAt) }}</span></span>
       </div>
 
-      <n-table :single-line="false" size="small" bordered>
+      <n-table
+        :single-line="false"
+        size="small"
+        bordered
+      >
         <thead>
           <tr>
-            <th style="width:72px">Cant.</th>
+            <th style="width:72px">
+              Cant.
+            </th>
             <th>Producto</th>
-            <th style="width:120px; text-align:right;">Precio</th>
-            <th style="width:140px; text-align:right;">Subtotal</th>
+            <th style="width:120px; text-align:right;">
+              Precio
+            </th>
+            <th style="width:140px; text-align:right;">
+              Subtotal
+            </th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="it in (selected.raw?.items || [])" :key="it.id">
+          <tr
+            v-for="it in (selected.raw?.items || [])"
+            :key="it.id"
+          >
             <td>{{ it.qty }}</td>
             <td>
               <div style="display:flex; flex-direction:column">
                 <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap">
                   <strong>{{ it.name || itemName(it.id) }}</strong>
-                  <n-tag v-if="it.stockWarning" size="small" type="warning">Posible problema de stock</n-tag>
+                  <n-tag
+                    v-if="it.stockWarning"
+                    size="small"
+                    type="warning"
+                  >
+                    Posible problema de stock
+                  </n-tag>
                 </div>
                 <small style="color:#888">ID: {{ it.id }}</small>
               </div>
             </td>
-            <td style="text-align:right">{{ peso(it.unitPrice) }}</td>
-            <td style="text-align:right">{{ peso((it.unitPrice || 0) * (it.qty || 0)) }}</td>
+            <td style="text-align:right">
+              {{ peso(it.unitPrice) }}
+            </td>
+            <td style="text-align:right">
+              {{ peso((it.unitPrice || 0) * (it.qty || 0)) }}
+            </td>
           </tr>
         </tbody>
         <tfoot>
           <tr>
-            <td colspan="3" style="text-align:right"><strong>Total</strong></td>
-            <td style="text-align:right"><strong>{{ selected.total }}</strong></td>
+            <td
+              colspan="3"
+              style="text-align:right"
+            >
+              <strong>Total</strong>
+            </td>
+            <td style="text-align:right">
+              <strong>{{ selected.total }}</strong>
+            </td>
           </tr>
         </tfoot>
       </n-table>
     </template>
   </n-modal>
-
 </template>
 
 <script setup lang="ts">

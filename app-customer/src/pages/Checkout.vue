@@ -2,20 +2,52 @@
   <div class="checkout">
     <h2>Finalizar pedido</h2>
     <!-- Soft-offline notice: if status flips while here, block flow and inform -->
-    <n-alert v-if="isSoftOffline" type="warning" title="Pausa momentánea" class="soft-note">
+    <n-alert
+      v-if="isSoftOffline"
+      type="warning"
+      title="Pausa momentánea"
+      class="soft-note"
+    >
       <div>Por ahora no podés finalizar el pedido. {{ offlineMsg }}</div>
-      <small v-if="platform.offlineUntil" class="muted">Hasta: {{ new Date(platform.offlineUntil).toLocaleString() }}</small>
+      <small
+        v-if="platform.offlineUntil"
+        class="muted"
+      >Hasta: {{ new Date(platform.offlineUntil).toLocaleString() }}</small>
     </n-alert>
-    <div v-if="items.length === 0" class="empty">
-      <div class="muted">No hay items en el carrito.</div>
-      <n-button size="small" type="tertiary" @click="goHome">Volver al menú</n-button>
+    <div
+      v-if="items.length === 0"
+      class="empty"
+    >
+      <div class="muted">
+        No hay items en el carrito.
+      </div>
+      <n-button
+        size="small"
+        type="tertiary"
+        @click="goHome"
+      >
+        Volver al menú
+      </n-button>
     </div>
-    <div v-else class="content">
+    <div
+      v-else
+      class="content"
+    >
       <!-- Steps header -->
       <div class="steps">
-        <div class="step" :class="{ active: step===1 }">1. Datos</div>
-        <div class="sep"></div>
-        <div class="step" :class="{ active: step===2 }">2. Confirmación</div>
+        <div
+          class="step"
+          :class="{ active: step===1 }"
+        >
+          1. Datos
+        </div>
+        <div class="sep" />
+        <div
+          class="step"
+          :class="{ active: step===2 }"
+        >
+          2. Confirmación
+        </div>
       </div>
 
       <!-- Step 1: ask name -->
@@ -24,12 +56,28 @@
           <h3>Tu nombre</h3>
           <n-form label-placement="top">
             <n-form-item label="Tu nombre (opcional)">
-              <n-input v-model:value="customerName" placeholder="Ej: Juan" @keyup.enter="goNext" />
+              <n-input
+                v-model:value="customerName"
+                placeholder="Ej: Juan"
+                @keyup.enter="goNext"
+              />
             </n-form-item>
           </n-form>
           <div class="actions">
-            <n-button tertiary @click="goHome">Volver</n-button>
-            <n-button type="primary" :disabled="isSoftOffline" @click="goNext" :title="isSoftOffline ? 'La plataforma está en pausa momentánea' : ''">Siguiente</n-button>
+            <n-button
+              tertiary
+              @click="goHome"
+            >
+              Volver
+            </n-button>
+            <n-button
+              type="primary"
+              :disabled="isSoftOffline"
+              :title="isSoftOffline ? 'La plataforma está en pausa momentánea' : ''"
+              @click="goNext"
+            >
+              Siguiente
+            </n-button>
           </div>
         </section>
       </template>
@@ -39,20 +87,32 @@
         <section class="review">
           <h3>Resumen</h3>
           <div class="list">
-            <div v-for="it in items" :key="it.id" class="row">
-              <div class="name">{{ it.name }} <small class="muted">x{{ it.qty }}</small></div>
-              <div class="price">{{ currency(it.unitPrice * it.qty) }}</div>
+            <div
+              v-for="it in items"
+              :key="it.id"
+              class="row"
+            >
+              <div class="name">
+                {{ it.name }} <small class="muted">x{{ it.qty }}</small>
+              </div>
+              <div class="price">
+                {{ currency(it.unitPrice * it.qty) }}
+              </div>
             </div>
           </div>
           <div class="total">
             <div>Total</div>
-            <div class="price">{{ currency(subtotal) }}</div>
+            <div class="price">
+              {{ currency(subtotal) }}
+            </div>
           </div>
         </section>
 
         <section class="pay">
           <h3>Pago</h3>
-          <p class="muted">Elegí cómo querés pagar.</p>
+          <p class="muted">
+            Elegí cómo querés pagar.
+          </p>
           <div class="actions stack">
             <!-- Main option: MercadoPago (only render if method is available) -->
             <n-button
@@ -61,11 +121,16 @@
               type="primary"
               :loading="loading"
               :disabled="items.length===0 || isSoftOffline"
-              @click="placeOrderMp"
               :title="isSoftOffline ? 'La plataforma está en pausa momentánea' : ''"
+              @click="placeOrderMp"
             >
               <div class="mp-btn">
-                <img src="/images/mp_logo.png" alt="" aria-hidden="true" class="mp-logo" />
+                <img
+                  src="/images/mp_logo.png"
+                  alt=""
+                  aria-hidden="true"
+                  class="mp-logo"
+                >
                 <span class="mp-label">Pagar con Mercado Pago</span>
               </div>
             </n-button>
@@ -78,19 +143,33 @@
               :secondary="!!canPayOnline"
               :loading="loading"
               :disabled="items.length===0 || isSoftOffline"
-              @click="placeOrder"
               :title="isSoftOffline ? 'La plataforma está en pausa momentánea' : ''"
+              @click="placeOrder"
             >
               Pago Manual por Caja
             </n-button>
             <!-- Empty state when no payment method is available -->
-            <div v-if="!canPayOnline && !canPayCash" class="muted">
+            <div
+              v-if="!canPayOnline && !canPayCash"
+              class="muted"
+            >
               Por el momento no hay métodos de pago disponibles.
             </div>
             <!-- Back button at the bottom, same size -->
-            <n-button class="big-button" tertiary @click="step=1">Atrás</n-button>
+            <n-button
+              class="big-button"
+              tertiary
+              @click="step=1"
+            >
+              Atrás
+            </n-button>
           </div>
-          <div v-if="error" class="error">{{ error }}</div>
+          <div
+            v-if="error"
+            class="error"
+          >
+            {{ error }}
+          </div>
         </section>
       </template>
     </div>

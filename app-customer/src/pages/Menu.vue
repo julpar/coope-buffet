@@ -1,18 +1,45 @@
 <template>
   <div class="menu">
     <h2>Menú</h2>
-    <div v-if="loading" class="muted">Cargando…</div>
+    <div
+      v-if="loading"
+      class="muted"
+    >
+      Cargando…
+    </div>
     <div v-else>
-      <section v-for="cat in data.categories" :key="cat.id" class="cat">
+      <section
+        v-for="cat in data.categories"
+        :key="cat.id"
+        class="cat"
+      >
         <h3>{{ cat.name }}</h3>
         <div class="grid">
-          <n-card v-for="it in cat.items" :key="it.id" size="small" :embedded="true">
+          <n-card
+            v-for="it in cat.items"
+            :key="it.id"
+            size="small"
+            :embedded="true"
+          >
             <div class="it">
               <!-- Left thumbnail + right content -->
               <div class="row">
-                <div class="thumb-cell" @click="it.imageUrl ? openImage(it.imageUrl, it.name) : null" :aria-label="it.imageUrl ? 'Ver imagen de ' + it.name : undefined" role="button" :tabindex="it.imageUrl ? 0 : -1" @keydown.enter.prevent="it.imageUrl ? openImage(it.imageUrl, it.name) : null" :style="it.imageUrl ? 'cursor: zoom-in;' : ''">
+                <div
+                  class="thumb-cell"
+                  :aria-label="it.imageUrl ? 'Ver imagen de ' + it.name : undefined"
+                  role="button"
+                  :tabindex="it.imageUrl ? 0 : -1"
+                  :style="it.imageUrl ? 'cursor: zoom-in;' : ''"
+                  @click="it.imageUrl ? openImage(it.imageUrl, it.name) : null"
+                  @keydown.enter.prevent="it.imageUrl ? openImage(it.imageUrl, it.name) : null"
+                >
                   <template v-if="it.imageUrl">
-                    <img :src="it.imageUrl" :alt="it.name" loading="lazy" class="thumb-img" />
+                    <img
+                      :src="it.imageUrl"
+                      :alt="it.name"
+                      loading="lazy"
+                      class="thumb-img"
+                    >
                   </template>
                   <template v-else>
                     <span class="thumb-letter">{{ (it.name || '?').toString().trim().charAt(0).toUpperCase() || '?' }}</span>
@@ -22,14 +49,35 @@
                   <div class="meta">
                     <div class="title">
                       <strong>{{ it.name }}</strong>
-                      <n-tag v-if="it.isGlutenFree" type="success" size="small">SIN TACC</n-tag>
+                      <n-tag
+                        v-if="it.isGlutenFree"
+                        type="success"
+                        size="small"
+                      >
+                        SIN TACC
+                      </n-tag>
                     </div>
-                    <div class="price">{{ currency(it.price) }}</div>
+                    <div class="price">
+                      {{ currency(it.price) }}
+                    </div>
                   </div>
                   <div class="actions">
-                    <small v-if="it.availability==='sold-out'" class="sold">Sin stock</small>
-                    <small v-else-if="it.availability==='limited'" class="limited">Stock limitado</small>
-                    <n-button size="small" type="primary" :disabled="it.availability==='sold-out'" @click="add(it)">Agregar</n-button>
+                    <small
+                      v-if="it.availability==='sold-out'"
+                      class="sold"
+                    >Sin stock</small>
+                    <small
+                      v-else-if="it.availability==='limited'"
+                      class="limited"
+                    >Stock limitado</small>
+                    <n-button
+                      size="small"
+                      type="primary"
+                      :disabled="it.availability==='sold-out'"
+                      @click="add(it)"
+                    >
+                      Agregar
+                    </n-button>
                   </div>
                 </div>
               </div>
@@ -40,12 +88,43 @@
     </div>
   </div>
   <!-- Image preview modal (custom overlay to ensure centered rendering across environments) -->
-  <div v-if="showImage" class="img-modal" role="dialog" aria-modal="true" :aria-label="imageTitle || 'Imagen'" @click="closeImage">
-    <div class="img-modal-content" @click.stop>
-      <button class="img-modal-close" type="button" aria-label="Cerrar" @click="closeImage">×</button>
-      <div v-if="imageTitle" class="img-modal-title">{{ imageTitle }}</div>
-      <img v-if="imageUrl" :src="imageUrl" :alt="imageTitle" />
-      <div v-else class="img-modal-fallback">Sin imagen</div>
+  <div
+    v-if="showImage"
+    class="img-modal"
+    role="dialog"
+    aria-modal="true"
+    :aria-label="imageTitle || 'Imagen'"
+    @click="closeImage"
+  >
+    <div
+      class="img-modal-content"
+      @click.stop
+    >
+      <button
+        class="img-modal-close"
+        type="button"
+        aria-label="Cerrar"
+        @click="closeImage"
+      >
+        ×
+      </button>
+      <div
+        v-if="imageTitle"
+        class="img-modal-title"
+      >
+        {{ imageTitle }}
+      </div>
+      <img
+        v-if="imageUrl"
+        :src="imageUrl"
+        :alt="imageTitle"
+      >
+      <div
+        v-else
+        class="img-modal-fallback"
+      >
+        Sin imagen
+      </div>
     </div>
   </div>
 </template>

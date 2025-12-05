@@ -1,26 +1,79 @@
 <template>
-  <div class="success" :inert="showFeedback">
-    <h2 ref="pageTitleRef" tabindex="-1">Pedido generado</h2>
-    <div v-if="loading" class="muted">Cargando…</div>
-    <div v-else-if="!order" class="error">No se encontró el pedido.</div>
-    <div v-else class="content">
+  <div
+    class="success"
+    :inert="showFeedback"
+  >
+    <h2
+      ref="pageTitleRef"
+      tabindex="-1"
+    >
+      Pedido generado
+    </h2>
+    <div
+      v-if="loading"
+      class="muted"
+    >
+      Cargando…
+    </div>
+    <div
+      v-else-if="!order"
+      class="error"
+    >
+      No se encontró el pedido.
+    </div>
+    <div
+      v-else
+      class="content"
+    >
       <!-- QR primero -->
-      <div class="qr-wrap" v-if="qrSrc">
-        <img :src="qrSrc" alt="QR del pedido" class="qr" />
-        <div class="qr-hint">Escaneá este QR en caja o mostrá el código manual.</div>
+      <div
+        v-if="qrSrc"
+        class="qr-wrap"
+      >
+        <img
+          :src="qrSrc"
+          alt="QR del pedido"
+          class="qr"
+        >
+        <div class="qr-hint">
+          Escaneá este QR en caja o mostrá el código manual.
+        </div>
       </div>
 
       <!-- Estado prominente con esquema de color -->
-      <div class="status-banner" :class="statusClass(order.status)" v-if="order.status">
-        <div class="status-title">{{ statusLabel(order.status) }}</div>
-        <div class="status-desc">{{ statusDescription(order.status) }}</div>
+      <div
+        v-if="order.status"
+        class="status-banner"
+        :class="statusClass(order.status)"
+      >
+        <div class="status-title">
+          {{ statusLabel(order.status) }}
+        </div>
+        <div class="status-desc">
+          {{ statusDescription(order.status) }}
+        </div>
       </div>
 
       <!-- Código manual destacado (alternativa al QR) -->
-      <div class="manual-code" v-if="order.shortCode">
-        <div class="code-label">Código</div>
-        <div class="code-value" :aria-label="`Código ${order.shortCode}`">{{ order.shortCode }}</div>
-        <n-button size="small" quaternary class="copy-btn" @click="copyCode">
+      <div
+        v-if="order.shortCode"
+        class="manual-code"
+      >
+        <div class="code-label">
+          Código
+        </div>
+        <div
+          class="code-value"
+          :aria-label="`Código ${order.shortCode}`"
+        >
+          {{ order.shortCode }}
+        </div>
+        <n-button
+          size="small"
+          quaternary
+          class="copy-btn"
+          @click="copyCode"
+        >
           Copiar
         </n-button>
       </div>
@@ -33,7 +86,11 @@
       <!-- Actions -->
       <div class="actions">
         <!-- If order is already fulfilled, it's safe to promote a new one -->
-        <n-button v-if="order.status === 'fulfilled'" type="primary" @click="goToMenu">
+        <n-button
+          v-if="order.status === 'fulfilled'"
+          type="primary"
+          @click="goToMenu"
+        >
           Crear nuevo pedido
         </n-button>
 
@@ -48,9 +105,15 @@
         </n-button>
 
         <!-- Fallback action for any other state -->
-        <n-button v-else quaternary @click="goToMenu">Volver al menú</n-button>
+        <n-button
+          v-else
+          quaternary
+          @click="goToMenu"
+        >
+          Volver al menú
+        </n-button>
       </div>
-      </div>
+    </div>
 
     <!-- Feedback modal -->
     <n-modal
@@ -63,32 +126,88 @@
       style="max-width:520px;width:90vw"
     >
       <template #header>
-        <strong ref="fbHeaderRef" tabindex="-1">Tu opinión</strong>
+        <strong
+          ref="fbHeaderRef"
+          tabindex="-1"
+        >Tu opinión</strong>
       </template>
-      <div v-if="feedbackStep === 1" class="fb-wrap">
-        <p class="fb-intro">Calificá tu experiencia</p>
+      <div
+        v-if="feedbackStep === 1"
+        class="fb-wrap"
+      >
+        <p class="fb-intro">
+          Calificá tu experiencia
+        </p>
         <div class="fb-row">
-          <div class="fb-label">Facilidad</div>
-          <n-rate size="large" :count="5" :allow-half="false" v-model:value="ease" />
+          <div class="fb-label">
+            Facilidad
+          </div>
+          <n-rate
+            v-model:value="ease"
+            size="large"
+            :count="5"
+            :allow-half="false"
+          />
         </div>
         <div class="fb-row">
-          <div class="fb-label">Velocidad</div>
-          <n-rate size="large" :count="5" :allow-half="false" v-model:value="speed" />
+          <div class="fb-label">
+            Velocidad
+          </div>
+          <n-rate
+            v-model:value="speed"
+            size="large"
+            :count="5"
+            :allow-half="false"
+          />
         </div>
         <div class="fb-row">
-          <div class="fb-label">Calidad</div>
-          <n-rate size="large" :count="5" :allow-half="false" v-model:value="quality" />
+          <div class="fb-label">
+            Calidad
+          </div>
+          <n-rate
+            v-model:value="quality"
+            size="large"
+            :count="5"
+            :allow-half="false"
+          />
         </div>
         <div class="fb-actions">
-          <n-button type="primary" :disabled="!canContinue" @click="onFeedbackContinue">Continuar</n-button>
+          <n-button
+            type="primary"
+            :disabled="!canContinue"
+            @click="onFeedbackContinue"
+          >
+            Continuar
+          </n-button>
         </div>
       </div>
-      <div v-else class="fb-wrap">
-        <p class="fb-intro">Contanos lo que salió mal</p>
-        <n-input v-model:value="comment" type="textarea" :autosize="{ minRows: 3, maxRows: 6 }" placeholder="Escribí tu comentario" />
+      <div
+        v-else
+        class="fb-wrap"
+      >
+        <p class="fb-intro">
+          Contanos lo que salió mal
+        </p>
+        <n-input
+          v-model:value="comment"
+          type="textarea"
+          :autosize="{ minRows: 3, maxRows: 6 }"
+          placeholder="Escribí tu comentario"
+        />
         <div class="fb-actions">
-          <n-button tertiary @click="skipComment">Omitir</n-button>
-          <n-button type="primary" :loading="submitting" @click="submitFeedback">Enviar</n-button>
+          <n-button
+            tertiary
+            @click="skipComment"
+          >
+            Omitir
+          </n-button>
+          <n-button
+            type="primary"
+            :loading="submitting"
+            @click="submitFeedback"
+          >
+            Enviar
+          </n-button>
         </div>
       </div>
     </n-modal>

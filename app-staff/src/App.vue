@@ -1,113 +1,213 @@
 <template>
   <n-message-provider>
-  <n-config-provider :theme-overrides="themeOverrides">
-    <n-layout class="layout">
-      <n-layout-header v-if="ready && (adminExists && currentUser)" bordered class="header">
-        <div class="brand">
-          <!-- Mobile menu trigger -->
-          <n-button class="only-mobile" quaternary circle @click="drawerOpen = true" aria-label="Abrir menú">
-            <template #icon>
-              <n-icon><MenuOutline /></n-icon>
-            </template>
-          </n-button>
-          <n-icon size="22"><StorefrontOutline /></n-icon>
-          <span>Buffet Coope Grecia</span>
-        </div>
-        <div class="header-actions">
-          <div class="api-indicator" :title="`API: ${apiBase}`">
-            <span class="dot" :class="apiStatusClass"></span>
-            <span class="api-text">{{ apiLabel }}</span>
+    <n-config-provider :theme-overrides="themeOverrides">
+      <n-layout class="layout">
+        <n-layout-header
+          v-if="ready && (adminExists && currentUser)"
+          bordered
+          class="header"
+        >
+          <div class="brand">
+            <!-- Mobile menu trigger -->
+            <n-button
+              class="only-mobile"
+              quaternary
+              circle
+              aria-label="Abrir menú"
+              @click="drawerOpen = true"
+            >
+              <template #icon>
+                <n-icon><MenuOutline /></n-icon>
+              </template>
+            </n-button>
+            <n-icon size="22">
+              <StorefrontOutline />
+            </n-icon>
+            <span>Buffet Coope Grecia</span>
           </div>
-          <!-- Notifications removed: no visible use -->
+          <div class="header-actions">
+            <div
+              class="api-indicator"
+              :title="`API: ${apiBase}`"
+            >
+              <span
+                class="dot"
+                :class="apiStatusClass"
+              />
+              <span class="api-text">{{ apiLabel }}</span>
+            </div>
+            <!-- Notifications removed: no visible use -->
 
-          <!-- Profile: full on desktop, show user name on mobile (no icon) -->
-          <n-button class="hide-on-mobile" text>
-            <template #icon>
-              <n-icon><PersonOutline /></n-icon>
-            </template>
-            {{ currentUser?.nickname || 'Perfil' }}
-          </n-button>
-          <!-- Mobile: show the nickname as text instead of the icon -->
-          <n-button class="only-mobile" text>
-            {{ currentUser?.nickname || 'Perfil' }}
-          </n-button>
+            <!-- Profile: full on desktop, show user name on mobile (no icon) -->
+            <n-button
+              class="hide-on-mobile"
+              text
+            >
+              <template #icon>
+                <n-icon><PersonOutline /></n-icon>
+              </template>
+              {{ currentUser?.nickname || 'Perfil' }}
+            </n-button>
+            <!-- Mobile: show the nickname as text instead of the icon -->
+            <n-button
+              class="only-mobile"
+              text
+            >
+              {{ currentUser?.nickname || 'Perfil' }}
+            </n-button>
 
-          <!-- Logout -->
-          <n-button class="hide-on-mobile" type="default" strong :loading="loggingOut" @click="onLogout">
-            Salir
-          </n-button>
-          <!-- Mobile: make logout a text button (label instead of icon) -->
-          <n-button class="only-mobile" type="default" size="small" :loading="loggingOut" @click="onLogout">
-            Salir
-          </n-button>
-        </div>
-      </n-layout-header>
-
-      <!-- Prominent banner when API is offline  -->
-      <div v-if="ready && apiOnline === false && !bannerDismissed" class="mock-banner" role="alert">
-        <div class="mock-banner__content">
-          <div class="mock-banner__text">
-            <strong>API fuera de línea.</strong>
-            <span>
-              La aplicación no puede conectarse con el servidor en este momento.
-              <small class="muted">Destino configurado: {{ apiBase }}</small>
-            </span>
+            <!-- Logout -->
+            <n-button
+              class="hide-on-mobile"
+              type="default"
+              strong
+              :loading="loggingOut"
+              @click="onLogout"
+            >
+              Salir
+            </n-button>
+            <!-- Mobile: make logout a text button (label instead of icon) -->
+            <n-button
+              class="only-mobile"
+              type="default"
+              size="small"
+              :loading="loggingOut"
+              @click="onLogout"
+            >
+              Salir
+            </n-button>
           </div>
-          <div class="mock-banner__actions">
-            <n-button size="small" tertiary @click="dismissBanner">Ocultar por esta sesión</n-button>
+        </n-layout-header>
+
+        <!-- Prominent banner when API is offline  -->
+        <div
+          v-if="ready && apiOnline === false && !bannerDismissed"
+          class="mock-banner"
+          role="alert"
+        >
+          <div class="mock-banner__content">
+            <div class="mock-banner__text">
+              <strong>API fuera de línea.</strong>
+              <span>
+                La aplicación no puede conectarse con el servidor en este momento.
+                <small class="muted">Destino configurado: {{ apiBase }}</small>
+              </span>
+            </div>
+            <div class="mock-banner__actions">
+              <n-button
+                size="small"
+                tertiary
+                @click="dismissBanner"
+              >
+                Ocultar por esta sesión
+              </n-button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Operational status banner for non-admin roles (soft/hard offline) -->
-      <div v-if="ready && showPlatformBanner" class="platform-banner" :class="platformBannerClass" role="alert">
-        <div class="platform-banner__content">
-          <div class="platform-banner__text">
-            <strong v-if="platformStatus?.status==='hard-offline'">Clientes: servicio no disponible</strong>
-            <strong v-else>Clientes: pausa temporal</strong>
-            <span>
-              {{ platformStatus?.message || (platformStatus?.status==='hard-offline' ? 'El sitio de clientes está temporalmente apagado.' : 'Los clientes no pueden realizar pedidos por el momento.') }}
-              <small v-if="platformStatus?.offlineUntil" class="muted">Hasta: {{ new Date(platformStatus!.offlineUntil!).toLocaleString() }}</small>
-            </span>
+        <!-- Operational status banner for non-admin roles (soft/hard offline) -->
+        <div
+          v-if="ready && showPlatformBanner"
+          class="platform-banner"
+          :class="platformBannerClass"
+          role="alert"
+        >
+          <div class="platform-banner__content">
+            <div class="platform-banner__text">
+              <strong v-if="platformStatus?.status==='hard-offline'">Clientes: servicio no disponible</strong>
+              <strong v-else>Clientes: pausa temporal</strong>
+              <span>
+                {{ platformStatus?.message || (platformStatus?.status==='hard-offline' ? 'El sitio de clientes está temporalmente apagado.' : 'Los clientes no pueden realizar pedidos por el momento.') }}
+                <small
+                  v-if="platformStatus?.offlineUntil"
+                  class="muted"
+                >Hasta: {{ new Date(platformStatus!.offlineUntil!).toLocaleString() }}</small>
+              </span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- First-time setup: create admin -->
-      <div v-if="ready && !adminExists" class="setup">
-        <div class="setup-card">
-          <h2>Configuración inicial</h2>
-          <p>Crea el usuario administrador para empezar.</p>
-          <n-input v-model:value="adminNickname" placeholder="Nombre para Admin (ej. Dire)" />
-          <n-input type="password" v-model:value="adminPassword" placeholder="Contraseña/TOKEN para Admin (mínimo 6 caracteres)" />
-          <n-button type="primary" :loading="savingAdmin" :disabled="!canCreateAdmin" @click="createAdmin">Crear administrador</n-button>
-          <p class="hint">La contraseña definida funcionará como <strong>token permanente</strong> para iniciar sesión en este dispositivo (o por QR). Puedes cambiarla recreando el usuario más adelante.</p>
+        <!-- First-time setup: create admin -->
+        <div
+          v-if="ready && !adminExists"
+          class="setup"
+        >
+          <div class="setup-card">
+            <h2>Configuración inicial</h2>
+            <p>Crea el usuario administrador para empezar.</p>
+            <n-input
+              v-model:value="adminNickname"
+              placeholder="Nombre para Admin (ej. Dire)"
+            />
+            <n-input
+              v-model:value="adminPassword"
+              type="password"
+              placeholder="Contraseña/TOKEN para Admin (mínimo 6 caracteres)"
+            />
+            <n-button
+              type="primary"
+              :loading="savingAdmin"
+              :disabled="!canCreateAdmin"
+              @click="createAdmin"
+            >
+              Crear administrador
+            </n-button>
+            <p class="hint">
+              La contraseña definida funcionará como <strong>token permanente</strong> para iniciar sesión en este dispositivo (o por QR). Puedes cambiarla recreando el usuario más adelante.
+            </p>
+          </div>
         </div>
-      </div>
-      <!-- If admin exists but no session yet, show the routed auth pages (e.g., /login) without sidebar/header -->
-      <div v-else-if="ready && adminExists && !currentUser" class="auth-only">
-        <RouterView />
-      </div>
-
-      <!-- Full app layout once authenticated -->
-      <n-layout v-else has-sider>
-        <!-- Desktop/tablet: keep sider; Mobile: hide sider and use drawer -->
-        <n-layout-sider v-if="!isMobile" v-model:collapsed="collapsed" show-trigger bordered collapse-mode="width" :collapsed-width="64" width="220">
-          <n-menu :value="$route.path" :options="menuOptions" @update:value="onMenu" :collapsed="collapsed" />
-        </n-layout-sider>
-        <n-layout-content class="main">
+        <!-- If admin exists but no session yet, show the routed auth pages (e.g., /login) without sidebar/header -->
+        <div
+          v-else-if="ready && adminExists && !currentUser"
+          class="auth-only"
+        >
           <RouterView />
-        </n-layout-content>
+        </div>
 
-        <!-- Mobile drawer menu -->
-        <n-drawer v-model:show="drawerOpen" placement="left" :width="260">
-          <n-drawer-content title="Menú">
-            <n-menu :value="$route.path" :options="menuOptions" @update:value="onMenu" />
-          </n-drawer-content>
-        </n-drawer>
+        <!-- Full app layout once authenticated -->
+        <n-layout
+          v-else
+          has-sider
+        >
+          <!-- Desktop/tablet: keep sider; Mobile: hide sider and use drawer -->
+          <n-layout-sider
+            v-if="!isMobile"
+            v-model:collapsed="collapsed"
+            show-trigger
+            bordered
+            collapse-mode="width"
+            :collapsed-width="64"
+            width="220"
+          >
+            <n-menu
+              :value="$route.path"
+              :options="menuOptions"
+              :collapsed="collapsed"
+              @update:value="onMenu"
+            />
+          </n-layout-sider>
+          <n-layout-content class="main">
+            <RouterView />
+          </n-layout-content>
+
+          <!-- Mobile drawer menu -->
+          <n-drawer
+            v-model:show="drawerOpen"
+            placement="left"
+            :width="260"
+          >
+            <n-drawer-content title="Menú">
+              <n-menu
+                :value="$route.path"
+                :options="menuOptions"
+                @update:value="onMenu"
+              />
+            </n-drawer-content>
+          </n-drawer>
+        </n-layout>
       </n-layout>
-    </n-layout>
-  </n-config-provider>
+    </n-config-provider>
   </n-message-provider>
 </template>
 
@@ -268,7 +368,7 @@ async function createAdmin() {
     await authApi.initAdmin(adminNickname.value, adminPassword.value);
     await loadAuth(true);
   } catch (e) {
-    // eslint-disable-next-line no-alert
+     
     alert('Error creando admin: ' + (e as any)?.message);
   } finally {
     savingAdmin.value = false;

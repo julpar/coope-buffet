@@ -2,101 +2,204 @@
   <!-- Tarjetas estáticas removidas: "Hoy", "Órdenes" (estáticas), "Usuarios activos" y "Actividad reciente" -->
   
   <!-- Feedback de clientes: visible para todos los roles logueados -->
-  <n-card class="mt" :bordered="true">
+  <n-card
+    class="mt"
+    :bordered="true"
+  >
     <template #header>
       <div class="tile-header">
         <n-icon><ListOutline /></n-icon>
         <span>Satisfacción de clientes</span>
-        <span class="spacer"></span>
-        <n-button size="tiny" quaternary @click="toggleFeedback()">{{ collapsedFeedback ? 'Expandir' : 'Minimizar' }}</n-button>
+        <span class="spacer" />
+        <n-button
+          size="tiny"
+          quaternary
+          @click="toggleFeedback()"
+        >
+          {{ collapsedFeedback ? 'Expandir' : 'Minimizar' }}
+        </n-button>
       </div>
     </template>
-    <div class="feedback-grid" v-if="!loadingFeedback" v-show="!collapsedFeedback">
+    <div
+      v-if="!loadingFeedback"
+      v-show="!collapsedFeedback"
+      class="feedback-grid"
+    >
       <div class="feedback-averages">
         <div class="avg-block">
-          <div class="avg-title">General</div>
-          <div class="avg-value">{{ fmtAvg(summary?.overallAvg) }}</div>
-          <div class="avg-sub">Promedio total</div>
-          <div class="count-highlight">{{ summary?.count || 0 }} respuestas</div>
+          <div class="avg-title">
+            General
+          </div>
+          <div class="avg-value">
+            {{ fmtAvg(summary?.overallAvg) }}
+          </div>
+          <div class="avg-sub">
+            Promedio total
+          </div>
+          <div class="count-highlight">
+            {{ summary?.count || 0 }} respuestas
+          </div>
         </div>
         <div class="avg-cats">
           <div class="avg-cat">
-            <div class="avg-title">Facilidad</div>
-            <div class="avg-value small">{{ fmtAvg(summary?.perCategory?.ease) }}</div>
+            <div class="avg-title">
+              Facilidad
+            </div>
+            <div class="avg-value small">
+              {{ fmtAvg(summary?.perCategory?.ease) }}
+            </div>
           </div>
           <div class="avg-cat">
-            <div class="avg-title">Velocidad</div>
-            <div class="avg-value small">{{ fmtAvg(summary?.perCategory?.speed) }}</div>
+            <div class="avg-title">
+              Velocidad
+            </div>
+            <div class="avg-value small">
+              {{ fmtAvg(summary?.perCategory?.speed) }}
+            </div>
           </div>
           <div class="avg-cat">
-            <div class="avg-title">Calidad</div>
-            <div class="avg-value small">{{ fmtAvg(summary?.perCategory?.quality) }}</div>
+            <div class="avg-title">
+              Calidad
+            </div>
+            <div class="avg-value small">
+              {{ fmtAvg(summary?.perCategory?.quality) }}
+            </div>
           </div>
         </div>
       </div>
       <div class="feedback-neg">
         <div class="panel-header">
           <strong>Últimas malas experiencias</strong>
-          <n-tag size="small" type="error">{{ badCount }}</n-tag>
+          <n-tag
+            size="small"
+            type="error"
+          >
+            {{ badCount }}
+          </n-tag>
         </div>
-        <div class="bad-list" v-if="(summary?.latestBad?.length || 0) > 0">
-          <div v-for="rec in summary!.latestBad" :key="rec.orderId" class="bad-item">
+        <div
+          v-if="(summary?.latestBad?.length || 0) > 0"
+          class="bad-list"
+        >
+          <div
+            v-for="rec in summary!.latestBad"
+            :key="rec.orderId"
+            class="bad-item"
+          >
             <div class="bad-top">
               <span class="code">#{{ rec.shortCode }}</span>
               <span class="rating">{{ rec.avg.toFixed(1) }} / 5</span>
               <span class="when">{{ formatWhen(rec.createdAt) }}</span>
             </div>
-            <div class="bad-text" v-if="rec.comment">{{ rec.comment }}</div>
-            <div class="bad-text muted" v-else>Sin comentario</div>
+            <div
+              v-if="rec.comment"
+              class="bad-text"
+            >
+              {{ rec.comment }}
+            </div>
+            <div
+              v-else
+              class="bad-text muted"
+            >
+              Sin comentario
+            </div>
           </div>
         </div>
-        <div v-else class="empty">No hay comentarios negativos recientes.</div>
+        <div
+          v-else
+          class="empty"
+        >
+          No hay comentarios negativos recientes.
+        </div>
       </div>
     </div>
-    <div v-else class="muted" v-show="!collapsedFeedback">Cargando satisfacción…</div>
+    <div
+      v-else
+      v-show="!collapsedFeedback"
+      class="muted"
+    >
+      Cargando satisfacción…
+    </div>
   </n-card>
   
   <!-- Stock alerts: out of stock and low stock -->
   <!-- Visible only to ADMIN and STOCK roles -->
-  <n-card class="mt" :bordered="true" v-if="canSeeStockAlerts">
+  <n-card
+    v-if="canSeeStockAlerts"
+    class="mt"
+    :bordered="true"
+  >
     <template #header>
       <div class="tile-header">
         <n-icon><ListOutline /></n-icon>
         <span>Alertas de stock</span>
-        <span class="spacer"></span>
-        <n-button size="tiny" quaternary @click="toggleStock()">{{ collapsedStock ? 'Expandir' : 'Minimizar' }}</n-button>
+        <span class="spacer" />
+        <n-button
+          size="tiny"
+          quaternary
+          @click="toggleStock()"
+        >
+          {{ collapsedStock ? 'Expandir' : 'Minimizar' }}
+        </n-button>
       </div>
     </template>
-    <div class="stock-toolbar" v-show="!collapsedStock">
+    <div
+      v-show="!collapsedStock"
+      class="stock-toolbar"
+    >
       <div class="muted">
         Monitoreo de platos con stock agotado o cercano al umbral.
         <span class="toggle">
-          <n-switch size="small" v-model:value="includeDonation" />
+          <n-switch
+            v-model:value="includeDonation"
+            size="small"
+          />
           <span class="toggle-label">Incluir Feria del Plato</span>
         </span>
       </div>
       <div class="actions">
         <n-tooltip trigger="hover">
           <template #trigger>
-            <n-button size="small" tertiary circle :loading="loadingStock" @click="refreshStock">
+            <n-button
+              size="small"
+              tertiary
+              circle
+              :loading="loadingStock"
+              @click="refreshStock"
+            >
               <n-icon><RefreshOutline /></n-icon>
             </n-button>
           </template>
           Refrescar
         </n-tooltip>
-        <n-button size="small" type="primary" @click="goToMenu">
+        <n-button
+          size="small"
+          type="primary"
+          @click="goToMenu"
+        >
           Ir a Inventario
         </n-button>
       </div>
     </div>
-    <div class="stock-grid" v-show="!collapsedStock">
+    <div
+      v-show="!collapsedStock"
+      class="stock-grid"
+    >
       <div class="stock-panel">
         <div class="panel-header">
           <strong>Agotados</strong>
-          <n-tag type="error" size="small">{{ outVisibleCount }}</n-tag>
+          <n-tag
+            type="error"
+            size="small"
+          >
+            {{ outVisibleCount }}
+          </n-tag>
         </div>
         <template v-if="outVisibleByCategory.length">
-          <n-collapse v-model:expanded-names="outExpanded" :accordion="false">
+          <n-collapse
+            v-model:expanded-names="outExpanded"
+            :accordion="false"
+          >
             <n-collapse-item
               v-for="grp in outVisibleByCategory"
               :key="grp.categoryId"
@@ -114,15 +217,28 @@
             </n-collapse-item>
           </n-collapse>
         </template>
-        <div v-else class="empty">Sin items agotados.</div>
+        <div
+          v-else
+          class="empty"
+        >
+          Sin items agotados.
+        </div>
       </div>
       <div class="stock-panel">
         <div class="panel-header">
           <strong>Bajo stock</strong>
-          <n-tag type="warning" size="small">{{ lowVisibleCount }}</n-tag>
+          <n-tag
+            type="warning"
+            size="small"
+          >
+            {{ lowVisibleCount }}
+          </n-tag>
         </div>
         <template v-if="lowVisibleByCategory.length">
-          <n-collapse v-model:expanded-names="lowExpanded" :accordion="false">
+          <n-collapse
+            v-model:expanded-names="lowExpanded"
+            :accordion="false"
+          >
             <n-collapse-item
               v-for="grp in lowVisibleByCategory"
               :key="grp.categoryId"
@@ -140,7 +256,12 @@
             </n-collapse-item>
           </n-collapse>
         </template>
-        <div v-else class="empty">Sin items con bajo stock.</div>
+        <div
+          v-else
+          class="empty"
+        >
+          Sin items con bajo stock.
+        </div>
       </div>
     </div>
   </n-card>
@@ -149,56 +270,114 @@
   <!-- CASHIER: shows orders waiting for payment -->
   <!-- FULFILLER: shows orders waiting fulfillment (paid but not fulfilled) -->
   <!-- ADMIN: sees both -->
-  <n-card class="mt" :bordered="true" v-if="canSeeCashier || canSeeFulfillment">
+  <n-card
+    v-if="canSeeCashier || canSeeFulfillment"
+    class="mt"
+    :bordered="true"
+  >
     <template #header>
-      <div class="tile-header"><n-icon><ListOutline /></n-icon><span>Órdenes — Resumen</span><span class="spacer"></span><n-button size="tiny" quaternary @click="toggleOrders()">{{ collapsedOrders ? 'Expandir' : 'Minimizar' }}</n-button></div>
+      <div class="tile-header">
+        <n-icon><ListOutline /></n-icon><span>Órdenes — Resumen</span><span class="spacer" /><n-button
+          size="tiny"
+          quaternary
+          @click="toggleOrders()"
+        >
+          {{ collapsedOrders ? 'Expandir' : 'Minimizar' }}
+        </n-button>
+      </div>
     </template>
-    <div class="orders-sections" v-show="!collapsedOrders">
+    <div
+      v-show="!collapsedOrders"
+      class="orders-sections"
+    >
       <!-- Cashier section -->
-      <div class="orders-panel" v-if="canSeeCashier">
+      <div
+        v-if="canSeeCashier"
+        class="orders-panel"
+      >
         <div class="panel-header">
           <strong>Esperando pago</strong>
-          <span class="spacer"></span>
-          <n-tag size="small" type="info" style="margin-right:8px">Mostrando órdenes de los últimos 15 minutos</n-tag>
+          <span class="spacer" />
+          <n-tag
+            size="small"
+            type="info"
+            style="margin-right:8px"
+          >
+            Mostrando órdenes de los últimos 15 minutos
+          </n-tag>
           <n-tooltip trigger="hover">
             <template #trigger>
-              <n-button size="small" tertiary circle :loading="loadingOrders" @click="refreshOrders">
+              <n-button
+                size="small"
+                tertiary
+                circle
+                :loading="loadingOrders"
+                @click="refreshOrders"
+              >
                 <n-icon><RefreshOutline /></n-icon>
               </n-button>
             </template>
             Refrescar
           </n-tooltip>
-          <n-button size="small" type="primary" @click="goToCashier">Ir a Caja</n-button>
+          <n-button
+            size="small"
+            type="primary"
+            @click="goToCashier"
+          >
+            Ir a Caja
+          </n-button>
         </div>
         <div class="kpi">
-          <div class="kpi-value">{{ pendingPaymentCount }}</div>
-          <div class="kpi-sub">Ordenes con pago pendiente</div>
+          <div class="kpi-value">
+            {{ pendingPaymentCount }}
+          </div>
+          <div class="kpi-sub">
+            Ordenes con pago pendiente
+          </div>
         </div>
       </div>
 
       <!-- Fulfillment section -->
-      <div class="orders-panel" v-if="canSeeFulfillment">
+      <div
+        v-if="canSeeFulfillment"
+        class="orders-panel"
+      >
         <div class="panel-header">
           <strong>En preparación/entrega</strong>
-          <span class="spacer"></span>
+          <span class="spacer" />
           <n-tooltip trigger="hover">
             <template #trigger>
-              <n-button size="small" tertiary circle :loading="loadingOrders" @click="refreshOrders">
+              <n-button
+                size="small"
+                tertiary
+                circle
+                :loading="loadingOrders"
+                @click="refreshOrders"
+              >
                 <n-icon><RefreshOutline /></n-icon>
               </n-button>
             </template>
             Refrescar
           </n-tooltip>
-          <n-button size="small" type="primary" @click="goToFulfillment">Ir a Entrega</n-button>
+          <n-button
+            size="small"
+            type="primary"
+            @click="goToFulfillment"
+          >
+            Ir a Entrega
+          </n-button>
         </div>
         <div class="kpi">
-          <div class="kpi-value">{{ awaitingFulfillmentCount }}</div>
-          <div class="kpi-sub">Ordenes pagadas sin completar</div>
+          <div class="kpi-value">
+            {{ awaitingFulfillmentCount }}
+          </div>
+          <div class="kpi-sub">
+            Ordenes pagadas sin completar
+          </div>
         </div>
       </div>
     </div>
   </n-card>
-  
 </template>
 
 <script setup lang="ts">

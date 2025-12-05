@@ -1,27 +1,53 @@
 <template>
   <div class="page">
     <h2>Estado de la plataforma</h2>
-    <p class="muted">Control global para clientes. El modo apagado duro bloquea completamente el sitio de clientes; el modo pausa muestra un aviso y desactiva pedidos.</p>
+    <p class="muted">
+      Control global para clientes. El modo apagado duro bloquea completamente el sitio de clientes; el modo pausa muestra un aviso y desactiva pedidos.
+    </p>
 
-    <n-card size="small" class="card">
+    <n-card
+      size="small"
+      class="card"
+    >
       <div class="group">
         <div class="row">
           <label>Estado</label>
-          <n-radio-group v-model:value="form.status" name="platform-status" :disabled="loading">
-            <n-radio value="online">Online</n-radio>
-            <n-radio value="soft-offline">Pausa (solo aviso)</n-radio>
-            <n-radio value="hard-offline">Apagado (total)</n-radio>
+          <n-radio-group
+            v-model:value="form.status"
+            name="platform-status"
+            :disabled="loading"
+          >
+            <n-radio value="online">
+              Online
+            </n-radio>
+            <n-radio value="soft-offline">
+              Pausa (solo aviso)
+            </n-radio>
+            <n-radio value="hard-offline">
+              Apagado (total)
+            </n-radio>
           </n-radio-group>
         </div>
 
         <div class="row">
           <label>Mensaje para clientes</label>
-          <n-input v-model:value="form.message" type="textarea" :autosize="{ minRows: 2, maxRows: 4 }" placeholder="Ej. Cerrado por mantenimiento. Volvemos pronto." :disabled="loading" />
+          <n-input
+            v-model:value="form.message"
+            type="textarea"
+            :autosize="{ minRows: 2, maxRows: 4 }"
+            placeholder="Ej. Cerrado por mantenimiento. Volvemos pronto."
+            :disabled="loading"
+          />
         </div>
 
         <div class="row">
           <label>Hasta (opcional)</label>
-          <n-date-picker v-model:value="untilTs" type="datetime" clearable :disabled="loading" />
+          <n-date-picker
+            v-model:value="untilTs"
+            type="datetime"
+            clearable
+            :disabled="loading"
+          />
         </div>
       </div>
 
@@ -29,43 +55,94 @@
         <div class="row">
           <label>Métodos de pago</label>
           <div class="pay-methods">
-            <n-checkbox-group v-model:value="form.paymentMethods" :disabled="loading">
-              <n-checkbox value="online" label="Online (Mercado Pago)" />
-              <n-checkbox value="cash" label="Efectivo en Caja" />
+            <n-checkbox-group
+              v-model:value="form.paymentMethods"
+              :disabled="loading"
+            >
+              <n-checkbox
+                value="online"
+                label="Online (Mercado Pago)"
+              />
+              <n-checkbox
+                value="cash"
+                label="Efectivo en Caja"
+              />
             </n-checkbox-group>
-            <div v-if="form.status==='online' && (form.paymentMethods?.length||0)===0" class="field-error">Seleccioná al menos un método de pago para el modo Online.</div>
+            <div
+              v-if="form.status==='online' && (form.paymentMethods?.length||0)===0"
+              class="field-error"
+            >
+              Seleccioná al menos un método de pago para el modo Online.
+            </div>
           </div>
         </div>
 
         <div class="row">
           <label>Tipos de pago de MP</label>
           <div>
-            <div class="muted small">Seleccioná qué tipos de pago de MP permitir. El saldo en cuenta siempre está habilitado. Por defecto: saldo en cuenta, crédito, débito y prepaga.</div>
-            <n-checkbox-group v-model:value="form.mpAllowedPaymentTypes" :disabled="loading">
-              <n-checkbox value="credit_card" label="Tarjeta de crédito" />
-              <n-checkbox value="debit_card" label="Tarjeta de débito" />
-              <n-checkbox value="prepaid_card" label="Tarjeta prepaga" />
+            <div class="muted small">
+              Seleccioná qué tipos de pago de MP permitir. El saldo en cuenta siempre está habilitado. Por defecto: saldo en cuenta, crédito, débito y prepaga.
+            </div>
+            <n-checkbox-group
+              v-model:value="form.mpAllowedPaymentTypes"
+              :disabled="loading"
+            >
+              <n-checkbox
+                value="credit_card"
+                label="Tarjeta de crédito"
+              />
+              <n-checkbox
+                value="debit_card"
+                label="Tarjeta de débito"
+              />
+              <n-checkbox
+                value="prepaid_card"
+                label="Tarjeta prepaga"
+              />
             </n-checkbox-group>
           </div>
         </div>
       </div>
 
       <div class="actions">
-        <n-button type="primary" :loading="saving" @click="save">Guardar</n-button>
-        <n-button quaternary :disabled="loading" @click="refresh">Actualizar</n-button>
+        <n-button
+          type="primary"
+          :loading="saving"
+          @click="save"
+        >
+          Guardar
+        </n-button>
+        <n-button
+          quaternary
+          :disabled="loading"
+          @click="refresh"
+        >
+          Actualizar
+        </n-button>
       </div>
 
-      <n-alert v-if="current" type="info" title="Estado actual" class="current">
+      <n-alert
+        v-if="current"
+        type="info"
+        title="Estado actual"
+        class="current"
+      >
         <div><strong>{{ label(current.status) }}</strong></div>
-        <div v-if="current.message">Mensaje: {{ current.message }}</div>
-        <div v-if="current.offlineUntil">Hasta: {{ formatTs(current.offlineUntil) }}</div>
+        <div v-if="current.message">
+          Mensaje: {{ current.message }}
+        </div>
+        <div v-if="current.offlineUntil">
+          Hasta: {{ formatTs(current.offlineUntil) }}
+        </div>
         <div>Métodos de pago: {{ (current.paymentMethods||[]).map(pmLabel).join(', ') || '—' }}</div>
         <div>
           Tipos de MP permitidos:
           <template v-if="(current.mpAllowedPaymentTypes||[]).length">
             {{ (current.mpAllowedPaymentTypes||[]).map(typeLabel).join(', ') }}
           </template>
-          <template v-else>ninguno</template>
+          <template v-else>
+            ninguno
+          </template>
         </div>
       </n-alert>
     </n-card>

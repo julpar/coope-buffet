@@ -6,40 +6,109 @@
     :mask-closable="!creating"
     :closable="!creating"
   >
-    <div v-if="step === 'form'" class="form">
+    <div
+      v-if="step === 'form'"
+      class="form"
+    >
       <n-form @submit.prevent>
         <n-form-item label="Nombre del dispositivo/usuario">
-          <n-input v-model:value="nickname" placeholder="Ej.: Cajera 1" @keyup.enter="tryCreate" />
+          <n-input
+            v-model:value="nickname"
+            placeholder="Ej.: Cajera 1"
+            @keyup.enter="tryCreate"
+          />
         </n-form-item>
         <n-form-item label="Roles">
           <n-checkbox-group v-model:value="roles">
             <n-space wrap>
-              <n-checkbox v-for="r in roleOptions" :key="r" :value="r">{{ r }}</n-checkbox>
+              <n-checkbox
+                v-for="r in roleOptions"
+                :key="r"
+                :value="r"
+              >
+                {{ r }}
+              </n-checkbox>
             </n-space>
           </n-checkbox-group>
         </n-form-item>
       </n-form>
       <div class="actions">
-        <n-button quaternary @click="cancel" :disabled="creating">Cancelar</n-button>
-        <n-button type="primary" @click="tryCreate" :loading="creating" :disabled="!nickname || roles.length === 0">Crear</n-button>
+        <n-button
+          quaternary
+          :disabled="creating"
+          @click="cancel"
+        >
+          Cancelar
+        </n-button>
+        <n-button
+          type="primary"
+          :loading="creating"
+          :disabled="!nickname || roles.length === 0"
+          @click="tryCreate"
+        >
+          Crear
+        </n-button>
       </div>
     </div>
 
-    <div v-else class="success">
-      <div class="hint">URL de acceso (válida para iniciar sesión permanente):</div>
-      <n-input :value="permUrl" readonly />
+    <div
+      v-else
+      class="success"
+    >
+      <div class="hint">
+        URL de acceso (válida para iniciar sesión permanente):
+      </div>
+      <n-input
+        :value="permUrl"
+        readonly
+      />
       <div class="perm-actions">
-        <n-button size="small" @click="copyPerm">Copiar enlace</n-button>
-        <n-button size="small" tertiary tag="a" :href="permUrl" target="_blank">Abrir</n-button>
-        <n-button v-if="canShare" size="small" @click="sharePerm">Compartir</n-button>
+        <n-button
+          size="small"
+          @click="copyPerm"
+        >
+          Copiar enlace
+        </n-button>
+        <n-button
+          size="small"
+          tertiary
+          tag="a"
+          :href="permUrl"
+          target="_blank"
+        >
+          Abrir
+        </n-button>
+        <n-button
+          v-if="canShare"
+          size="small"
+          @click="sharePerm"
+        >
+          Compartir
+        </n-button>
       </div>
       <div class="qr-wrap">
-        <img :src="qrSrc" alt="QR de acceso" class="qr" />
-        <div class="qr-hint">Escanea con la cámara del dispositivo para iniciar sesión.</div>
+        <img
+          :src="qrSrc"
+          alt="QR de acceso"
+          class="qr"
+        >
+        <div class="qr-hint">
+          Escanea con la cámara del dispositivo para iniciar sesión.
+        </div>
       </div>
       <div class="actions">
-        <n-button quaternary @click="close">Cerrar</n-button>
-        <n-button type="primary" @click="createAnother">Crear otro</n-button>
+        <n-button
+          quaternary
+          @click="close"
+        >
+          Cerrar
+        </n-button>
+        <n-button
+          type="primary"
+          @click="createAnother"
+        >
+          Crear otro
+        </n-button>
       </div>
     </div>
   </n-modal>

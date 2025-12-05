@@ -1,17 +1,33 @@
 <template>
   <div class="page">
     <div class="toolbar">
-      <n-input v-model:value="q" placeholder="Buscar ingrediente..." clearable class="grow">
+      <n-input
+        v-model:value="q"
+        placeholder="Buscar ingrediente..."
+        clearable
+        class="grow"
+      >
         <template #prefix>
-          <n-icon size="16"><SearchOutline /></n-icon>
+          <n-icon size="16">
+            <SearchOutline />
+          </n-icon>
         </template>
       </n-input>
-      <n-button type="primary" tertiary>
-        <template #icon><n-icon><AddOutline /></n-icon></template>
+      <n-button
+        type="primary"
+        tertiary
+      >
+        <template #icon>
+          <n-icon><AddOutline /></n-icon>
+        </template>
         Nuevo
       </n-button>
     </div>
-    <n-data-table :columns="columns" :data="filtered" :bordered="true" />
+    <n-data-table
+      :columns="columns"
+      :data="filtered"
+      :bordered="true"
+    />
   </div>
 </template>
 

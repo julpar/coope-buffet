@@ -1,36 +1,99 @@
 <template>
   <div class="page">
     <div class="toolbar">
-      <n-input v-model:value="q" placeholder="Buscar usuario..." clearable class="grow">
+      <n-input
+        v-model:value="q"
+        placeholder="Buscar usuario..."
+        clearable
+        class="grow"
+      >
         <template #prefix>
-          <n-icon size="16"><SearchOutline /></n-icon>
+          <n-icon size="16">
+            <SearchOutline />
+          </n-icon>
         </template>
       </n-input>
-      <n-button type="primary" tertiary @click="showCreate = true">
-        <template #icon><n-icon><PersonAddOutline /></n-icon></template>
+      <n-button
+        type="primary"
+        tertiary
+        @click="showCreate = true"
+      >
+        <template #icon>
+          <n-icon><PersonAddOutline /></n-icon>
+        </template>
         Invitar
       </n-button>
     </div>
 
     <div class="table-wrap">
-      <n-data-table :columns="columns" :data="filtered" :bordered="true" :scroll-x="880" />
+      <n-data-table
+        :columns="columns"
+        :data="filtered"
+        :bordered="true"
+        :scroll-x="880"
+      />
     </div>
 
-    <InviteUserModal v-model:show="showCreate" @created="onCreated" />
-    <EditUserModal v-model:show="showEdit" :user="editingUser" @saved="onSaved" />
+    <InviteUserModal
+      v-model:show="showCreate"
+      @created="onCreated"
+    />
+    <EditUserModal
+      v-model:show="showEdit"
+      :user="editingUser"
+      @saved="onSaved"
+    />
 
-    <n-modal v-model:show="showQR" preset="card" title="Acceso permanente" :mask-closable="!loadingQR" :closable="!loadingQR">
-      <div v-if="loadingQR">Cargando…</div>
-      <div v-else class="qr-modal">
-        <div class="hint">URL de acceso:</div>
-        <n-input :value="permUrl" readonly />
-        <div class="perm-actions">
-          <n-button size="small" @click="copyPerm">Copiar enlace</n-button>
-          <n-button size="small" tertiary tag="a" :href="permUrl" target="_blank">Abrir</n-button>
+    <n-modal
+      v-model:show="showQR"
+      preset="card"
+      title="Acceso permanente"
+      :mask-closable="!loadingQR"
+      :closable="!loadingQR"
+    >
+      <div v-if="loadingQR">
+        Cargando…
+      </div>
+      <div
+        v-else
+        class="qr-modal"
+      >
+        <div class="hint">
+          URL de acceso:
         </div>
-        <div class="qr-wrap" v-if="qrSrc">
-          <img :src="qrSrc" alt="QR de acceso" class="qr" />
-          <div class="qr-hint">Escanea con la cámara del dispositivo para iniciar sesión.</div>
+        <n-input
+          :value="permUrl"
+          readonly
+        />
+        <div class="perm-actions">
+          <n-button
+            size="small"
+            @click="copyPerm"
+          >
+            Copiar enlace
+          </n-button>
+          <n-button
+            size="small"
+            tertiary
+            tag="a"
+            :href="permUrl"
+            target="_blank"
+          >
+            Abrir
+          </n-button>
+        </div>
+        <div
+          v-if="qrSrc"
+          class="qr-wrap"
+        >
+          <img
+            :src="qrSrc"
+            alt="QR de acceso"
+            class="qr"
+          >
+          <div class="qr-hint">
+            Escanea con la cámara del dispositivo para iniciar sesión.
+          </div>
         </div>
       </div>
     </n-modal>

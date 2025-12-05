@@ -2,14 +2,23 @@
   <n-message-provider>
     <n-config-provider>
       <n-layout class="layout">
-        <n-layout-header bordered class="header">
+        <n-layout-header
+          bordered
+          class="header"
+        >
           <div class="brand">
             <span class="logo">🍽️</span>
             <span>Buffet</span>
           </div>
           <div class="header-actions">
             <!-- Refresh menu: placed to the LEFT of the cart -->
-            <n-button class="refresh" size="small" tertiary @click="refreshMenu" aria-label="Actualizar menú">
+            <n-button
+              class="refresh"
+              size="small"
+              tertiary
+              aria-label="Actualizar menú"
+              @click="refreshMenu"
+            >
               <template #icon>
                 <n-icon><RefreshOutline /></n-icon>
               </template>
@@ -25,38 +34,70 @@
               @keydown.enter="toggleCart"
               @keydown.space.prevent="toggleCart"
             >
-              <n-badge :value="cartQty" :max="99" type="success">
-                <n-button type="primary" size="small">
+              <n-badge
+                :value="cartQty"
+                :max="99"
+                type="success"
+              >
+                <n-button
+                  type="primary"
+                  size="small"
+                >
                   <template #icon>
                     <n-icon><CartOutline /></n-icon>
                   </template>
                   <span class="hide-on-mobile">Carrito</span>
                 </n-button>
               </n-badge>
-              <span class="subtotal" v-if="cartQty > 0">{{ currency(subtotal) }}</span>
+              <span
+                v-if="cartQty > 0"
+                class="subtotal"
+              >{{ currency(subtotal) }}</span>
             </div>
           </div>
         </n-layout-header>
 
         <!-- Soft-offline banner overlay (suppressed on Success page so users can view their completed order) -->
-        <div v-if="showSoftOverlay" class="soft-overlay" role="dialog" aria-modal="true">
+        <div
+          v-if="showSoftOverlay"
+          class="soft-overlay"
+          role="dialog"
+          aria-modal="true"
+        >
           <div class="soft-card">
             <h3>Estamos en pausa momentánea</h3>
             <p>{{ platform.message.value || 'Volvemos en unos minutos.' }}</p>
-            <small v-if="platform.offlineUntil.value" class="muted">Hasta: {{ new Date(platform.offlineUntil.value).toLocaleString() }}</small>
+            <small
+              v-if="platform.offlineUntil.value"
+              class="muted"
+            >Hasta: {{ new Date(platform.offlineUntil.value).toLocaleString() }}</small>
           </div>
         </div>
 
         <!-- Hard-offline FULL SCREEN component -->
-        <div v-if="platform.status.value === 'hard-offline'" class="hard-offline" role="dialog" aria-modal="true" aria-label="Servicio no disponible">
+        <div
+          v-if="platform.status.value === 'hard-offline'"
+          class="hard-offline"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Servicio no disponible"
+        >
           <div class="hard-card">
             <h1>Servicio no disponible</h1>
             <p class="desc">
               {{ platform.message.value || 'El buffet está temporalmente fuera de servicio. Intenta nuevamente más tarde.' }}
             </p>
-            <small v-if="platform.offlineUntil.value" class="muted">Hasta: {{ new Date(platform.offlineUntil.value).toLocaleString() }}</small>
+            <small
+              v-if="platform.offlineUntil.value"
+              class="muted"
+            >Hasta: {{ new Date(platform.offlineUntil.value).toLocaleString() }}</small>
             <div class="actions">
-              <n-button type="primary" @click="retryNow">Reintentar ahora</n-button>
+              <n-button
+                type="primary"
+                @click="retryNow"
+              >
+                Reintentar ahora
+              </n-button>
             </div>
           </div>
         </div>
@@ -75,7 +116,13 @@
               <span>Algunos pedidos o el menú podrían no cargarse correctamente.</span>
             </div>
             <div class="api-error__actions">
-              <n-button size="small" type="primary" @click="retryNow">Reintentar</n-button>
+              <n-button
+                size="small"
+                type="primary"
+                @click="retryNow"
+              >
+                Reintentar
+              </n-button>
             </div>
           </div>
         </div>
@@ -85,47 +132,112 @@
         </n-layout-content>
 
         <!-- Cart drawer -->
-        <n-drawer v-model:show="drawer" placement="right" :width="320">
+        <n-drawer
+          v-model:show="drawer"
+          placement="right"
+          :width="320"
+        >
           <n-drawer-content title="Tu pedido">
-            <div v-if="items.length === 0" class="muted">El carrito está vacío.</div>
-            <div v-else class="cart-list">
+            <div
+              v-if="items.length === 0"
+              class="muted"
+            >
+              El carrito está vacío.
+            </div>
+            <div
+              v-else
+              class="cart-list"
+            >
               <!-- Persistent shortage banner -->
-              <div v-if="activeShortages.length" class="shortage-banner" role="alert" aria-live="polite">
+              <div
+                v-if="activeShortages.length"
+                class="shortage-banner"
+                role="alert"
+                aria-live="polite"
+              >
                 <strong>No hay stock suficiente en algunos items.</strong>
                 <ul>
-                  <li v-for="s in activeShortages" :key="s.id">
+                  <li
+                    v-for="s in activeShortages"
+                    :key="s.id"
+                  >
                     {{ s.name || s.id }}: disponible {{ s.available }} (tenés {{ s.requested }})
                   </li>
                 </ul>
                 <div class="shortage-actions">
-                  <n-button size="small" type="primary" :disabled="activeShortageIds.size>0" @click="goCheckout" :title="activeShortageIds.size>0 ? 'Corregí las cantidades para continuar' : 'Ir a pagar'">
+                  <n-button
+                    size="small"
+                    type="primary"
+                    :disabled="activeShortageIds.size>0"
+                    :title="activeShortageIds.size>0 ? 'Corregí las cantidades para continuar' : 'Ir a pagar'"
+                    @click="goCheckout"
+                  >
                     Intentar de nuevo
                   </n-button>
-                  <n-button size="small" tertiary @click="clearShortages">Ocultar avisos</n-button>
+                  <n-button
+                    size="small"
+                    tertiary
+                    @click="clearShortages"
+                  >
+                    Ocultar avisos
+                  </n-button>
                 </div>
               </div>
 
-              <div v-for="it in items" :key="it.id" class="cart-row" :class="{ highlight: activeShortageIds.has(it.id) }">
+              <div
+                v-for="it in items"
+                :key="it.id"
+                class="cart-row"
+                :class="{ highlight: activeShortageIds.has(it.id) }"
+              >
                 <div class="info">
                   <strong>{{ it.name }}</strong>
                   <small class="muted">{{ currency(it.unitPrice) }} c/u</small>
-                  <div v-if="activeShortageIds.has(it.id)" class="inline-hint">
-                    <n-tag size="small" type="warning" bordered>Disponible: x{{ availableFor(it.id) }}</n-tag>
+                  <div
+                    v-if="activeShortageIds.has(it.id)"
+                    class="inline-hint"
+                  >
+                    <n-tag
+                      size="small"
+                      type="warning"
+                      bordered
+                    >
+                      Disponible: x{{ availableFor(it.id) }}
+                    </n-tag>
                   </div>
                 </div>
                 <div class="qty">
-                  <n-button size="small" tertiary @click="dec(it.id)">-</n-button>
+                  <n-button
+                    size="small"
+                    tertiary
+                    @click="dec(it.id)"
+                  >
+                    -
+                  </n-button>
                   <span class="q">{{ it.qty }}</span>
-                  <n-button size="small" tertiary @click="inc(it.id)">+</n-button>
+                  <n-button
+                    size="small"
+                    tertiary
+                    @click="inc(it.id)"
+                  >
+                    +
+                  </n-button>
                 </div>
-                <div class="row-total">{{ currency(it.unitPrice * it.qty) }}</div>
+                <div class="row-total">
+                  {{ currency(it.unitPrice * it.qty) }}
+                </div>
               </div>
               <n-divider />
               <div class="totals">
                 <div>Subtotal</div>
                 <div>{{ currency(subtotal) }}</div>
               </div>
-              <n-button type="primary" :disabled="items.length===0 || platform.status.value==='soft-offline' || activeShortageIds.size>0" @click="goCheckout" :title="activeShortageIds.size>0 ? 'Corregí las cantidades antes de continuar' : ''">
+              <n-button
+                type="primary"
+                :disabled="items.length===0 || platform.status.value==='soft-offline' || activeShortageIds.size>0"
+                :title="activeShortageIds.size>0 ? 'Corregí las cantidades antes de continuar' : ''"
+                @click="goCheckout"
+              >
                 Continuar al pago
               </n-button>
             </div>

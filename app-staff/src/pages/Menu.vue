@@ -1,9 +1,16 @@
 <template>
   <div class="page">
     <div class="toolbar">
-      <n-input v-model:value="q" placeholder="Buscar plato..." clearable class="grow2">
+      <n-input
+        v-model:value="q"
+        placeholder="Buscar plato..."
+        clearable
+        class="grow2"
+      >
         <template #prefix>
-          <n-icon size="16"><SearchOutline /></n-icon>
+          <n-icon size="16">
+            <SearchOutline />
+          </n-icon>
         </template>
       </n-input>
       <n-select
@@ -13,36 +20,84 @@
         class="filter"
         :style="categorySelectStyle"
       />
-      <n-button type="primary" @click="openCreate">
-        <template #icon><n-icon><AddOutline /></n-icon></template>
+      <n-button
+        type="primary"
+        @click="openCreate"
+      >
+        <template #icon>
+          <n-icon><AddOutline /></n-icon>
+        </template>
         Nuevo plato
       </n-button>
-      <n-button tertiary @click="refresh" :loading="loading">
-        <template #icon><n-icon><RefreshOutline /></n-icon></template>
+      <n-button
+        tertiary
+        :loading="loading"
+        @click="refresh"
+      >
+        <template #icon>
+          <n-icon><RefreshOutline /></n-icon>
+        </template>
         Refrescar
       </n-button>
     </div>
     <div class="table-wrap">
-      <n-data-table :columns="columns" :data="filtered" :loading="loading" :bordered="true" :scroll-x="840" />
+      <n-data-table
+        :columns="columns"
+        :data="filtered"
+        :loading="loading"
+        :bordered="true"
+        :scroll-x="840"
+      />
     </div>
 
     <!-- Add/Edit item modal -->
-    <n-modal v-model:show="showEditor" preset="card" :title="editorTitle" style="max-width:520px; width:92vw;">
+    <n-modal
+      v-model:show="showEditor"
+      preset="card"
+      :title="editorTitle"
+      style="max-width:520px; width:92vw;"
+    >
       <div class="form">
-        <n-form :model="form" label-placement="top">
+        <n-form
+          :model="form"
+          label-placement="top"
+        >
           <div class="row">
-            <n-form-item label="ID" path="id">
-              <n-input v-model:value="form.id" placeholder="ID corto (ej. A7F2C)" :disabled="isEditing" />
+            <n-form-item
+              label="ID"
+              path="id"
+            >
+              <n-input
+                v-model:value="form.id"
+                placeholder="ID corto (ej. A7F2C)"
+                :disabled="isEditing"
+              />
             </n-form-item>
-            <n-form-item label="Categoría" path="categoryId">
-              <n-select v-model:value="form.categoryId" :options="categoryOptions" placeholder="Categoría" />
+            <n-form-item
+              label="Categoría"
+              path="categoryId"
+            >
+              <n-select
+                v-model:value="form.categoryId"
+                :options="categoryOptions"
+                placeholder="Categoría"
+              />
             </n-form-item>
           </div>
-          <n-form-item label="Nombre" path="name">
-            <n-input v-model:value="form.name" placeholder="Nombre del plato" />
+          <n-form-item
+            label="Nombre"
+            path="name"
+          >
+            <n-input
+              v-model:value="form.name"
+              placeholder="Nombre del plato"
+            />
           </n-form-item>
           <div class="row">
-            <n-form-item label="Precio" path="price">
+            <n-form-item
+              label="Precio"
+              path="price"
+            >
               <n-input-number
                 v-model:value="form.price"
                 :min="0"
@@ -52,7 +107,10 @@
                 :input-props="{ inputmode: 'decimal', pattern: '[0-9]*' }"
               />
             </n-form-item>
-            <n-form-item label="Stock" path="stock">
+            <n-form-item
+              label="Stock"
+              path="stock"
+            >
               <n-input-number
                 v-model:value="form.stock"
                 :min="0"
@@ -63,7 +121,10 @@
             </n-form-item>
           </div>
           <div class="row">
-            <n-form-item label="Umbral de bajo stock" path="lowStockThreshold">
+            <n-form-item
+              label="Umbral de bajo stock"
+              path="lowStockThreshold"
+            >
               <n-input-number
                 v-model:value="form.lowStockThreshold"
                 :min="0"
@@ -72,46 +133,127 @@
                 :input-props="{ inputmode: 'numeric', pattern: '[0-9]*' }"
               />
             </n-form-item>
-            <n-form-item label="Sin TACC" path="isGlutenFree">
+            <n-form-item
+              label="Sin TACC"
+              path="isGlutenFree"
+            >
               <n-switch v-model:value="form.isGlutenFree" />
             </n-form-item>
           </div>
-          <n-form-item label="Activo" path="active">
+          <n-form-item
+            label="Activo"
+            path="active"
+          >
             <n-switch v-model:value="form.active" />
           </n-form-item>
-          <n-form-item label="Imagen" path="imageUrl">
+          <n-form-item
+            label="Imagen"
+            path="imageUrl"
+          >
             <div style="display:flex; flex-direction:column; gap:8px; width:100%">
               <div style="display:flex; align-items:center; gap:8px;">
-                <input ref="fileInput" type="file" accept="image/*" @change="onPickImage" style="display:none" />
+                <input
+                  ref="fileInput"
+                  type="file"
+                  accept="image/*"
+                  style="display:none"
+                  @change="onPickImage"
+                >
                 <!-- Camera capture input (mobile devices will offer camera) -->
-                <input ref="cameraInput" type="file" accept="image/*;capture=camera" capture="environment" @change="onPickImage" style="display:none" />
-                <n-button :loading="uploadingImage" @click="() => fileInput?.click()">Seleccionar imagen</n-button>
-                <n-button :loading="uploadingImage" tertiary @click="openCamera">Tomar foto</n-button>
-                <n-button quaternary v-if="form.imageUrl" @click="clearImage">Quitar imagen</n-button>
+                <input
+                  ref="cameraInput"
+                  type="file"
+                  accept="image/*;capture=camera"
+                  capture="environment"
+                  style="display:none"
+                  @change="onPickImage"
+                >
+                <n-button
+                  :loading="uploadingImage"
+                  @click="() => fileInput?.click()"
+                >
+                  Seleccionar imagen
+                </n-button>
+                <n-button
+                  :loading="uploadingImage"
+                  tertiary
+                  @click="openCamera"
+                >
+                  Tomar foto
+                </n-button>
+                <n-button
+                  v-if="form.imageUrl"
+                  quaternary
+                  @click="clearImage"
+                >
+                  Quitar imagen
+                </n-button>
               </div>
-              <div v-if="form.imageUrl" style="display:flex; gap:8px; align-items:center;">
-                <img :src="form.imageUrl as string" alt="preview" style="max-width:160px; max-height:100px; object-fit:cover; border-radius:6px; border:1px solid #ddd;" />
-                <a :href="form.imageUrl as string" target="_blank" rel="noreferrer">Abrir</a>
+              <div
+                v-if="form.imageUrl"
+                style="display:flex; gap:8px; align-items:center;"
+              >
+                <img
+                  :src="form.imageUrl as string"
+                  alt="preview"
+                  style="max-width:160px; max-height:100px; object-fit:cover; border-radius:6px; border:1px solid #ddd;"
+                >
+                <a
+                  :href="form.imageUrl as string"
+                  target="_blank"
+                  rel="noreferrer"
+                >Abrir</a>
               </div>
-              <div v-else style="color:#777; font-size:12px;">No hay imagen. Puede seleccionar un archivo o tomar una foto. Las imágenes se redimensionan a un máximo de 1024px por lado (límite 5MB).</div>
+              <div
+                v-else
+                style="color:#777; font-size:12px;"
+              >
+                No hay imagen. Puede seleccionar un archivo o tomar una foto. Las imágenes se redimensionan a un máximo de 1024px por lado (límite 5MB).
+              </div>
             </div>
           </n-form-item>
         </n-form>
       </div>
       <template #action>
         <div style="display:flex; gap:8px; justify-content:flex-end;">
-          <n-button @click="showEditor = false">Cancelar</n-button>
-          <n-button type="primary" :loading="saving" @click="saveItem">Guardar</n-button>
+          <n-button @click="showEditor = false">
+            Cancelar
+          </n-button>
+          <n-button
+            type="primary"
+            :loading="saving"
+            @click="saveItem"
+          >
+            Guardar
+          </n-button>
         </div>
       </template>
     </n-modal>
     <!-- Camera modal -->
-    <n-modal v-model:show="showCamera" preset="card" title="Tomar foto" style="max-width:520px; width:92vw;">
+    <n-modal
+      v-model:show="showCamera"
+      preset="card"
+      title="Tomar foto"
+      style="max-width:520px; width:92vw;"
+    >
       <div style="display:flex; flex-direction:column; gap:8px;">
-        <video ref="videoEl" autoplay playsinline style="width:100%; max-height:360px; background:#000; border-radius:6px;"></video>
+        <video
+          ref="videoEl"
+          autoplay
+          playsinline
+          style="width:100%; max-height:360px; background:#000; border-radius:6px;"
+        />
         <div style="display:flex; gap:8px; justify-content:flex-end;">
-          <n-button @click="closeCamera">Cancelar</n-button>
-          <n-button type="primary" :loading="uploadingImage" @click="capturePhoto">Tomar</n-button>
+          <n-button @click="closeCamera">
+            Cancelar
+          </n-button>
+          <n-button
+            type="primary"
+            :loading="uploadingImage"
+            @click="capturePhoto"
+          >
+            Tomar
+          </n-button>
         </div>
       </div>
     </n-modal>

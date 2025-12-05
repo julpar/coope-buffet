@@ -1,9 +1,27 @@
 <template>
   <div class="return-mp">
     <h2>Procesando pago…</h2>
-    <div v-if="loading" class="muted">Redirigiendo a tu pedido…</div>
-    <div v-else-if="error" class="error">{{ error }}</div>
-    <div v-else class="muted">Listo. Si no fuiste redirigido automáticamente, <a href="#" @click.prevent="go">seguí acá</a>.</div>
+    <div
+      v-if="loading"
+      class="muted"
+    >
+      Redirigiendo a tu pedido…
+    </div>
+    <div
+      v-else-if="error"
+      class="error"
+    >
+      {{ error }}
+    </div>
+    <div
+      v-else
+      class="muted"
+    >
+      Listo. Si no fuiste redirigido automáticamente, <a
+        href="#"
+        @click.prevent="go"
+      >seguí acá</a>.
+    </div>
   </div>
 </template>
 

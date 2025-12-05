@@ -1,73 +1,148 @@
 <template>
-  <div class="fulfillment" :class="{ focus: !!order }">
+  <div
+    class="fulfillment"
+    :class="{ focus: !!order }"
+  >
     <h2>Entrega</h2>
 
     <!-- Scanner / code entry when no order loaded -->
-    <n-card v-if="!order" size="small" class="scanner-card minimal">
+    <n-card
+      v-if="!order"
+      size="small"
+      class="scanner-card minimal"
+    >
       <div class="scan-row">
         <div class="scan-left">
           <div class="field-row big">
-            <n-input size="large" v-model:value="manualCode" placeholder="Código del pedido" maxlength="12" @keydown.enter.prevent="lookup" />
-            <n-button size="large" type="primary" :disabled="!canLookup" :loading="loading" @click="lookup">Buscar</n-button>
+            <n-input
+              v-model:value="manualCode"
+              size="large"
+              placeholder="Código del pedido"
+              maxlength="12"
+              @keydown.enter.prevent="lookup"
+            />
+            <n-button
+              size="large"
+              type="primary"
+              :disabled="!canLookup"
+              :loading="loading"
+              @click="lookup"
+            >
+              Buscar
+            </n-button>
           </div>
           <small class="hint">Escanea el QR o escribe el código. Solo se pueden completar pedidos PAGADOS.</small>
         </div>
         <div class="scan-right">
           <div class="video-wrap">
-            <video ref="videoEl" autoplay playsinline muted></video>
-            <div class="overlay">{{ scanning ? 'Escaneando…' : 'Escanear QR' }}</div>
+            <video
+              ref="videoEl"
+              autoplay
+              playsinline
+              muted
+            />
+            <div class="overlay">
+              {{ scanning ? 'Escaneando…' : 'Escanear QR' }}
+            </div>
           </div>
           <div class="scan-actions">
-            <n-button size="large" tertiary @click="toggleScan">{{ scanning ? 'Detener cámara' : 'Usar cámara' }}</n-button>
-            <small class="hint" v-if="!barcodeSupported">El lector de QR no está disponible; usa el código manual.</small>
+            <n-button
+              size="large"
+              tertiary
+              @click="toggleScan"
+            >
+              {{ scanning ? 'Detener cámara' : 'Usar cámara' }}
+            </n-button>
+            <small
+              v-if="!barcodeSupported"
+              class="hint"
+            >El lector de QR no está disponible; usa el código manual.</small>
           </div>
         </div>
       </div>
     </n-card>
 
     <!-- Order loaded -->
-    <n-card v-if="order" class="order-card focus-only" :title="'Pedido ' + order.id">
-      <div v-if="!isFulfillable" class="prominent-warning">
-        <n-alert type="warning" title="No se puede completar este pedido" :show-icon="true">
-          <div class="warn-text" style="font-weight: 700; font-size: 18px; letter-spacing: .5px;">
+    <n-card
+      v-if="order"
+      class="order-card focus-only"
+      :title="'Pedido ' + order.id"
+    >
+      <div
+        v-if="!isFulfillable"
+        class="prominent-warning"
+      >
+        <n-alert
+          type="warning"
+          title="No se puede completar este pedido"
+          :show-icon="true"
+        >
+          <div
+            class="warn-text"
+            style="font-weight: 700; font-size: 18px; letter-spacing: .5px;"
+          >
             NO ESTA LISTO PARA ENTREGAR
           </div>
         </n-alert>
       </div>
       <div class="order-summary">
-        <div class="row big-code"><strong>Código:</strong> <span class="code">{{ order.shortCode }}</span></div>
-        <div class="row"><strong>Cliente:</strong> <span>{{ order.customerName || '-' }}</span></div>
-        <div class="row"><strong>Estado:</strong> <n-tag :type="order.status === 'paid' ? 'info' : order.status === 'fulfilled' ? 'success' : 'warning'">{{ statusLabel }}</n-tag></div>
+        <div class="row big-code">
+          <strong>Código:</strong> <span class="code">{{ order.shortCode }}</span>
+        </div>
+        <div class="row">
+          <strong>Cliente:</strong> <span>{{ order.customerName || '-' }}</span>
+        </div>
+        <div class="row">
+          <strong>Estado:</strong> <n-tag :type="order.status === 'paid' ? 'info' : order.status === 'fulfilled' ? 'success' : 'warning'">
+            {{ statusLabel }}
+          </n-tag>
+        </div>
       </div>
       <!-- Stock warning banner if any item is flagged -->
-      <div v-if="hasStockWarnings" class="prominent-warning">
-        <n-alert type="warning" title="Posible problema de stock" :show-icon="true">
+      <div
+        v-if="hasStockWarnings"
+        class="prominent-warning"
+      >
+        <n-alert
+          type="warning"
+          title="Posible problema de stock"
+          :show-icon="true"
+        >
           Uno o más artículos podrían no estar disponibles. Seguí el protocolo manual: verificar stock,
           ofrecer reemplazo o realizar reembolso parcial según corresponda.
         </n-alert>
       </div>
       <div class="items">
         <div class="items-header">
-          <div class="items-title">Artículos del pedido</div>
-          <div class="items-total" :aria-label="'Total de unidades: ' + totalItems">
+          <div class="items-title">
+            Artículos del pedido
+          </div>
+          <div
+            class="items-total"
+            :aria-label="'Total de unidades: ' + totalItems"
+          >
             <span class="total-number">{{ totalItems }}</span>
             <span class="total-label">unidades</span>
           </div>
         </div>
 
         <!-- Pending (not yet checked) items on top -->
-        <div class="subsection-header" v-if="pendingItems.length">
+        <div
+          v-if="pendingItems.length"
+          class="subsection-header"
+        >
           <span class="subsection-title">Pendientes</span>
           <span class="subsection-count">{{ pendingItems.length }}</span>
         </div>
         <div
-          class="item"
           v-for="it in pendingItems"
           :key="'p-'+it.id"
+          class="item"
           :class="{ checked: isItemChecked(it.id), 'dragging': isDragging(it.id), 'swipe-right': dragDx > 0 && draggingId === String(it.id), 'swipe-left': dragDx < 0 && draggingId === String(it.id) }"
           role="button"
           :aria-pressed="isItemChecked(it.id)"
           tabindex="0"
+          :style="rowStyle(it.id)"
           @click="(e) => onItemClick(it.id, e)"
           @keydown.enter.prevent="() => toggleItemChecked(it.id, !isItemChecked(it.id))"
           @keydown.space.prevent="() => toggleItemChecked(it.id, !isItemChecked(it.id))"
@@ -75,27 +150,40 @@
           @pointermove="(e) => onItemPointerMove(it.id, e)"
           @pointerup="(e) => onItemPointerUp(it.id, e)"
           @pointercancel="() => onItemPointerCancel(it.id)"
-          :style="rowStyle(it.id)"
         >
-          <span class="qty" :title="'Cantidad'">x{{ it.qty }}</span>
-          <span class="name" style="display:inline-flex; align-items:center; gap:8px;">
+          <span
+            class="qty"
+            :title="'Cantidad'"
+          >x{{ it.qty }}</span>
+          <span
+            class="name"
+            style="display:inline-flex; align-items:center; gap:8px;"
+          >
             {{ it.name || it.id }}
-            <n-tag v-if="it.stockWarning" size="small" type="warning">Posible problema de stock</n-tag>
+            <n-tag
+              v-if="it.stockWarning"
+              size="small"
+              type="warning"
+            >Posible problema de stock</n-tag>
           </span>
         </div>
 
         <!-- Checked items moved under a secondary section and greyed out -->
-        <div class="subsection-header muted" v-if="checkedItems.length">
+        <div
+          v-if="checkedItems.length"
+          class="subsection-header muted"
+        >
           <span class="subsection-title">Comprobados</span>
           <span class="subsection-count">{{ checkedItems.length }}</span>
         </div>
         <div
-          class="item checked"
           v-for="it in checkedItems"
           :key="'c-'+it.id"
+          class="item checked"
           role="button"
           :aria-pressed="true"
           tabindex="0"
+          :style="rowStyle(it.id)"
           @click="(e) => onItemClick(it.id, e, true)"
           @keydown.enter.prevent="() => toggleItemChecked(it.id, false)"
           @keydown.space.prevent="() => toggleItemChecked(it.id, false)"
@@ -103,19 +191,45 @@
           @pointermove="(e) => onItemPointerMove(it.id, e)"
           @pointerup="(e) => onItemPointerUp(it.id, e)"
           @pointercancel="() => onItemPointerCancel(it.id)"
-          :style="rowStyle(it.id)"
         >
-          <span class="qty" :title="'Cantidad'">x{{ it.qty }}</span>
-          <span class="name" style="display:inline-flex; align-items:center; gap:8px;">
+          <span
+            class="qty"
+            :title="'Cantidad'"
+          >x{{ it.qty }}</span>
+          <span
+            class="name"
+            style="display:inline-flex; align-items:center; gap:8px;"
+          >
             {{ it.name || it.id }}
-            <n-tag v-if="it.stockWarning" size="small" type="warning">Posible problema de stock</n-tag>
+            <n-tag
+              v-if="it.stockWarning"
+              size="small"
+              type="warning"
+            >Posible problema de stock</n-tag>
           </span>
         </div>
       </div>
       <template #action>
         <n-space>
-          <n-button size="large" strong secondary @click="clearOrder">Cancelar</n-button>
-          <n-button size="large" strong type="primary" class="cta-fulfill" :loading="marking" @click="markFulfilled" :disabled="!isFulfillable">MARCAR COMPLETADO</n-button>
+          <n-button
+            size="large"
+            strong
+            secondary
+            @click="clearOrder"
+          >
+            Cancelar
+          </n-button>
+          <n-button
+            size="large"
+            strong
+            type="primary"
+            class="cta-fulfill"
+            :loading="marking"
+            :disabled="!isFulfillable"
+            @click="markFulfilled"
+          >
+            MARCAR COMPLETADO
+          </n-button>
         </n-space>
       </template>
     </n-card>

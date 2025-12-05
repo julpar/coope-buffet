@@ -1,21 +1,47 @@
 <template>
-  <n-drawer v-model:show="show" :width="360" placement="right">
+  <n-drawer
+    v-model:show="show"
+    :width="360"
+    placement="right"
+  >
     <n-drawer-content :title="`Editar usuario: ${original?.nickname ?? ''}`">
       <n-form @submit.prevent>
         <n-form-item label="Nombre (opcional)">
-          <n-input v-model:value="nickname" placeholder="Nombre para mostrar" />
+          <n-input
+            v-model:value="nickname"
+            placeholder="Nombre para mostrar"
+          />
         </n-form-item>
         <n-form-item label="Roles">
           <n-checkbox-group v-model:value="roles">
             <n-space wrap>
-              <n-checkbox v-for="r in roleOptions" :key="r" :value="r">{{ r }}</n-checkbox>
+              <n-checkbox
+                v-for="r in roleOptions"
+                :key="r"
+                :value="r"
+              >
+                {{ r }}
+              </n-checkbox>
             </n-space>
           </n-checkbox-group>
         </n-form-item>
       </n-form>
       <div class="actions">
-        <n-button quaternary @click="close" :disabled="saving">Cancelar</n-button>
-        <n-button type="primary" @click="save" :loading="saving" :disabled="roles.length === 0">Guardar</n-button>
+        <n-button
+          quaternary
+          :disabled="saving"
+          @click="close"
+        >
+          Cancelar
+        </n-button>
+        <n-button
+          type="primary"
+          :loading="saving"
+          :disabled="roles.length === 0"
+          @click="save"
+        >
+          Guardar
+        </n-button>
       </div>
     </n-drawer-content>
   </n-drawer>

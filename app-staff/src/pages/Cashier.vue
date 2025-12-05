@@ -1,45 +1,109 @@
 <template>
-  <div class="cashier" :class="{ focus: !!order }">
+  <div
+    class="cashier"
+    :class="{ focus: !!order }"
+  >
     <h2>Cajero</h2>
 
     <!-- Single-operation workstation: big input + live scanner -->
-    <n-card v-if="!order" size="small" class="scanner-card minimal">
+    <n-card
+      v-if="!order"
+      size="small"
+      class="scanner-card minimal"
+    >
       <div class="scan-row">
         <div class="scan-left">
           <div class="field-row big">
-            <n-input size="large" v-model:value="manualCode" placeholder="Código del pedido" maxlength="12" @keydown.enter.prevent="lookup" />
-            <n-button size="large" type="primary" :disabled="!canLookup" :loading="loading" @click="lookup">Buscar</n-button>
+            <n-input
+              v-model:value="manualCode"
+              size="large"
+              placeholder="Código del pedido"
+              maxlength="12"
+              @keydown.enter.prevent="lookup"
+            />
+            <n-button
+              size="large"
+              type="primary"
+              :disabled="!canLookup"
+              :loading="loading"
+              @click="lookup"
+            >
+              Buscar
+            </n-button>
           </div>
           <small class="hint">Escanea el QR o escribe el código.</small>
         </div>
         <div class="scan-right">
           <div class="video-wrap">
-            <video ref="videoEl" autoplay playsinline muted></video>
-            <div class="overlay">{{ scanning ? 'Escaneando…' : 'Escanear QR' }}</div>
+            <video
+              ref="videoEl"
+              autoplay
+              playsinline
+              muted
+            />
+            <div class="overlay">
+              {{ scanning ? 'Escaneando…' : 'Escanear QR' }}
+            </div>
           </div>
           <div class="scan-actions">
-            <n-button size="large" tertiary @click="toggleScan">{{ scanning ? 'Detener cámara' : 'Usar cámara' }}</n-button>
-            <small class="hint" v-if="!barcodeSupported">El lector de QR no está disponible; usa el código manual.</small>
+            <n-button
+              size="large"
+              tertiary
+              @click="toggleScan"
+            >
+              {{ scanning ? 'Detener cámara' : 'Usar cámara' }}
+            </n-button>
+            <small
+              v-if="!barcodeSupported"
+              class="hint"
+            >El lector de QR no está disponible; usa el código manual.</small>
           </div>
         </div>
       </div>
     </n-card>
 
-    <n-card v-if="order" class="order-card focus-only" :title="'Pedido ' + order.id">
-      <div v-if="!isPayable" class="prominent-warning">
-        <n-alert type="warning" title="No se puede cobrar este pedido" :show-icon="true">
-          <div class="warn-text" style="font-weight: 700; font-size: 18px; letter-spacing: .5px;">
+    <n-card
+      v-if="order"
+      class="order-card focus-only"
+      :title="'Pedido ' + order.id"
+    >
+      <div
+        v-if="!isPayable"
+        class="prominent-warning"
+      >
+        <n-alert
+          type="warning"
+          title="No se puede cobrar este pedido"
+          :show-icon="true"
+        >
+          <div
+            class="warn-text"
+            style="font-weight: 700; font-size: 18px; letter-spacing: .5px;"
+          >
             YA SE ENCUENTRA PAGO
           </div>
         </n-alert>
       </div>
       <div class="order-summary">
-        <div class="row big-code"><strong>Código:</strong> <span class="code">{{ order.shortCode }}</span></div>
-        <div class="row"><strong>Subtotal:</strong> <span class="money">{{ peso(subtotal) }}</span></div>
-        <div class="row" v-if="order.total && order.total !== subtotal"><strong>Total:</strong> <span class="money">{{ peso(order.total) }}</span></div>
+        <div class="row big-code">
+          <strong>Código:</strong> <span class="code">{{ order.shortCode }}</span>
+        </div>
+        <div class="row">
+          <strong>Subtotal:</strong> <span class="money">{{ peso(subtotal) }}</span>
+        </div>
+        <div
+          v-if="order.total && order.total !== subtotal"
+          class="row"
+        >
+          <strong>Total:</strong> <span class="money">{{ peso(order.total) }}</span>
+        </div>
       </div>
       <div class="items">
-        <div class="item" v-for="it in order.items" :key="it.id">
+        <div
+          v-for="it in order.items"
+          :key="it.id"
+          class="item"
+        >
           <span class="qty">x{{ it.qty }}</span>
           <span class="name">{{ it.name || it.id }}</span>
           <span class="price">{{ peso((it.unitPrice || 0) * (it.qty || 0)) }}</span>
@@ -47,8 +111,25 @@
       </div>
       <template #action>
         <n-space>
-          <n-button size="large" strong secondary @click="clearOrder">Cancelar</n-button>
-          <n-button size="large" strong type="primary" class="cta-pay" :loading="marking" @click="markPaid" :disabled="order.status !== 'pending_payment'">MARCAR PAGADO</n-button>
+          <n-button
+            size="large"
+            strong
+            secondary
+            @click="clearOrder"
+          >
+            Cancelar
+          </n-button>
+          <n-button
+            size="large"
+            strong
+            type="primary"
+            class="cta-pay"
+            :loading="marking"
+            :disabled="order.status !== 'pending_payment'"
+            @click="markPaid"
+          >
+            MARCAR PAGADO
+          </n-button>
         </n-space>
       </template>
     </n-card>
