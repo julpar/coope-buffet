@@ -4,6 +4,18 @@ import { API_BASE as ABS_BASE } from './base';
 import { platform } from './platform';
 export const apiOnline = ref<boolean | null>(null);
 
+type HttpError = Error & {
+  status?: number;
+  code?: string;
+  shortages?: unknown;
+};
+
+function httpError(message: string, opts?: { status?: number; code?: string; shortages?: unknown }): HttpError {
+  const err = new Error(message) as HttpError;
+  if (opts) Object.assign(err, opts);
+  return err;
+}
+
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
   const urlPath = path.startsWith('/') ? path : `/${path}`;
   const url = ABS_BASE + urlPath;
@@ -16,10 +28,7 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
     // customer endpoints at all. The backend would return a 503 HTML page
     // anyway, so short‑circuit here to prevent unnecessary network noise.
     if (platform.status.value === 'hard-offline') {
-      const err: any = new Error('Servicio no disponible');
-      err.status = 503;
-      err.code = 'HARD_OFFLINE';
-      throw err;
+      throw httpError('Servicio no disponible', { status: 503, code: 'HARD_OFFLINE' });
     }
     res = await fetch(url, {
       headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
@@ -39,10 +48,7 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
     // switch to the full-screen offline overlay instead of showing raw HTML.
     if (res.status === 503) {
       try { await platform.fetch(); } catch { void 0; }
-      const err: any = new Error('Servicio no disponible');
-      err.status = 503;
-      err.code = 'HARD_OFFLINE';
-      throw err;
+      throw httpError('Servicio no disponible', { status: 503, code: 'HARD_OFFLINE' });
     }
     // Try to parse a structured API error first
     let bodyText = '';
@@ -51,11 +57,11 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
     try {
       const json = bodyText ? JSON.parse(bodyText) : null;
       if (json && (json.code || json.message)) {
-        const err: any = new Error(json.message || `${res.status} ${res.statusText}`);
-        err.status = res.status;
-        err.code = json.code;
-        if (json.shortages) err.shortages = json.shortages;
-        throw err;
+        throw httpError(json.message || `${res.status} ${res.statusText}`, {
+          status: res.status,
+          code: json.code,
+          shortages: json.shortages,
+        });
       }
     } catch {
       // 2) If parsing failed (e.g., body wrapped with extra text), try to extract the first JSON object substring
@@ -66,11 +72,11 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
           try {
             const json = JSON.parse(bodyText.slice(start, end + 1));
             if (json && (json.code || json.message)) {
-              const err: any = new Error(json.message || `${res.status} ${res.statusText}`);
-              err.status = res.status;
-              err.code = json.code;
-              if (json.shortages) err.shortages = json.shortages;
-              throw err;
+              throw httpError(json.message || `${res.status} ${res.statusText}`, {
+                status: res.status,
+                code: json.code,
+                shortages: json.shortages,
+              });
             }
           } catch {
             // ignore and fall through

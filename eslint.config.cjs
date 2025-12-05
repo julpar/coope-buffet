@@ -84,8 +84,6 @@ module.exports = [
   // Project-wide rules
   {
     rules: {
-      // Relax some strict rules to warnings for incremental cleanup
-      'no-useless-escape': 'warn',
       'vue/multi-word-component-names': 'off',
       '@typescript-eslint/ban-ts-comment': 'warn',
     },
