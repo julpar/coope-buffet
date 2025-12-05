@@ -557,8 +557,8 @@ async function refreshOrders() {
   try {
     // Fetch counts per state; keep lightweight
     const [pendingList, paidList] = await Promise.all([
-      canSeeCashier.value ? staffApi.listOrders('pending_payment') : Promise.resolve<StaffOrder[]>([]),
-      canSeeFulfillment.value ? staffApi.listOrders('paid') : Promise.resolve<StaffOrder[]>([]),
+      canSeeCashier.value ? staffApi.listOrders('pending_payment') : Promise.resolve([]),
+      canSeeFulfillment.value ? staffApi.listOrders('paid') : Promise.resolve([]),
     ]);
     // Limit to last WINDOW_MINUTES minutes
     const recentPending = (pendingList || []).filter((o) =>

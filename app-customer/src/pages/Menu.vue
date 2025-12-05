@@ -198,14 +198,18 @@ function onRefreshMenu() {
 
 onMounted(() => {
   fetchMenu();
-  window.addEventListener('refresh-menu', onRefreshMenu as EventListener);
+  const onRefresh = (e: Event) => { void e; onRefreshMenu(); };
+  window.addEventListener('refresh-menu', onRefresh as unknown as (evt: Event) => void);
   // Close modal on Escape
   window.addEventListener('keydown', onKeyDown);
+  // store to remove later
+  (cleanup as unknown as Array<() => void>).push(() => window.removeEventListener('refresh-menu', onRefresh as unknown as (evt: Event) => void));
+  (cleanup as unknown as Array<() => void>).push(() => window.removeEventListener('keydown', onKeyDown));
 });
 
+const cleanup: Array<() => void> = [];
 onBeforeUnmount(() => {
-  window.removeEventListener('refresh-menu', onRefreshMenu as EventListener);
-  window.removeEventListener('keydown', onKeyDown);
+  cleanup.forEach(fn => { try { fn(); } catch { /* ignore */ } });
 });
 
 function onKeyDown(e: KeyboardEvent) {

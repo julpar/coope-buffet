@@ -16,7 +16,7 @@ function httpError(message: string, opts?: { status?: number; code?: string; sho
   return err;
 }
 
-async function http<T>(path: string, init?: RequestInit): Promise<T> {
+async function http<T>(path: string, init?: globalThis.RequestInit): Promise<T> {
   const urlPath = path.startsWith('/') ? path : `/${path}`;
   const url = ABS_BASE + urlPath;
   let res: Response;
