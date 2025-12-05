@@ -51,10 +51,6 @@ module.exports = [
     },
     rules: {
       ...tsPlugin.configs.recommended.rules,
-      // Type-aware: let TS handle globals/types like RequestInit, process, etc.
-      'no-undef': 'off',
-      // Do not fail CI on any usage; warn instead to allow incremental typing
-      '@typescript-eslint/no-explicit-any': 'warn',
     },
   },
 
@@ -75,9 +71,6 @@ module.exports = [
     },
     rules: {
       ...tsPlugin.configs.recommended.rules,
-      // Inside <script lang="ts"> blocks, rely on TS for globals
-      'no-undef': 'off',
-      '@typescript-eslint/no-explicit-any': 'warn',
     },
   },
 

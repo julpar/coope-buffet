@@ -40,7 +40,8 @@ export class CustomerPaymentsController {
     if (order.status !== 'pending_payment') throw new Error('order not pending');
 
     // Build and validate absolute return URLs for MercadoPago
-    const rawCustomerBase = String(process.env.SERVICE_URL_WEB_CUSTOMER || '').trim();
+    const g = globalThis as unknown as { process?: { env?: Record<string, string | undefined> } };
+    const rawCustomerBase = String(g.process?.env?.SERVICE_URL_WEB_CUSTOMER || '').trim();
     if (!rawCustomerBase) {
       throw new Error('CONFIG_ERROR: Set SERVICE_URL_WEB_CUSTOMER to a full http(s) URL (e.g., https://customer.example.com)');
     }
@@ -50,7 +51,7 @@ export class CustomerPaymentsController {
       throw new Error('CONFIG_ERROR: Set SERVICE_URL_WEB_CUSTOMER to a full http(s) URL (e.g., https://customer.example.com)');
     }
 
-    const rawPublicBase = String(process.env.SERVICE_URL_APP || '').trim();
+    const rawPublicBase = String(g.process?.env?.SERVICE_URL_APP || '').trim();
     if (!rawPublicBase) {
       throw new Error('CONFIG_ERROR: Set SERVICE_URL_APP to a full http(s) URL (e.g., https://api.example.com)');
     }

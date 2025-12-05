@@ -45,7 +45,8 @@ export class AuthController {
   @Public()
   async logout(@Res() res: Response) {
     // Clear the session cookie by setting an immediate expiration
-    const isProd = process.env.NODE_ENV === 'production';
+    const g = globalThis as unknown as { process?: { env?: Record<string, string | undefined> } };
+    const isProd = (g.process?.env?.NODE_ENV || '').toLowerCase() === 'production';
     res.cookie('session', '', {
       httpOnly: true,
       secure: isProd,
@@ -57,7 +58,8 @@ export class AuthController {
   }
 
   private setSessionCookie(res: Response, token: string) {
-    const isProd = process.env.NODE_ENV === 'production';
+    const g = globalThis as unknown as { process?: { env?: Record<string, string | undefined> } };
+    const isProd = (g.process?.env?.NODE_ENV || '').toLowerCase() === 'production';
     res.cookie('session', token, {
       httpOnly: true,
       secure: isProd,
@@ -68,3 +70,5 @@ export class AuthController {
     });
   }
 }
+
+/* eslint-env node */

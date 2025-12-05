@@ -18,7 +18,8 @@ export class MercadoPagoService {
   private readonly apiBase = 'https://api.mercadopago.com';
 
   private get accessToken(): string {
-    const tok = process.env.MP_ACCESS_TOKEN || '';
+    const g = globalThis as unknown as { process?: { env?: Record<string, string | undefined> } };
+    const tok = g.process?.env?.MP_ACCESS_TOKEN || '';
     if (!tok) this.logger.warn('MP_ACCESS_TOKEN is not set');
     return tok;
   }

@@ -1,8 +1,12 @@
+/* eslint-env node */
 import 'reflect-metadata';
 // Ensure backend/.env is loaded regardless of current working directory
 import path from 'path';
 import dotenv from 'dotenv';
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+const gMain = globalThis as unknown as { process?: { env?: Record<string, string | undefined>; cwd?: () => string } };
+// Resolve .env relative to the compiled dist directory (../.env from current working dir as fallback)
+const baseDir = gMain.process?.cwd ? gMain.process.cwd() : '.';
+dotenv.config({ path: path.resolve(baseDir, '../.env') });
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
@@ -39,14 +43,14 @@ async function bootstrap() {
     'http://localhost:8081', // web-staff
   ];
 
-  const envOrigins = (process.env.CORS_ORIGINS || '')
+  const envOrigins = (gMain.process?.env?.CORS_ORIGINS || '')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
 
   const allowedOrigins = [...new Set([...defaultOrigins, ...envOrigins])];
 
-  const allowAll = String(process.env.CORS_ALLOW_ALL || '').toLowerCase() === 'true';
+  const allowAll = String(gMain.process?.env?.CORS_ALLOW_ALL || '').toLowerCase() === 'true';
 
   // Pre-compute suffix patterns like .example.com or *.example.com
   const originSuffixes = allowedOrigins
@@ -97,7 +101,8 @@ async function bootstrap() {
   // Platform status enforcement for customer-facing routes
   app.use(platformStatusMiddleware());
 
-  const port = process.env.PORT ? Number(process.env.PORT) : 3000;
+  const portEnv = gMain.process?.env?.PORT;
+  const port = portEnv ? Number(portEnv) : 3000;
   await app.listen(port);
   console.log(`Server running on http://0.0.0.0:${port}`);
 }
