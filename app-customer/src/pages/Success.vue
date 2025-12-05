@@ -215,7 +215,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, h, watch, computed, nextTick } from 'vue';
+import { onMounted, onUnmounted, ref, h, watch, computed, nextTick, type VNode } from 'vue';
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
 import type { CustomerOrder } from '../types';
 import { customerApi } from '../lib/api';
@@ -245,7 +245,7 @@ const { message } = createDiscreteApi(['message']);
 // Discrete dialog for nicer confirmations (no provider required here)
 const { dialog } = createDiscreteApi(['dialog']);
 
-function confirmDialog(opts: { title: string; content: any; positiveText?: string; negativeText?: string }): Promise<boolean> {
+function confirmDialog(opts: { title: string; content: VNode | (() => VNode); positiveText?: string; negativeText?: string }): Promise<boolean> {
   return new Promise((resolve) => {
     const d = dialog.warning({
       title: opts.title,
@@ -403,7 +403,7 @@ async function onCancelClick() {
     const currId = String(order.value?.id || route.params.id || '');
     if (currId) {
       const fresh = await customerApi.getOrder(currId);
-      if (fresh) order.value = fresh as any;
+      if (fresh) order.value = fresh;
     }
   } catch { void 0; }
   const st = order.value?.status;

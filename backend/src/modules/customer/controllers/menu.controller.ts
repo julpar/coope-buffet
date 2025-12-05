@@ -15,7 +15,8 @@ export class MenuController {
     const data = await this.menu.publicMenu();
     const catCount = data.categories.length;
     const itemCount = data.categories.reduce((acc, c) => acc + (c.items?.length || 0), 0);
-    this.logger.debug(`menu fetched categories=${catCount} items=${itemCount} rid=${(req as any).id ?? '-'}`);
+    const rid = (req as Request & { id?: string }).id ?? '-';
+    this.logger.debug(`menu fetched categories=${catCount} items=${itemCount} rid=${rid}`);
     return data;
   }
 }

@@ -45,12 +45,13 @@ onMounted(async () => {
     // MercadoPago sometimes sends duplicated query params (e.g., external_reference twice)
     // Vue Router represents duplicates as an array; also, some proxies join as comma-separated.
     // Normalize by picking the first non-empty value and, if comma-separated, the first token.
-    function pickRef(val: any): string {
+    function pickRef(val: unknown): string {
       let raw = '';
       if (Array.isArray(val)) {
-        raw = val.find((v) => !!String(v || '').trim()) ?? '';
+        const found = val.find((v) => !!String(v ?? '').trim());
+        raw = String(found ?? '');
       } else {
-        raw = String(val || '');
+        raw = String(val ?? '');
       }
       raw = raw.trim();
       if (raw.includes(',')) {
@@ -67,10 +68,11 @@ onMounted(async () => {
     }
     // Resolve order by shortcode and navigate to the standard success page
     const order = await customerApi.getOrderByCode(externalRef);
-    targetId = order.id as unknown as string;
+    targetId = order.id;
     await router.replace(`/success/${encodeURIComponent(targetId)}`);
-  } catch (e: any) {
-    error.value = e?.message || 'No se pudo recuperar el pedido.';
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String((e as { message?: unknown })?.message || '');
+    error.value = msg || 'No se pudo recuperar el pedido.';
   } finally {
     loading.value = false;
   }

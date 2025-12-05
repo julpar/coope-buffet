@@ -64,7 +64,7 @@ export class MercadoPagoService {
       payment_methods: {
         excluded_payment_types: excludedTypes,
       },
-    } as any;
+    };
 
     const resp = await fetch(`${this.apiBase}/checkout/preferences`, {
       method: 'POST',
@@ -83,7 +83,7 @@ export class MercadoPagoService {
     return { id: json.id, init_point: json.init_point, sandbox_init_point: json.sandbox_init_point };
   }
 
-  async getPayment(paymentId: string): Promise<any> {
+  async getPayment(paymentId: string): Promise<unknown> {
     const resp = await fetch(`${this.apiBase}/v1/payments/${encodeURIComponent(paymentId)}`, {
       headers: { 'Authorization': `Bearer ${this.accessToken}` },
     });
@@ -92,6 +92,6 @@ export class MercadoPagoService {
       this.logger.error(`getPayment failed: ${resp.status} ${resp.statusText} ${t}`);
       throw new Error('mercadopago_payment_fetch_failed');
     }
-    return resp.json();
+    return await resp.json();
   }
 }

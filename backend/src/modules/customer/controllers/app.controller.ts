@@ -31,8 +31,8 @@ export class AppController {
     try {
       const raw = await r.get('platform:payment_methods');
       if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) paymentMethods = parsed.filter((m: any) => m === 'online' || m === 'cash');
+        const parsed = JSON.parse(raw) as unknown;
+        if (Array.isArray(parsed)) paymentMethods = parsed.filter((m): m is PaymentMethod => m === 'online' || m === 'cash');
       }
     } catch { /* no-op */ void 0; }
     return {
