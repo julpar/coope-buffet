@@ -211,7 +211,8 @@ async function refresh() {
       paymentMethods: (st.paymentMethods && st.paymentMethods.length ? st.paymentMethods : ['online','cash']),
       // Filter out account_money from the UI toggles (always enabled server-side)
       mpAllowedPaymentTypes: Array.isArray(st.mpAllowedPaymentTypes) && st.mpAllowedPaymentTypes.length
-        ? (st.mpAllowedPaymentTypes as any).filter((t: string) => t !== 'account_money')
+        ? (st.mpAllowedPaymentTypes as Array<'account_money' | 'credit_card' | 'debit_card' | 'prepaid_card'>)
+            .filter((t): t is 'credit_card' | 'debit_card' | 'prepaid_card' => t !== 'account_money')
         : ['credit_card','debit_card','prepaid_card'],
     };
   } catch {

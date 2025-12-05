@@ -101,7 +101,7 @@
 </template>
 
 <script setup lang="ts">
-import { h, computed, ref, onMounted } from 'vue';
+import { h, computed, ref, onMounted, type VNode } from 'vue';
 import { NTag, NButton, useMessage, type DataTableColumns } from 'naive-ui';
 import { PersonAddOutline, TrashOutline, SearchOutline } from '@vicons/ionicons5';
 import { usersApi, authApi, type StaffUser } from '../lib/api';
@@ -137,11 +137,13 @@ const columns: DataTableColumns<StaffUser> = [
   { title: 'Nombre', key: 'nickname', minWidth: 200, ellipsis: true },
   { title: 'Roles', key: 'roles', minWidth: 240, render: (row: StaffUser) => h('div', { style: 'display:flex;flex-wrap:wrap;gap:6px' }, row.roles.map(r => h(NTag, { size: 'small' }, { default: () => r }))) },
   { title: 'ID', key: 'id', width: 160 },
-  { title: 'Acciones', key: 'actions', width: 300, render: (row: StaffUser) => h('div', { style: 'display:flex; gap:8px; white-space: nowrap;' }, [
-      isAdmin.value ? h(NButton, { quaternary: true, size: 'small', onClick: () => viewQR(row) }, { default: () => 'Ver QR' }) : null,
-      h(NButton, { quaternary: true, size: 'small', onClick: () => editUser(row) }, { default: () => 'Editar' }),
-      h(NButton, { quaternary: true, size: 'small', type: 'error', onClick: () => removeUser(row) }, { default: () => 'Eliminar', icon: () => h('i', { class: 'n-icon' }, h(TrashOutline)) })
-    ].filter(Boolean) as any)
+  { title: 'Acciones', key: 'actions', width: 300, render: (row: StaffUser) => h('div', { style: 'display:flex; gap:8px; white-space: nowrap;' }, (
+      [
+        isAdmin.value ? h(NButton, { quaternary: true, size: 'small', onClick: () => viewQR(row) }, { default: () => 'Ver QR' }) : null,
+        h(NButton, { quaternary: true, size: 'small', onClick: () => editUser(row) }, { default: () => 'Editar' }),
+        h(NButton, { quaternary: true, size: 'small', type: 'error', onClick: () => removeUser(row) }, { default: () => 'Eliminar', icon: () => h('i', { class: 'n-icon' }, h(TrashOutline)) })
+      ] as Array<VNode | null>
+    ).filter((n): n is VNode => n !== null))
   }
 ];
 
