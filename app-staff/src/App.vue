@@ -316,7 +316,6 @@ const loggingOut = ref(false);
 // Platform status banner (visible to every logged-in user on soft/hard offline)
 const platformStatus = ref<PlatformStatusResponse | null>(null);
 const platformTimer = ref<number | null>(null);
-const isAdminUser = computed(() => (currentUser.value?.roles || []).includes('ADMIN'));
 const showPlatformBanner = computed(() => {
   // Only show once the app knows there's a logged-in user
   if (!currentUser.value) return false;

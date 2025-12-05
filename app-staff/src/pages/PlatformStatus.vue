@@ -214,7 +214,7 @@ async function refresh() {
         ? (st.mpAllowedPaymentTypes as any).filter((t: string) => t !== 'account_money')
         : ['credit_card','debit_card','prepaid_card'],
     };
-  } catch (e: any) {
+  } catch {
     msg.error('No se pudo cargar el estado');
   } finally {
     loading.value = false;
@@ -238,7 +238,7 @@ async function save() {
     const res = await platformApi.setStatus(body);
     current.value = { status: res.status, message: res.message, offlineUntil: res.offlineUntil, paymentMethods: res.paymentMethods, mpAllowedPaymentTypes: res.mpAllowedPaymentTypes };
     msg.success('Estado actualizado');
-  } catch (e: any) {
+  } catch (e: unknown) {
     try {
       const msgTxt = String(e?.message || '');
       if (msgTxt.includes('{') && msgTxt.includes('}')) {

@@ -600,19 +600,7 @@ onMounted(async () => {
 
 type Row = Item & { lowStockThreshold?: number };
 
-const outCols: DataTableColumns<Row> = [
-  { title: 'Plato', key: 'name' },
-  { title: 'Categoría', key: 'categoryId', width: 140 },
-  { title: 'Stock', key: 'stock', width: 100, align: 'right', render: () => h(NTag, { type: 'error', size: 'small' }, { default: () => '0' }) },
-  { title: 'Umbral', key: 'lowStockThreshold', width: 110, align: 'right' },
-];
-
-const lowCols: DataTableColumns<Row> = [
-  { title: 'Plato', key: 'name' },
-  { title: 'Categoría', key: 'categoryId', width: 140 },
-  { title: 'Stock', key: 'stock', width: 100, align: 'right', render: (row) => h(NTag, { type: 'warning', size: 'small' }, { default: () => String(row.stock ?? 0) }) },
-  { title: 'Umbral', key: 'lowStockThreshold', width: 110, align: 'right' },
-];
+// removed unused outCols/lowCols (grouped variants below are used)
 
 // Grouped columns (category column removed, since grouping shows it in header)
 const outColsGrouped: DataTableColumns<Row> = [
@@ -637,7 +625,7 @@ async function loadFeedback() {
   try {
     const res = await staffApi.getFeedbackSummary();
     summary.value = res as FeedbackSummary;
-  } catch (e) {
+  } catch {
     // keep silent
     summary.value = { count: 0, overallAvg: 0, perCategory: { ease: 0, speed: 0, quality: 0 }, latestBad: [] };
   } finally {

@@ -52,7 +52,7 @@ onMounted(async () => {
     await authApi.perm(tok);
     state.value = 'ok';
     setTimeout(() => router.replace('/'), 300);
-  } catch (e) {
+  } catch {
     state.value = 'err';
   }
 });

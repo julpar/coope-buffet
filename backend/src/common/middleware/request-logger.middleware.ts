@@ -6,7 +6,7 @@ const httpLogger = new Logger('HTTP');
 export function requestLoggerMiddleware() {
   return (req: Request, res: Response, next: NextFunction) => {
     const start = process.hrtime.bigint();
-    const id = (req as any).id as string | undefined;
+    const id = req.id;
     const method = req.method;
     const url = req.originalUrl || req.url;
     const ip = req.ip;

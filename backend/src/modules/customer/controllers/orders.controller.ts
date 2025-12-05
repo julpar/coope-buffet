@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Logger, Param, Post, BadRequestException } from '@nestjs/common';
 import { Public } from '../../../common/auth/auth.decorators';
-import { OrdersService, Order, InsufficientStockError } from '../../core/orders.service';
+import { OrdersService, Order } from '../../core/orders.service';
 
 @Controller('orders')
 export class CustomerOrdersController {
@@ -28,10 +28,15 @@ export class CustomerOrdersController {
       });
       this.logger.log(`create order id=${o.id} channel=${o.channel} total=${o.total}`);
       return o;
-    } catch (e: any) {
-      if (e?.name === 'InsufficientStockError' && e?.shortages) {
+    } catch (e: unknown) {
+      if (
+        typeof e === 'object' && e !== null &&
+        'name' in e && (e as { name?: unknown }).name === 'InsufficientStockError' &&
+        'shortages' in e
+      ) {
         // 400 with machine-friendly code and shortages list
-        throw new BadRequestException({ code: 'INSUFFICIENT_STOCK', message: 'Not enough stock for some items', shortages: e.shortages });
+        const shortages = (e as { shortages?: unknown }).shortages;
+        throw new BadRequestException({ code: 'INSUFFICIENT_STOCK', message: 'Not enough stock for some items', shortages });
       }
       throw e;
     }

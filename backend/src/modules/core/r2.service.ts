@@ -61,7 +61,6 @@ export class R2Service {
       throw new Error('R2 not configured');
     }
     const safeName = (opts.filename || 'file').replace(/[^a-zA-Z0-9_.-]/g, '_');
-    const ext = safeName.includes('.') ? safeName.split('.').pop() : undefined;
     const uid = Math.random().toString(36).slice(2, 10);
     // Flat path under configured prefix (no date subfolders)
     const prefix = this.keyPrefix ? `${this.keyPrefix.replace(/\/+$/,'')}/` : '';

@@ -282,7 +282,7 @@ async function lookup() {
     if (o?.status !== 'paid') {
       msg.warning('El pedido no está pagado. Solo los pedidos pagados pueden completarse.');
     }
-  } catch (e: any) {
+  } catch {
     msg.error('No se encontró el pedido para ese código.');
     order.value = null;
   } finally {
@@ -352,7 +352,7 @@ async function markFulfilled() {
     order.value = { ...(order.value as any), status: 'fulfilled' };
     // Auto-clear after a short delay to continue workflow
     setTimeout(() => clearOrder(), 400);
-  } catch (e: any) {
+  } catch {
     msg.error('No se pudo marcar como completado.');
   } finally {
     marking.value = false;
@@ -514,7 +514,7 @@ function onItemPointerMove(id: string | number, e: PointerEvent) {
   }
 }
 
-function onItemPointerUp(id: string | number, e: PointerEvent) {
+function onItemPointerUp(id: string | number) {
   if (draggingId.value !== String(id)) return;
   const key = String(id);
   const dx = dragDx.value;

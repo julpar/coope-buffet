@@ -1,6 +1,6 @@
-import { Body, Controller, Get, Post, Query, Res } from '@nestjs/common';
-import type { Response } from 'express';
-import { UserService, type User } from '../../core/user.service';
+import { Body, Controller, Get, Post, Query, Res, Req } from '@nestjs/common';
+import type { Response, Request } from 'express';
+import { UserService } from '../../core/user.service';
 import { Public } from '../../../common/auth/auth.decorators';
 
 @Controller('/auth')
@@ -9,9 +9,9 @@ export class AuthController {
 
   @Get('status')
   @Public()
-  async status(@Res({ passthrough: true }) res: Response) {
+  async status(@Res({ passthrough: true }) res: Response, @Req() req: Request) {
     const adminExists = await this.users.adminExists();
-    const user = (res.req as any).user as User | undefined;
+    const user = req.user;
     return {
       adminExists,
       currentUser: user ? { id: user.id, nickname: user.nickname, roles: user.roles } : null,

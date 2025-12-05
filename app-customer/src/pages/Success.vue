@@ -390,19 +390,6 @@ function stopPolling() {
   }
 }
 
-function onBackClick() {
-  // Warn the customer that returning to the menu will drop the cart/order
-  // This avoids losing a potentially paid order without explicit consent.
-  const status = order.value?.status || '';
-  const msg =
-    '¿Seguro que querés volver al menú?\n' +
-    'Se perderá el carrito y el pedido actual' +
-    (status ? ` (estado: ${statusLabel(status)})` : '') +
-    '.\nSi ya realizaste el pago, el pedido también se perderá.';
-  if (window.confirm(msg)) {
-    router.push('/');
-  }
-}
 
 // New explicit actions for buttons
 function goToMenu() {
@@ -557,7 +544,7 @@ async function submitFeedback() {
     message.success('¡Gracias por tu opinión!');
     // Mark as submitted so we don't prompt again on reload
     setFbSubmitted(order.value.id);
-  } catch (e: any) {
+  } catch {
     // If already submitted, just close
     showFeedback.value = false;
   } finally {

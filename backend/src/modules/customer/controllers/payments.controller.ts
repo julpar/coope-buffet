@@ -2,7 +2,7 @@ import { Body, Controller, Post, Logger, Query, BadRequestException } from '@nes
 import { Public } from '../../../common/auth/auth.decorators';
 import { OrdersService } from '../../core/orders.service';
 import { MercadoPagoService } from '../../payments/mercadopago.service';
-import { MpPaymentType, MP_DEFAULT_ALLOWED_TYPES, MP_TOGGLEABLE_ALLOWED_TYPES } from '../../payments/mp.types';
+import { MpPaymentType, MP_DEFAULT_ALLOWED_TYPES, isMpPaymentType } from '../../payments/mp.types';
 import { RedisService } from '../../core/redis.service';
 
 @Controller('payments/mercadopago')
@@ -24,8 +24,8 @@ export class CustomerPaymentsController {
     try {
       const raw = await r.get('platform:payment_methods');
       if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) methods = parsed.filter((m: any) => m === 'online' || m === 'cash');
+        const parsed = JSON.parse(raw) as unknown;
+        if (Array.isArray(parsed)) methods = parsed.filter((m: unknown): m is 'online' | 'cash' => m === 'online' || m === 'cash');
       }
     } catch {}
     if (status !== 'online') {
@@ -76,16 +76,16 @@ export class CustomerPaymentsController {
     try {
       const raw = await r.get('platform:mp_allowed_types');
       if (raw) {
-        const parsed = JSON.parse(raw);
+        const parsed = JSON.parse(raw) as unknown;
         if (Array.isArray(parsed)) {
-          // Accept only the fixed set of allow-able types (default 4) and honor the case of only account_money
-          const set = new Set<string>(MP_DEFAULT_ALLOWED_TYPES as unknown as string[]);
+          // Accept only the fixed set of allow-able types (default 4) and honor the case of including account_money
           const filtered = parsed
-            .map((v: any) => (typeof v === 'string' ? v.trim() : ''))
-            .filter((s: string) => !!s && set.has(s));
-          const withAccount = Array.from(new Set(['account_money', ...filtered]));
+            .map((v: unknown) => (typeof v === 'string' ? v.trim() : ''))
+            .filter((s: string): s is string => s.length > 0)
+            .filter((s: string): s is MpPaymentType => isMpPaymentType(s));
+          const withAccount = Array.from(new Set<MpPaymentType>([MpPaymentType.AccountMoney, ...filtered]));
           if (withAccount.length > 0) {
-            allowedPaymentTypes = withAccount as MpPaymentType[];
+            allowedPaymentTypes = withAccount;
           }
         }
       }
@@ -114,10 +114,14 @@ export class CustomerPaymentsController {
   // Webhook for asynchronous notifications
   @Post('webhook')
   @Public()
-  async webhook(@Body() body: any, @Query() query: any) {
+  async webhook(@Body() body: Record<string, unknown>, @Query() query: Record<string, unknown>) {
     // MP may send id in different places
-    const paymentId = body?.data?.id || query?.['data.id'] || query?.id || body?.id;
-    const type = body?.type || query?.type || query?.topic;
+    const paymentId =
+      (typeof body?.data === 'object' && body?.data && 'id' in (body.data as object) ? (body.data as { id?: unknown }).id : undefined) ||
+      (query?.['data.id'] as unknown) ||
+      (query?.id as unknown) ||
+      (body?.id as unknown);
+    const type = (body?.type as unknown) || (query?.type as unknown) || (query?.topic as unknown);
 
     if (type !== 'payment' && type !== 'merchant_order') {
       return { ok: true };
@@ -126,20 +130,20 @@ export class CustomerPaymentsController {
 
     try {
       const p = await this.mp.getPayment(String(paymentId));
-      const status = p?.status;
-      const externalRef: string | undefined = p?.external_reference;
+      const status = p.status;
+      const externalRef: string | undefined = p.external_reference;
       if (!externalRef) return { ok: true };
       if (status === 'approved') {
         const order = await this.orders.getByCode(String(externalRef));
         if (order) {
-          await this.orders.markPaid(order.id, { externalId: String(p?.id || paymentId) });
+          await this.orders.markPaid(order.id, { externalId: String(p.id || paymentId) });
           this.logger.log(`Order ${order.id} marked paid via MP webhook payment=${p?.id}`);
         } else {
           this.logger.warn(`Webhook approved but order not found for code=${externalRef}`);
         }
       }
     } catch (e) {
-      this.logger.error('MP webhook error', e as any);
+      this.logger.error(`MP webhook error: ${e instanceof Error ? e.message : String(e)}`);
     }
 
     return { ok: true };

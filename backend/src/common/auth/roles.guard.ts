@@ -1,4 +1,5 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import type { Request } from 'express';
 import { Reflector } from '@nestjs/core';
 import { META_PUBLIC, META_ROLES } from './auth.decorators';
 import type { AllowedRoles } from './auth.decorators';
@@ -23,8 +24,8 @@ export class RolesGuard implements CanActivate {
       this.reflector.get<AllowedRoles>(META_ROLES, handler) ??
       this.reflector.get<AllowedRoles>(META_ROLES, klass);
 
-    const request = context.switchToHttp().getRequest();
-    const user = (request as any).user as { roles?: string[] } | undefined;
+    const request = context.switchToHttp().getRequest<Request>();
+    const user = request.user;
 
     // If no roles metadata is present, deny by default to force explicit Public/Role annotation
     if (!roles || roles.length === 0) {

@@ -17,7 +17,7 @@ export function requestIdMiddleware() {
   return (req: Request, res: Response, next: NextFunction) => {
     const incoming = (req.headers['x-request-id'] || req.headers['x-correlation-id']) as string | undefined;
     const id = (incoming && String(incoming)) || genId();
-    (req as any).id = id;
+    req.id = id;
     res.setHeader('X-Request-Id', id);
     next();
   };

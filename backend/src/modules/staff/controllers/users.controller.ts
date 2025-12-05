@@ -10,7 +10,6 @@ import {
     NotFoundException
 } from '@nestjs/common';
 import {UserService, type Role} from '../../core/user.service';
-import {API_PREFIX} from '../../../common/constants';
 import {Roles} from '../../../common/auth/auth.decorators';
 
 // Routes under /v1/staff/users (versioned prefix is set globally)
@@ -47,7 +46,6 @@ export class UsersController {
         const user = await this.users.createUser(nickname, roles);
 
         const staffBase = (process.env.SERVICE_URL_WEB_STAFF || '').trim();
-        console.log(staffBase);
         const permToken = user.token.startsWith('perm:') ? user.token.slice(5) : user.token;
         let permUrl: string;
 

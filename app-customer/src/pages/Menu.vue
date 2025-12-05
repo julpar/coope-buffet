@@ -184,7 +184,7 @@ async function fetchMenu() {
       return { ...c, items };
     });
     data.glutenFree = (res.glutenFree || []).map(normalizeAvailability);
-  } catch (e) {
+  } catch {
     // keep previous data if request fails
   } finally {
     loading.value = false;

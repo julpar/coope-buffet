@@ -46,12 +46,12 @@ const filtered = computed(() => rows.value.filter(r =>
   !q.value || r.name.toLowerCase().includes(q.value.toLowerCase())
 ));
 
-const columns: DataTableColumns<any> = [
+const columns: DataTableColumns<{ name: string; stock: number; unit: string }> = [
   { title: 'Ingrediente', key: 'name' },
   { title: 'Stock', key: 'stock', width: 120 },
   { title: 'Unidad', key: 'unit', width: 120 },
   {
-    title: 'Acciones', key: 'actions', width: 200, render: (row: any) => (
+    title: 'Acciones', key: 'actions', width: 200, render: () => (
       h('div', { style: 'display:flex; gap:8px' }, [
         h(NButton, { quaternary: true, size: 'small' }, { default: () => 'Editar', icon: () => h(NIcon, null, { default: () => h(CreateOutline) }) }),
         h(NButton, { quaternary: true, size: 'small', type: 'error' }, { default: () => 'Eliminar', icon: () => h(NIcon, null, { default: () => h(TrashOutline) }) })

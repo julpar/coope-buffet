@@ -179,7 +179,7 @@ async function lookup() {
     if (o?.status !== 'pending_payment') {
       msg.warning('El pedido no está pendiente de pago.');
     }
-  } catch (e: any) {
+  } catch {
     msg.error('No se encontró el pedido para ese código.');
     order.value = null;
   } finally {
@@ -197,7 +197,7 @@ async function markPaid() {
     msg.success('Pago registrado. Enviado a preparación.');
     // Prepare immediately for the next customer
     resetForNext(true);
-  } catch (e: any) {
+  } catch {
     msg.error('No se pudo marcar como pagado.');
   } finally {
     marking.value = false;
@@ -230,7 +230,7 @@ async function startScan() {
     if (videoEl.value) videoEl.value.srcObject = mediaStream;
     scanning.value = true;
     tick();
-  } catch (e) {
+  } catch {
     // Permission denied; ignore
   }
 }
@@ -299,18 +299,6 @@ const subtotal = computed(() => {
 
 // Payable and humanized status for UI
 const isPayable = computed(() => (order.value?.status === 'pending_payment'));
-const statusLabel = computed(() => {
-  const s = String(order.value?.status || '').toLowerCase();
-  const map: Record<string, string> = {
-    pending_payment: 'Pendiente de pago',
-    paid: 'Pagado',
-    preparing: 'En preparación',
-    ready: 'Listo para retirar',
-    delivered: 'Entregado',
-    cancelled: 'Cancelado'
-  };
-  return map[s] || (s ? s : 'Desconocido');
-});
 </script>
 
 <style scoped>

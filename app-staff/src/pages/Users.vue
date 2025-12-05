@@ -119,7 +119,7 @@ const isAdmin = computed(() => roles.value.includes('ADMIN'));
 async function loadUsers() {
   try {
     rows.value = await usersApi.list();
-  } catch (e) {
+  } catch {
     message.error('No se pudieron cargar los usuarios');
   }
 }
@@ -160,7 +160,7 @@ function editUser(u: StaffUser) {
   editingUser.value = u;
   showEdit.value = true;
 }
-async function onSaved(_u: StaffUser) {
+async function onSaved() {
   // Reload list so tags reflect changes
   await loadUsers();
 }
