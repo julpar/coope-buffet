@@ -1,4 +1,4 @@
-import type { Category, Item } from '../types';
+import type { Category, Item, StaffOrder, FeedbackSummary } from '../types';
 import { ref } from 'vue';
 
 // Build absolute API base from environment variables.
@@ -78,8 +78,12 @@ async function callApi<T>(fn: () => Promise<T>): Promise<T> {
     apiOnline.value = true;
     isApiOffline.value = false;
     return res;
-  } catch (e: any) {
-    const status = typeof e?.status === 'number' ? e.status : undefined;
+  } catch (e: unknown) {
+    let status: number | undefined;
+    if (e && typeof e === 'object' && 'status' in e) {
+      const s = (e as { status?: unknown }).status;
+      if (typeof s === 'number') status = s;
+    }
     if (!status || status >= 500) {
       apiOnline.value = false;
       isApiOffline.value = true; // reuse flag to toggle the existing offline banner
@@ -106,22 +110,22 @@ export const staffApi = {
     ),
   // Orders (no fallback; banner indicates offline)
   listOrders: (state: 'pending_payment' | 'paid' | 'fulfilled' | 'all' = 'paid') =>
-    callApi<any[]>(() => {
+    callApi<StaffOrder[]>(() => {
       const qs = state ? `?state=${encodeURIComponent(state)}` : '';
-      return http(`/staff/orders${qs}`);
+      return http<StaffOrder[]>(`/staff/orders${qs}`);
     }),
   // Feedback summary for dashboard (all logged-in roles can access)
-  getFeedbackSummary: () => callApi<any>(() => http('/staff/feedback/summary')),
+  getFeedbackSummary: () => callApi<FeedbackSummary>(() => http('/staff/feedback/summary')),
   lookupOrderByCode: (code: string) =>
-    callApi<any>(() => http(`/staff/orders/lookup?code=${encodeURIComponent(code)}`)),
+    callApi<StaffOrder>(() => http(`/staff/orders/lookup?code=${encodeURIComponent(code)}`)),
   markOrderPaid: (id: string, externalId?: string | null) =>
-    callApi<any>(() => http(`/staff/orders/${encodeURIComponent(id)}/paid`, { method: 'POST', body: JSON.stringify({ externalId: externalId ?? null }) })),
+    callApi<StaffOrder>(() => http(`/staff/orders/${encodeURIComponent(id)}/paid`, { method: 'POST', body: JSON.stringify({ externalId: externalId ?? null }) })),
   markOrderPaidByCode: (code: string, externalId?: string | null) =>
-    callApi<any>(() => http(`/staff/orders/paid-by-code`, { method: 'POST', body: JSON.stringify({ code, externalId: externalId ?? null }) })),
+    callApi<StaffOrder>(() => http(`/staff/orders/paid-by-code`, { method: 'POST', body: JSON.stringify({ code, externalId: externalId ?? null }) })),
   setOrderFulfillment: (id: string, fulfilled: boolean) =>
-    callApi<any>(() => http(`/staff/orders/${encodeURIComponent(id)}/fulfillment`, { method: 'POST', body: JSON.stringify({ fulfilled }) })),
+    callApi<StaffOrder>(() => http(`/staff/orders/${encodeURIComponent(id)}/fulfillment`, { method: 'POST', body: JSON.stringify({ fulfilled }) })),
   cancelOrder: (id: string) =>
-    callApi<any>(() => http(`/staff/orders/${encodeURIComponent(id)}/cancel`, { method: 'POST' })),
+    callApi<{ ok: true }>(() => http(`/staff/orders/${encodeURIComponent(id)}/cancel`, { method: 'POST' })),
   // Images: request a presigned upload URL and upload the file, returning the public URL
   uploadImage: async (file: File): Promise<{ url: string }> => {
     // 1) Ask backend for a presigned URL

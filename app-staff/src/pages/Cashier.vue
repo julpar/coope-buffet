@@ -141,13 +141,15 @@ import { onBeforeUnmount, onMounted, ref, computed } from 'vue';
 import { useMessage } from 'naive-ui';
 import { staffApi } from '../lib/api';
 
-type Order = any; // use backend shape
+// Minimal shape used by this page (matches what the staff API returns for cashier lookups)
+type CashierItem = { unitPrice?: number; qty?: number };
+type CashierOrder = { shortCode: string; status: string; items?: CashierItem[] };
 
 const msg = useMessage();
 const manualCode = ref('');
 const loading = ref(false);
 const marking = ref(false);
-const order = ref<Order | null>(null);
+const order = ref<CashierOrder | null>(null);
 
 // Money formatting: backend/client prices are in ARS currency units (not cents)
 function peso(amount: number) {
@@ -158,7 +160,10 @@ function peso(amount: number) {
 const videoEl = ref<HTMLVideoElement | null>(null);
 const scanning = ref(false);
 const barcodeSupported = 'BarcodeDetector' in window;
-let bd: any = null;
+// Minimal local typing for BarcodeDetector to avoid `any`
+type BarcodeDetection = { rawValue?: string; raw?: string };
+type BarcodeDetectorT = { detect(video: HTMLVideoElement): Promise<BarcodeDetection[]> };
+let bd: BarcodeDetectorT | null = null;
 let rafId: number | null = null;
 let mediaStream: MediaStream | null = null;
 
@@ -292,9 +297,9 @@ function resetForNext(restartScan = false) {
 
 // Subtotal for focused view (currency units)
 const subtotal = computed(() => {
-  const o = order.value as any;
+  const o = order.value;
   if (!o?.items) return 0;
-  return o.items.reduce((sum: number, it: any) => sum + (it.unitPrice || 0) * (it.qty || 1), 0);
+  return o.items.reduce((sum: number, it: CashierItem) => sum + (Number(it.unitPrice || 0)) * (Number(it.qty || 1)), 0);
 });
 
 // Payable and humanized status for UI

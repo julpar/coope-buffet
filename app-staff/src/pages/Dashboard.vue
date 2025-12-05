@@ -557,18 +557,19 @@ async function refreshOrders() {
   try {
     // Fetch counts per state; keep lightweight
     const [pendingList, paidList] = await Promise.all([
-      canSeeCashier.value ? staffApi.listOrders('pending_payment') : Promise.resolve([]),
-      canSeeFulfillment.value ? staffApi.listOrders('paid') : Promise.resolve([]),
+      canSeeCashier.value ? staffApi.listOrders('pending_payment') : Promise.resolve<StaffOrder[]>([]),
+      canSeeFulfillment.value ? staffApi.listOrders('paid') : Promise.resolve<StaffOrder[]>([]),
     ]);
     // Limit to last WINDOW_MINUTES minutes
-    const recentPending = (pendingList || []).filter((o: any) => isWithinWindow(o?.createdAt));
+    const recentPending = (pendingList || []).filter((o) =>
+      isWithinWindow((o as { createdAt?: string | number | Date }).createdAt)
+    );
     pendingPaymentCount.value = recentPending.length;
     // In case backend returns some fulfilled within 'paid', filter by fulfillment flag if present
-    const awaiting = (paidList || []).filter((o: any) => !o.fulfillment);
+    const awaiting = (paidList || []).filter((o) => !(o as { fulfillment?: unknown }).fulfillment);
     // For fulfillment we want ALL awaiting orders (no time window)
     awaitingFulfillmentCount.value = awaiting.length;
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.warn('Error loading order counts', e);
     // Keep previous values on error
   } finally {
