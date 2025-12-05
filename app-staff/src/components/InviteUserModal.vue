@@ -191,9 +191,9 @@ function copyPerm() {
 async function sharePerm() {
   try {
     if (!permUrl.value) return;
-    // @ts-ignore
+    // @ts-expect-error: Web Share API is not in TS lib for all targets
     if (navigator.share) {
-      // @ts-ignore
+      // @ts-expect-error: Web Share API types may be missing
       await navigator.share({ title: 'Acceso permanente', text: 'Escanea o abre este enlace para iniciar sesión', url: permUrl.value });
     } else {
       copyPerm();

@@ -448,7 +448,6 @@ async function loadStock() {
   try {
     items.value = await staffApi.getItems();
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.warn('Error loading items', e);
   } finally {
     loadingStock.value = false;
@@ -465,7 +464,6 @@ async function loadCategories() {
   try {
     categories.value = await staffApi.getCategories();
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.warn('Error loading categories', e);
     categories.value = [];
   }

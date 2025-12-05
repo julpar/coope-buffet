@@ -389,7 +389,6 @@ async function handlePermFromUrl() {
     const clean = location.pathname + (usp.toString() ? '?' + usp.toString() : '') + location.hash;
     history.replaceState({}, document.title, clean);
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.warn('Permanent token login failed', e);
     // Clean the URL even on failure
     const usp = new URLSearchParams(location.search);

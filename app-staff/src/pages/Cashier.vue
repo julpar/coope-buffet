@@ -219,7 +219,7 @@ function stopScan() {
 async function startScan() {
   if (!barcodeSupported) return;
   try {
-    // @ts-ignore
+    // @ts-expect-error BarcodeDetector may be behind a flag or missing types in some browsers
     bd = new window.BarcodeDetector({ formats: ['qr_code'] });
   } catch {
     // Safari behind flag etc.
