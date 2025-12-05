@@ -16,7 +16,7 @@ export class AppController {
     try {
       await this.redisSvc.redis.ping();
       redis = 'up';
-    } catch {}
+    } catch { /* no-op */ void 0; }
     return { ok: true, redis };
   }
 
@@ -34,7 +34,7 @@ export class AppController {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) paymentMethods = parsed.filter((m: any) => m === 'online' || m === 'cash');
       }
-    } catch {}
+    } catch { /* no-op */ void 0; }
     return {
       status,
       message,

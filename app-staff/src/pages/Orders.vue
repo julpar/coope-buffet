@@ -463,10 +463,10 @@ onMounted(() => {
     if (savedState === 'pending_payment' || savedState === 'paid' || savedState === 'fulfilled' || savedState === 'all' || savedState === 'warnings') {
       state.value = savedState as State;
     }
-  } catch {}
+  } catch { void 0; }
 });
 watch(state, (v) => {
-  try { sessionStorage.setItem('orders-state', v); } catch {}
+  try { sessionStorage.setItem('orders-state', v); } catch { void 0; }
   // When switching states, refresh the list so server-side filtering applies when relevant
   refresh();
 });

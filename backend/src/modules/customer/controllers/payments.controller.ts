@@ -27,7 +27,7 @@ export class CustomerPaymentsController {
         const parsed = JSON.parse(raw) as unknown;
         if (Array.isArray(parsed)) methods = parsed.filter((m: unknown): m is 'online' | 'cash' => m === 'online' || m === 'cash');
       }
-    } catch {}
+    } catch { /* no-op */ void 0; }
     if (status !== 'online') {
       throw new BadRequestException({ code: 'PLATFORM_OFFLINE', message: 'La plataforma no está disponible para pagos online.' });
     }
@@ -89,7 +89,7 @@ export class CustomerPaymentsController {
           }
         }
       }
-    } catch {}
+    } catch { /* no-op */ void 0; }
 
     const pref = await this.mp.createPreference({
       external_reference: order.shortCode,

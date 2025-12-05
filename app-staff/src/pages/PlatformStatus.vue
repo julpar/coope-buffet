@@ -252,7 +252,7 @@ async function save() {
           }
         }
       }
-    } catch {}
+    } catch { void 0; }
     msg.error('No se pudo guardar');
   } finally {
     saving.value = false;

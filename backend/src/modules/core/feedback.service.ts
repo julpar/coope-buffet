@@ -101,7 +101,7 @@ export class FeedbackService {
         sum_speed = Number(stats.sum_speed || 0) || 0;
         sum_quality = Number(stats.sum_quality || 0) || 0;
       }
-    } catch {}
+    } catch { /* no-op */ void 0; }
 
     const perCategory = {
       ease: count > 0 ? Math.round((sum_ease / count) * 10) / 10 : 0,
