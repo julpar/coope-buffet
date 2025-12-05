@@ -78,7 +78,7 @@ async function loginWithToken() {
   try {
     await authApi.perm(token.value.trim());
     router.replace('/');
-  } catch (e: any) {
+  } catch {
     error.value = 'Token inválido o expirado.';
   } finally {
     submitting.value = false;

@@ -181,11 +181,11 @@
 </template>
 
 <script setup lang="ts">
-import { h, ref, onMounted, watch, computed } from 'vue';
+import { h, ref, onMounted, watch, computed, type VNode } from 'vue';
 import { useMessage, NTag, NButton, NIcon, NModal, NTable, NTooltip, type DataTableColumns } from 'naive-ui';
 import { RefreshOutline, SearchOutline, CheckmarkDoneOutline, CashOutline } from '@vicons/ionicons5';
 import { staffApi } from '../lib/api';
-import type { Item } from '../types';
+import type { Item, StaffOrder, OrderItemRef } from '../types';
 
 type State = 'pending_payment' | 'paid' | 'fulfilled' | 'all' | 'warnings';
 type Fulfillment = boolean | undefined;
@@ -194,7 +194,15 @@ const q = ref('');
 const state = ref<State>('all');
 const loading = ref(false);
 const msg = useMessage();
-type Row = { id: string; code: string; customer?: string; items: number; total: string; fulfillment: Fulfillment; raw: any };
+type Row = {
+  id: string;
+  code: string;
+  customer?: string;
+  items: number;
+  total: string;
+  fulfillment: Fulfillment;
+  raw: (StaffOrder & { shortCode?: string; customerName?: string; fulfillment?: boolean })
+};
 const rows = ref<Row[]>([]);
 
 // Details modal state
@@ -226,8 +234,8 @@ const stateOptions = [
 ];
 
 function rowHasStockWarning(row: Row): boolean {
-  const items = ((row?.raw?.items) || []) as Array<any>;
-  return items.some((it) => !!it?.stockWarning);
+  const items = (row.raw?.items || []) as OrderItemRef[];
+  return items.some((it) => !!it.stockWarning);
 }
 
 const filtered = computed(() => rows.value.filter(r => {
@@ -277,7 +285,7 @@ const columns: DataTableColumns<Row> = [
       ]);
 
       // Actions: primary first, then details
-      const primaryAction = renderAction(row) as any;
+      const primaryAction = renderAction(row);
       const detailsBtn = (() => {
         const b = h(
           NButton,
@@ -362,8 +370,8 @@ const columns: DataTableColumns<Row> = [
     render: (row: Row) => {
       const method = row.raw?.payment?.method as ('online' | 'cash' | undefined);
       const label = paymentLabel(method);
-      const tagType = method === 'online' ? 'info' : 'default';
-      return h(NTag, { size: 'small', type: tagType as any }, { default: () => label });
+      const tagType: 'info' | 'default' = method === 'online' ? 'info' : 'default';
+      return h(NTag, { size: 'small', type: tagType }, { default: () => label });
     }
   },
   {
@@ -380,25 +388,26 @@ async function refresh() {
   loading.value = true;
   try {
     // For the synthetic "warnings" state we need the full list to filter client-side
-    const backendState = state.value === 'warnings' ? 'all' : state.value;
-    const list = await staffApi.listOrders(backendState as any);
+    const backendState: 'pending_payment' | 'paid' | 'fulfilled' | 'all' =
+      state.value === 'warnings' ? 'all' : state.value;
+    const list = await staffApi.listOrders(backendState);
     // Always sort newest -> oldest by createdAt (also applies when filters change)
-    const sorted = (list || []).slice().sort((a: any, b: any) => {
-      const ta = a?.createdAt ? Date.parse(a.createdAt) : 0;
-      const tb = b?.createdAt ? Date.parse(b.createdAt) : 0;
+    const sorted = (list || []).slice().sort((a: StaffOrder, b: StaffOrder) => {
+      const ta = a?.createdAt ? Date.parse(String(a.createdAt)) : 0;
+      const tb = b?.createdAt ? Date.parse(String(b.createdAt)) : 0;
       return tb - ta;
     });
     // Map to rows
-    rows.value = sorted.map((o: any) => ({
+    rows.value = sorted.map((o) => ({
       id: o.id,
-      code: o.shortCode || o.id,
-      customer: o.customerName || undefined,
-      items: Array.isArray(o.items) ? o.items.reduce((a: number, it: any) => a + (it.qty || 0), 0) : 0,
-      total: peso(o.total || 0),
-      fulfillment: (o.fulfillment as any) as Fulfillment,
-      raw: o,
+      code: (o as { shortCode?: string }).shortCode || o.id,
+      customer: (o as { customerName?: string }).customerName || undefined,
+      items: Array.isArray(o.items) ? (o.items as OrderItemRef[]).reduce((a: number, it: OrderItemRef) => a + (it.qty || 0), 0) : 0,
+      total: peso((o as { total?: number }).total || 0),
+      fulfillment: (o as { fulfillment?: boolean }).fulfillment,
+      raw: o as Row['raw'],
     }));
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error(err);
     msg.error('No se pudieron cargar las órdenes');
   } finally {
@@ -406,7 +415,7 @@ async function refresh() {
   }
 }
 
-function renderAction(row: Row) {
+function renderAction(row: Row): VNode {
   const st = row.raw?.status as string;
   if (st === 'fulfilled' || row.fulfillment) return h('span', { style: 'color: #888' }, 'Sin acciones');
   if (st === 'pending_payment') {
@@ -431,7 +440,7 @@ async function markPaid(row: Row) {
     await staffApi.markOrderPaid(row.id);
     await refresh();
     msg.success('Orden marcada como pagada');
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error(err);
     msg.error('No se pudo marcar como pagada');
   }
@@ -442,7 +451,7 @@ async function markFulfilled(row: Row) {
     await staffApi.setOrderFulfillment(row.id, true);
     await refresh();
     msg.success('Orden marcada como completada');
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error(err);
     msg.error('No se pudo marcar como completada');
   }
@@ -463,10 +472,10 @@ onMounted(() => {
     if (savedState === 'pending_payment' || savedState === 'paid' || savedState === 'fulfilled' || savedState === 'all' || savedState === 'warnings') {
       state.value = savedState as State;
     }
-  } catch {}
+  } catch { void 0; }
 });
 watch(state, (v) => {
-  try { sessionStorage.setItem('orders-state', v); } catch {}
+  try { sessionStorage.setItem('orders-state', v); } catch { void 0; }
   // When switching states, refresh the list so server-side filtering applies when relevant
   refresh();
 });

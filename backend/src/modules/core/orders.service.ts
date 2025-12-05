@@ -254,7 +254,7 @@ export class OrdersService {
     const raws = await this.redis.redis.mget(keys);
     const out: Order[] = [];
     for (const raw of raws) {
-      try { if (raw) out.push(JSON.parse(raw as unknown as string)); } catch {}
+      try { if (raw) out.push(JSON.parse(raw as unknown as string)); } catch { /* no-op */ void 0; }
     }
     // Sort by createdAt ascending
     out.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
@@ -271,7 +271,7 @@ export class OrdersService {
     const raws = await this.redis.redis.mget(keys);
     const out: Order[] = [];
     for (const raw of raws) {
-      try { if (raw) out.push(JSON.parse(raw as unknown as string)); } catch {}
+      try { if (raw) out.push(JSON.parse(raw as unknown as string)); } catch { /* no-op */ void 0; }
     }
     // Sort by createdAt ascending
     out.sort((a, b) => a.createdAt.localeCompare(b.createdAt));

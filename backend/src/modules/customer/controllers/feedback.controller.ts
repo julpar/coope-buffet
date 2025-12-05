@@ -51,8 +51,9 @@ export class CustomerFeedbackController {
       const rec = await this.feedback.submit(order, { ease, speed, quality, comment: body?.comment });
       this.logger.log(`feedback submitted order=${order.shortCode} avg=${rec.avg}`);
       return { ok: true };
-    } catch (e: any) {
-      if (String(e?.message) === 'feedback_already_exists') {
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String((e as { message?: unknown })?.message || '');
+      if (msg === 'feedback_already_exists') {
         throw new ConflictException({ code: 'ALREADY_SUBMITTED', message: 'Ya existe una respuesta para este pedido.' });
       }
       throw e;

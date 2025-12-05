@@ -9,12 +9,12 @@ function load(): CartItem[] {
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (raw) return JSON.parse(raw);
-  } catch {}
+  } catch { void 0; }
   return [];
 }
 
 function save(items: CartItem[]) {
-  try { localStorage.setItem(LS_KEY, JSON.stringify(items)); } catch {}
+  try { localStorage.setItem(LS_KEY, JSON.stringify(items)); } catch { void 0; }
 }
 
 const itemsRef = ref<CartItem[]>(load());

@@ -19,9 +19,9 @@ export const platform = {
         platform.status.value = data.status as Status;
         platform.message.value = data.message || '';
         platform.offlineUntil.value = data.offlineUntil ?? null;
-        const pm = Array.isArray(data.paymentMethods) ? data.paymentMethods : ['online','cash'];
-        platform.paymentMethods.value = pm.filter((m: any) => m === 'online' || m === 'cash');
-      } catch {}
+        const pm = (Array.isArray(data.paymentMethods) ? data.paymentMethods : ['online','cash']) as unknown[];
+        platform.paymentMethods.value = pm.filter((m): m is 'online' | 'cash' => m === 'online' || m === 'cash');
+      } catch { void 0; }
     })().finally(() => {
       platform._inFlight = null;
     });

@@ -363,8 +363,9 @@ onMounted(() => {
       drawer.value = true;
     }
   };
+  type NotifyDetail = { type?: 'success' | 'warning' | 'error' | 'info'; message?: string; description?: string };
   const notifyHandler = (e: Event) => {
-    const detail: any = (e as CustomEvent).detail || {};
+    const detail = ((e as CustomEvent).detail || {}) as NotifyDetail;
     const text = [detail.message, detail.description].filter(Boolean).join(' ');
     switch (detail.type) {
       case 'success': message.success(text); break;
@@ -373,9 +374,10 @@ onMounted(() => {
       default: message.info(text || '');
     }
   };
+  type ShortageDetail = { shortages?: Array<{ id: string; name?: string; available?: number }> };
   const setShortagesHandler = (e: Event) => {
-    const detail: any = (e as CustomEvent).detail || {};
-    const list: any[] = Array.isArray(detail.shortages) ? detail.shortages : [];
+    const detail = ((e as CustomEvent).detail || {}) as ShortageDetail;
+    const list = Array.isArray(detail.shortages) ? detail.shortages : [];
     const map: Record<string, ShortageInfo> = {};
     for (const s of list) {
       const id = String(s.id);

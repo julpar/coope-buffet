@@ -412,18 +412,18 @@ try {
   collapsedFeedback.value = localStorage.getItem(LS_COLLAPSE_FB) === '1';
   collapsedStock.value = localStorage.getItem(LS_COLLAPSE_ST) === '1';
   collapsedOrders.value = localStorage.getItem(LS_COLLAPSE_ORD) === '1';
-} catch {}
+} catch { void 0; }
 function toggleFeedback() {
   collapsedFeedback.value = !collapsedFeedback.value;
-  try { localStorage.setItem(LS_COLLAPSE_FB, collapsedFeedback.value ? '1' : '0'); } catch {}
+  try { localStorage.setItem(LS_COLLAPSE_FB, collapsedFeedback.value ? '1' : '0'); } catch { void 0; }
 }
 function toggleStock() {
   collapsedStock.value = !collapsedStock.value;
-  try { localStorage.setItem(LS_COLLAPSE_ST, collapsedStock.value ? '1' : '0'); } catch {}
+  try { localStorage.setItem(LS_COLLAPSE_ST, collapsedStock.value ? '1' : '0'); } catch { void 0; }
 }
 function toggleOrders() {
   collapsedOrders.value = !collapsedOrders.value;
-  try { localStorage.setItem(LS_COLLAPSE_ORD, collapsedOrders.value ? '1' : '0'); } catch {}
+  try { localStorage.setItem(LS_COLLAPSE_ORD, collapsedOrders.value ? '1' : '0'); } catch { void 0; }
 }
 
 // Hide disabled items from stock alerts, regardless of their current stock
@@ -448,7 +448,6 @@ async function loadStock() {
   try {
     items.value = await staffApi.getItems();
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.warn('Error loading items', e);
   } finally {
     loadingStock.value = false;
@@ -465,7 +464,6 @@ async function loadCategories() {
   try {
     categories.value = await staffApi.getCategories();
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.warn('Error loading categories', e);
     categories.value = [];
   }
@@ -509,7 +507,7 @@ const includeDonation = ref<boolean>(false);
 try {
   const saved = localStorage.getItem(LS_TOGGLE_KEY);
   if (saved === '1') includeDonation.value = true;
-} catch {}
+} catch { void 0; }
 
 const outByCategory = computed<Group[]>(() => groupByCategory(outOfStock.value));
 const lowByCategory = computed<Group[]>(() => groupByCategory(lowStock.value));
@@ -536,7 +534,7 @@ function setDefaultExpanded() {
 
 // Persist toggle changes and adjust expanded groups to what's visible
 watch(includeDonation, (val) => {
-  try { localStorage.setItem(LS_TOGGLE_KEY, val ? '1' : '0'); } catch {}
+  try { localStorage.setItem(LS_TOGGLE_KEY, val ? '1' : '0'); } catch { void 0; }
   // Recalculate expanded to include/exclude donation categories according to visibility
   setDefaultExpanded();
 });
@@ -563,14 +561,15 @@ async function refreshOrders() {
       canSeeFulfillment.value ? staffApi.listOrders('paid') : Promise.resolve([]),
     ]);
     // Limit to last WINDOW_MINUTES minutes
-    const recentPending = (pendingList || []).filter((o: any) => isWithinWindow(o?.createdAt));
+    const recentPending = (pendingList || []).filter((o) =>
+      isWithinWindow((o as { createdAt?: string | number | Date }).createdAt)
+    );
     pendingPaymentCount.value = recentPending.length;
     // In case backend returns some fulfilled within 'paid', filter by fulfillment flag if present
-    const awaiting = (paidList || []).filter((o: any) => !o.fulfillment);
+    const awaiting = (paidList || []).filter((o) => !(o as { fulfillment?: unknown }).fulfillment);
     // For fulfillment we want ALL awaiting orders (no time window)
     awaitingFulfillmentCount.value = awaiting.length;
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.warn('Error loading order counts', e);
     // Keep previous values on error
   } finally {
@@ -600,19 +599,7 @@ onMounted(async () => {
 
 type Row = Item & { lowStockThreshold?: number };
 
-const outCols: DataTableColumns<Row> = [
-  { title: 'Plato', key: 'name' },
-  { title: 'Categoría', key: 'categoryId', width: 140 },
-  { title: 'Stock', key: 'stock', width: 100, align: 'right', render: () => h(NTag, { type: 'error', size: 'small' }, { default: () => '0' }) },
-  { title: 'Umbral', key: 'lowStockThreshold', width: 110, align: 'right' },
-];
-
-const lowCols: DataTableColumns<Row> = [
-  { title: 'Plato', key: 'name' },
-  { title: 'Categoría', key: 'categoryId', width: 140 },
-  { title: 'Stock', key: 'stock', width: 100, align: 'right', render: (row) => h(NTag, { type: 'warning', size: 'small' }, { default: () => String(row.stock ?? 0) }) },
-  { title: 'Umbral', key: 'lowStockThreshold', width: 110, align: 'right' },
-];
+// removed unused outCols/lowCols (grouped variants below are used)
 
 // Grouped columns (category column removed, since grouping shows it in header)
 const outColsGrouped: DataTableColumns<Row> = [
@@ -637,7 +624,7 @@ async function loadFeedback() {
   try {
     const res = await staffApi.getFeedbackSummary();
     summary.value = res as FeedbackSummary;
-  } catch (e) {
+  } catch {
     // keep silent
     summary.value = { count: 0, overallAvg: 0, perCategory: { ease: 0, speed: 0, quality: 0 }, latestBad: [] };
   } finally {

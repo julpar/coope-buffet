@@ -1,9 +1,10 @@
+/* eslint-env node */
 import type { Request, Response, NextFunction } from 'express';
 import Redis from 'ioredis';
 import { API_PREFIX } from '../constants';
 
 // Lightweight Redis client for middleware-only usage (separate from Nest DI)
-const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+const redis = new Redis((globalThis.process?.env?.REDIS_URL as string) || 'redis://localhost:6379', {
   lazyConnect: true,
 });
 let connected = false;

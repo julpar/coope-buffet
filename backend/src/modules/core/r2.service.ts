@@ -23,14 +23,15 @@ export class R2Service {
 
   private ensureClient() {
     if (this.s3) return;
-    const accountId = process.env.R2_ACCOUNT_ID;
-    const accessKeyId = process.env.R2_ACCESS_KEY_ID;
-    const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
-    const bucket = process.env.R2_BUCKET;
-    const endpoint = process.env.R2_S3_ENDPOINT || (accountId ? `https://${accountId}.r2.cloudflarestorage.com` : undefined);
-    this.publicBase = process.env.R2_PUBLIC_BASE || null;
+    const g = globalThis as unknown as { process?: { env?: Record<string, string | undefined> } };
+    const accountId = g.process?.env?.R2_ACCOUNT_ID;
+    const accessKeyId = g.process?.env?.R2_ACCESS_KEY_ID;
+    const secretAccessKey = g.process?.env?.R2_SECRET_ACCESS_KEY;
+    const bucket = g.process?.env?.R2_BUCKET;
+    const endpoint = g.process?.env?.R2_S3_ENDPOINT || (accountId ? `https://${accountId}.r2.cloudflarestorage.com` : undefined);
+    this.publicBase = g.process?.env?.R2_PUBLIC_BASE || null;
     // Allow configuring the object key prefix (defaults to "menu")
-    const rawPrefix = process.env.R2_UPLOAD_PREFIX;
+    const rawPrefix = g.process?.env?.R2_UPLOAD_PREFIX;
     if (rawPrefix != null) {
       // normalize: trim spaces and slashes to avoid duplicate separators
       const normalized = rawPrefix.trim().replace(/^\/+|\/+$/g, '');
@@ -61,7 +62,6 @@ export class R2Service {
       throw new Error('R2 not configured');
     }
     const safeName = (opts.filename || 'file').replace(/[^a-zA-Z0-9_.-]/g, '_');
-    const ext = safeName.includes('.') ? safeName.split('.').pop() : undefined;
     const uid = Math.random().toString(36).slice(2, 10);
     // Flat path under configured prefix (no date subfolders)
     const prefix = this.keyPrefix ? `${this.keyPrefix.replace(/\/+$/,'')}/` : '';
@@ -80,3 +80,5 @@ export class R2Service {
     return { uploadUrl, fileUrl, key, contentType: opts.contentType };
   }
 }
+
+/* eslint-env node */

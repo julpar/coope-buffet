@@ -25,7 +25,8 @@ export class StaffController {
       order: body.order ?? 0,
     };
     await this.menu.upsertCategory(cat);
-    this.logger.log(`upsert category id=${id} name=${cat.name} rid=${(req as any).id ?? '-'}`);
+    const rid = (req as Request & { id?: string }).id ?? '-';
+    this.logger.log(`upsert category id=${id} name=${cat.name} rid=${rid}`);
     // Frontend expects the updated Category object
     return cat;
   }
@@ -59,8 +60,9 @@ export class StaffController {
       active: body.active !== false,
     };
     await this.menu.upsertItem(item);
+    const rid = (req as Request & { id?: string }).id ?? '-';
     this.logger.log(
-      `upsert item id=${id} category=${item.categoryId} price=${item.price} stock=${item.stock} active=${item.active} rid=${(req as any).id ?? '-'}`,
+      `upsert item id=${id} category=${item.categoryId} price=${item.price} stock=${item.stock} active=${item.active} rid=${rid}`,
     );
     // Frontend expects the updated Item object
     return item;
@@ -75,8 +77,9 @@ export class StaffController {
       // Throw to yield non-2xx
       throw new Error('item not found');
     }
+    const rid = (req as Request & { id?: string }).id ?? '-';
     this.logger.log(
-      `adjust stock id=${id} delta=${delta} newStock=${updated.stock ?? 0} rid=${(req as any).id ?? '-'}`,
+      `adjust stock id=${id} delta=${delta} newStock=${updated.stock ?? 0} rid=${rid}`,
     );
     // Frontend expects { id, stock }
     return { id: updated.id, stock: updated.stock ?? 0 };
@@ -85,8 +88,9 @@ export class StaffController {
   @Delete('items/:id')
   async deleteItem(@Param('id') id: string, @Req() req: Request) {
     const existed = await this.menu.deleteItem(id);
+    const rid = (req as Request & { id?: string }).id ?? '-';
     this.logger.log(
-      `delete item id=${id} existed=${existed} rid=${(req as any).id ?? '-'}`,
+      `delete item id=${id} existed=${existed} rid=${rid}`,
     );
     return { ok: true };
   }

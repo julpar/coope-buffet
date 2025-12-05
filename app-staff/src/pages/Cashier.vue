@@ -141,13 +141,15 @@ import { onBeforeUnmount, onMounted, ref, computed } from 'vue';
 import { useMessage } from 'naive-ui';
 import { staffApi } from '../lib/api';
 
-type Order = any; // use backend shape
+// Minimal shape used by this page (matches what the staff API returns for cashier lookups)
+type CashierItem = { unitPrice?: number; qty?: number };
+type CashierOrder = { shortCode: string; status: string; items?: CashierItem[] };
 
 const msg = useMessage();
 const manualCode = ref('');
 const loading = ref(false);
 const marking = ref(false);
-const order = ref<Order | null>(null);
+const order = ref<CashierOrder | null>(null);
 
 // Money formatting: backend/client prices are in ARS currency units (not cents)
 function peso(amount: number) {
@@ -158,7 +160,10 @@ function peso(amount: number) {
 const videoEl = ref<HTMLVideoElement | null>(null);
 const scanning = ref(false);
 const barcodeSupported = 'BarcodeDetector' in window;
-let bd: any = null;
+// Minimal local typing for BarcodeDetector to avoid `any`
+type BarcodeDetection = { rawValue?: string; raw?: string };
+type BarcodeDetectorT = { detect(video: HTMLVideoElement): Promise<BarcodeDetection[]> };
+let bd: BarcodeDetectorT | null = null;
 let rafId: number | null = null;
 let mediaStream: MediaStream | null = null;
 
@@ -179,7 +184,7 @@ async function lookup() {
     if (o?.status !== 'pending_payment') {
       msg.warning('El pedido no está pendiente de pago.');
     }
-  } catch (e: any) {
+  } catch {
     msg.error('No se encontró el pedido para ese código.');
     order.value = null;
   } finally {
@@ -197,7 +202,7 @@ async function markPaid() {
     msg.success('Pago registrado. Enviado a preparación.');
     // Prepare immediately for the next customer
     resetForNext(true);
-  } catch (e: any) {
+  } catch {
     msg.error('No se pudo marcar como pagado.');
   } finally {
     marking.value = false;
@@ -219,7 +224,7 @@ function stopScan() {
 async function startScan() {
   if (!barcodeSupported) return;
   try {
-    // @ts-ignore
+    // @ts-expect-error BarcodeDetector may be behind a flag or missing types in some browsers
     bd = new window.BarcodeDetector({ formats: ['qr_code'] });
   } catch {
     // Safari behind flag etc.
@@ -230,7 +235,7 @@ async function startScan() {
     if (videoEl.value) videoEl.value.srcObject = mediaStream;
     scanning.value = true;
     tick();
-  } catch (e) {
+  } catch {
     // Permission denied; ignore
   }
 }
@@ -241,7 +246,7 @@ function parseCodeFromText(text: string): string | null {
     const u = new URL(text);
     const q = u.searchParams.get('code');
     if (q) return normalizeCode(q);
-  } catch {}
+  } catch { void 0; }
   // Fallback: find 6-10 alphanum block likely code
   const m = text.toUpperCase().match(/[A-Z0-9]{6,10}/);
   return m ? normalizeCode(m[0]) : null;
@@ -261,7 +266,7 @@ async function tick() {
         return;
       }
     }
-  } catch {}
+  } catch { void 0; }
   rafId = requestAnimationFrame(tick);
 }
 
@@ -292,25 +297,13 @@ function resetForNext(restartScan = false) {
 
 // Subtotal for focused view (currency units)
 const subtotal = computed(() => {
-  const o = order.value as any;
+  const o = order.value;
   if (!o?.items) return 0;
-  return o.items.reduce((sum: number, it: any) => sum + (it.unitPrice || 0) * (it.qty || 1), 0);
+  return o.items.reduce((sum: number, it: CashierItem) => sum + (Number(it.unitPrice || 0)) * (Number(it.qty || 1)), 0);
 });
 
 // Payable and humanized status for UI
 const isPayable = computed(() => (order.value?.status === 'pending_payment'));
-const statusLabel = computed(() => {
-  const s = String(order.value?.status || '').toLowerCase();
-  const map: Record<string, string> = {
-    pending_payment: 'Pendiente de pago',
-    paid: 'Pagado',
-    preparing: 'En preparación',
-    ready: 'Listo para retirar',
-    delivered: 'Entregado',
-    cancelled: 'Cancelado'
-  };
-  return map[s] || (s ? s : 'Desconocido');
-});
 </script>
 
 <style scoped>

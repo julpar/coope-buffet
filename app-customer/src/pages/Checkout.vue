@@ -257,10 +257,11 @@ async function placeOrder() {
     const id = res.id;
     await router.replace(`/success/${id}`);
     cart.clear();
-  } catch (e: any) {
+  } catch (e: unknown) {
     // Centralized handling for stock shortages
     if (handleInsufficientStock(e, router)) return;
-    error.value = e?.message || 'No se pudo crear el pedido.';
+    const msg = e instanceof Error ? e.message : String((e as { message?: unknown })?.message || '');
+    error.value = msg || 'No se pudo crear el pedido.';
   } finally {
     loading.value = false;
     suppressEmptyRedirect.value = false;
@@ -292,10 +293,11 @@ async function placeOrderMp() {
     // 3) Clear cart and redirect to MP Checkout Pro
     cart.clear();
     window.location.href = pref.initPoint;
-  } catch (e: any) {
+  } catch (e: unknown) {
     // Centralized handling for stock shortages
     if (handleInsufficientStock(e, router)) return;
-    error.value = e?.message || 'No se pudo iniciar el pago con MercadoPago.';
+    const msg = e instanceof Error ? e.message : String((e as { message?: unknown })?.message || '');
+    error.value = msg || 'No se pudo iniciar el pago con MercadoPago.';
   } finally {
     loading.value = false;
     suppressEmptyRedirect.value = false;

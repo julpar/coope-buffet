@@ -333,7 +333,7 @@ async function resizeToMax1024(input: File | Blob, filename = 'image.jpg', conte
   const outType = type === 'image/png' ? 'image/png' : 'image/jpeg';
   const quality = outType === 'image/jpeg' ? 0.9 : undefined;
   const blob: Blob = await new Promise((resolve, reject) => {
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('encode error'))), outType, quality as any);
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('encode error'))), outType, quality);
   });
   const outName = filename.endsWith('.png') && outType === 'image/png'
     ? filename
@@ -361,9 +361,10 @@ const filtered = computed(() => rows.value.filter(r => {
   return byCat && byText;
 }));
 
-const columns: DataTableColumns<any> = [
+type Row = Item & { priceFmt: string; availability: 'in-stock' | 'limited' | 'sold-out' };
+const columns: DataTableColumns<Row> = [
   // Thumbnail column on the left
-  { title: '', key: 'thumb', width: 64, render: (row: any) => {
+  { title: '', key: 'thumb', width: 64, render: (row: Row) => {
       const url = row.imageUrl as string | null | undefined;
       if (url) {
         // Use inline styles to guarantee constraint even if scoped CSS fails to apply inside DataTable
@@ -379,7 +380,7 @@ const columns: DataTableColumns<any> = [
   { title: 'Plato', key: 'name', minWidth: 200, ellipsis: true },
   { title: 'Precio', key: 'priceFmt', width: 140 },
   { title: 'Stock', key: 'stock', width: 100 },
-  { title: 'Disponible', key: 'availability', width: 160, render: (row: any) => {
+  { title: 'Disponible', key: 'availability', width: 160, render: (row: Row) => {
       // Combine the "active" state with stock availability to determine the label
       const isActive = row.active !== false; // default to true when undefined
       if (!isActive) {
@@ -390,7 +391,7 @@ const columns: DataTableColumns<any> = [
       return h(NTag, { type: t }, { default: () => label });
     }
   },
-  { title: 'Acciones', key: 'actions', width: 300, render: (row: any) => h('div', { style: 'display:flex; gap:8px; white-space: nowrap;' }, [
+  { title: 'Acciones', key: 'actions', width: 300, render: (row: Row) => h('div', { style: 'display:flex; gap:8px; white-space: nowrap;' }, [
       h(NButton, { quaternary: true, size: 'small', onClick: () => openEdit(row) }, { default: () => 'Editar', icon: () => h('i', { class: 'n-icon' }, h(CreateOutline)) }),
       h(NButton, { quaternary: true, size: 'small', onClick: () => openDuplicate(row) }, { default: () => 'Duplicar', icon: () => h('i', { class: 'n-icon' }, h(CopyOutline)) }),
       h(NButton, { quaternary: true, size: 'small', type: 'error', onClick: () => confirmDelete(row) }, { default: () => 'Eliminar', icon: () => h('i', { class: 'n-icon' }, h(TrashOutline)) })
@@ -404,7 +405,7 @@ async function refresh() {
     const [its, cats] = await Promise.all([getStaffItems(), staffApi.getCategories()]);
     items.value = its;
     categories.value = cats;
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error(err);
     message.error('No se pudo cargar el menú desde el servidor');
   } finally {
@@ -420,25 +421,26 @@ function currency(v: number) {
 
 const isEditing = computed(() => !!editing.value);
 const editorTitle = computed(() => (isEditing.value ? 'Editar plato' : 'Nuevo plato'));
-const categoryOptions = computed(() => categories.value.map(c => ({ label: c.name, value: c.id })));
-const categoryFilterOptions = computed(() => [{ label: 'Todas', value: 'all' }, ...categoryOptions.value]);
+type Option = { label: string; value: string };
+const categoryOptions = computed<Option[]>(() => categories.value.map(c => ({ label: c.name, value: c.id })));
+const categoryFilterOptions = computed<Option[]>(() => [{ label: 'Todas', value: 'all' }, ...categoryOptions.value]);
 
 // Dynamically size the category filter to the longest label so it doesn't look oversized
 const categorySelectCh = computed(() => {
-  const labels = categoryFilterOptions.value.map(o => String((o as any).label || ''));
+  const labels = categoryFilterOptions.value.map(o => String(o.label || ''));
   const longest = labels.reduce((m, s) => Math.max(m, s.length), 0);
   // Ensure a sane minimum (e.g., 6ch) and cap the maximum width (e.g., 26ch)
   const min = 6, max = 26;
   return Math.min(Math.max(longest, min), max);
 });
-const categorySelectStyle = computed(() => {
+const categorySelectStyle = computed<Record<string, string>>(() => {
   // Add extra pixels for the dropdown arrow and paddings (~56px works well in Naive UI)
   const extraPx = 56;
   return {
     width: `calc(${categorySelectCh.value}ch + ${extraPx}px)`,
     flex: '0 0 auto',
     whiteSpace: 'nowrap',
-  } as any;
+  };
 });
 
 function randomId(len = 5) {
@@ -551,12 +553,12 @@ async function onPickImage(e: Event) {
     const { url } = await staffApi.uploadImage(resized);
     form.value.imageUrl = url;
     message.success('Imagen subida');
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error(err);
     message.error('No se pudo subir la imagen');
   } finally {
     uploadingImage.value = false;
-    try { el.value = ''; } catch {}
+    try { el.value = ''; } catch { void 0; }
   }
 }
 
@@ -584,7 +586,7 @@ async function saveItem() {
     message.success(isEditing.value ? 'Plato actualizado' : 'Plato creado');
     showEditor.value = false;
     await refresh();
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error(err);
     message.error('No se pudo guardar el plato');
   } finally {
@@ -598,7 +600,7 @@ async function confirmDelete(row: Item) {
     await staffApi.deleteItem(row.id);
     message.success('Plato eliminado');
     await refresh();
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error(err);
     message.error('No se pudo eliminar el plato');
   }

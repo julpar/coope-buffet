@@ -18,7 +18,8 @@ export class MercadoPagoService {
   private readonly apiBase = 'https://api.mercadopago.com';
 
   private get accessToken(): string {
-    const tok = process.env.MP_ACCESS_TOKEN || '';
+    const g = globalThis as unknown as { process?: { env?: Record<string, string | undefined> } };
+    const tok = g.process?.env?.MP_ACCESS_TOKEN || '';
     if (!tok) this.logger.warn('MP_ACCESS_TOKEN is not set');
     return tok;
   }
@@ -64,7 +65,7 @@ export class MercadoPagoService {
       payment_methods: {
         excluded_payment_types: excludedTypes,
       },
-    } as any;
+    };
 
     const resp = await fetch(`${this.apiBase}/checkout/preferences`, {
       method: 'POST',
@@ -83,7 +84,7 @@ export class MercadoPagoService {
     return { id: json.id, init_point: json.init_point, sandbox_init_point: json.sandbox_init_point };
   }
 
-  async getPayment(paymentId: string): Promise<any> {
+  async getPayment(paymentId: string): Promise<unknown> {
     const resp = await fetch(`${this.apiBase}/v1/payments/${encodeURIComponent(paymentId)}`, {
       headers: { 'Authorization': `Bearer ${this.accessToken}` },
     });
@@ -92,6 +93,6 @@ export class MercadoPagoService {
       this.logger.error(`getPayment failed: ${resp.status} ${resp.statusText} ${t}`);
       throw new Error('mercadopago_payment_fetch_failed');
     }
-    return resp.json();
+    return await resp.json();
   }
 }

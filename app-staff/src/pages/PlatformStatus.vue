@@ -211,10 +211,11 @@ async function refresh() {
       paymentMethods: (st.paymentMethods && st.paymentMethods.length ? st.paymentMethods : ['online','cash']),
       // Filter out account_money from the UI toggles (always enabled server-side)
       mpAllowedPaymentTypes: Array.isArray(st.mpAllowedPaymentTypes) && st.mpAllowedPaymentTypes.length
-        ? (st.mpAllowedPaymentTypes as any).filter((t: string) => t !== 'account_money')
+        ? (st.mpAllowedPaymentTypes as Array<'account_money' | 'credit_card' | 'debit_card' | 'prepaid_card'>)
+            .filter((t): t is 'credit_card' | 'debit_card' | 'prepaid_card' => t !== 'account_money')
         : ['credit_card','debit_card','prepaid_card'],
     };
-  } catch (e: any) {
+  } catch {
     msg.error('No se pudo cargar el estado');
   } finally {
     loading.value = false;
@@ -238,7 +239,7 @@ async function save() {
     const res = await platformApi.setStatus(body);
     current.value = { status: res.status, message: res.message, offlineUntil: res.offlineUntil, paymentMethods: res.paymentMethods, mpAllowedPaymentTypes: res.mpAllowedPaymentTypes };
     msg.success('Estado actualizado');
-  } catch (e: any) {
+  } catch (e: unknown) {
     try {
       const msgTxt = String(e?.message || '');
       if (msgTxt.includes('{') && msgTxt.includes('}')) {
@@ -252,7 +253,7 @@ async function save() {
           }
         }
       }
-    } catch {}
+    } catch { void 0; }
     msg.error('No se pudo guardar');
   } finally {
     saving.value = false;

@@ -30,7 +30,7 @@ export class FeedbackService {
     return exists > 0;
   }
 
-  private normalizeScore(v: any): number {
+  private normalizeScore(v: unknown): number {
     const n = Number(v);
     if (!Number.isFinite(n)) return 0;
     if (n < 1) return 1;
@@ -38,7 +38,7 @@ export class FeedbackService {
     return Math.round(n);
   }
 
-  async submit(order: Order, input: { ease: any; speed: any; quality: any; comment?: string | null }): Promise<FeedbackRecord> {
+  async submit(order: Order, input: { ease: unknown; speed: unknown; quality: unknown; comment?: string | null }): Promise<FeedbackRecord> {
     const ease = this.normalizeScore(input?.ease);
     const speed = this.normalizeScore(input?.speed);
     const quality = this.normalizeScore(input?.quality);
@@ -79,7 +79,8 @@ export class FeedbackService {
       await multi.exec();
     } catch (e) {
       // Do not throw; feedback already stored. Just log.
-      this.logger.warn(`Failed to update feedback aggregates for order ${order.id}: ${String((e as any)?.message || e)}`);
+      const msg = e instanceof Error ? e.message : String((e as { message?: unknown })?.message || e);
+      this.logger.warn(`Failed to update feedback aggregates for order ${order.id}: ${msg}`);
     }
 
     return rec;
@@ -101,7 +102,7 @@ export class FeedbackService {
         sum_speed = Number(stats.sum_speed || 0) || 0;
         sum_quality = Number(stats.sum_quality || 0) || 0;
       }
-    } catch {}
+    } catch { /* no-op */ void 0; }
 
     const perCategory = {
       ease: count > 0 ? Math.round((sum_ease / count) * 10) / 10 : 0,

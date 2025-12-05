@@ -27,7 +27,7 @@ export class StaffPlatformController {
           paymentMethods = parsed.filter((m) => m === 'online' || m === 'cash');
         }
       }
-    } catch {}
+    } catch { /* no-op */ void 0; }
     try {
       const rawTypes = await r.get('platform:mp_allowed_types');
       if (rawTypes) {
@@ -35,7 +35,7 @@ export class StaffPlatformController {
         if (Array.isArray(parsed)) {
           const set = new Set<string>(MP_DEFAULT_ALLOWED_TYPES as unknown as string[]);
           const filtered = parsed
-            .map((v: any) => (typeof v === 'string' ? v.trim() : ''))
+            .map((v: unknown) => (typeof v === 'string' ? v.trim() : ''))
             .filter((s: string) => !!s && set.has(s));
           if (filtered.length > 0) {
             if (!filtered.includes('account_money')) filtered.unshift('account_money');
@@ -43,7 +43,7 @@ export class StaffPlatformController {
           }
         }
       }
-    } catch {}
+    } catch { /* no-op */ void 0; }
     return {
       status,
       message,
@@ -65,9 +65,10 @@ export class StaffPlatformController {
     },
   ) {
     const r = this.redis.redis;
-    const status: PlatformStatus = ['online', 'soft-offline', 'hard-offline'].includes(body?.status as any)
-      ? (body.status as PlatformStatus)
-      : 'online';
+    const status: PlatformStatus = ((): PlatformStatus => {
+      const s = body?.status;
+      return s === 'online' || s === 'soft-offline' || s === 'hard-offline' ? s : 'online';
+    })();
     const msg = (body?.message || '').trim();
     const untilRaw = body?.offlineUntil;
     const until = typeof untilRaw === 'number' && Number.isFinite(untilRaw) && untilRaw > 0 ? Math.floor(untilRaw) : null;
@@ -83,9 +84,9 @@ export class StaffPlatformController {
         const raw = await r.get('platform:payment_methods');
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) paymentMethods = parsed.filter((m: any) => m === 'online' || m === 'cash');
+          if (Array.isArray(parsed)) paymentMethods = parsed.filter((m): m is PaymentMethod => m === 'online' || m === 'cash');
         }
-      } catch {}
+      } catch { /* no-op */ void 0; }
     }
     if (!paymentMethods || paymentMethods.length === 0) {
       paymentMethods = ['online', 'cash'];
@@ -110,9 +111,9 @@ export class StaffPlatformController {
     await r.set('platform:offline_message', msg);
     if (until) await r.set('platform:offline_until', String(until));
     else await r.del('platform:offline_until');
-    try { await r.set('platform:payment_methods', JSON.stringify(paymentMethods)); } catch {}
+    try { await r.set('platform:payment_methods', JSON.stringify(paymentMethods)); } catch { /* no-op */ void 0; }
     if (mpAllowedPaymentTypes) {
-      try { await r.set('platform:mp_allowed_types', JSON.stringify(mpAllowedPaymentTypes)); } catch {}
+      try { await r.set('platform:mp_allowed_types', JSON.stringify(mpAllowedPaymentTypes)); } catch { /* no-op */ void 0; }
     }
 
     return { ok: true, status, message: msg, offlineUntil: until, paymentMethods, mpAllowedPaymentTypes: mpAllowedPaymentTypes ?? undefined };

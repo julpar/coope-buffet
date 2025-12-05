@@ -100,7 +100,7 @@ async function save() {
     message.success('Usuario actualizado');
     emit('saved', updated);
     show.value = false;
-  } catch (e) {
+  } catch {
     message.error('No se pudo actualizar');
   } finally {
     saving.value = false;
