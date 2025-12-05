@@ -93,7 +93,6 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
     const bodyText = await res.text();
     const trimmed = (bodyText || '').trim();
     if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-      // @ts-expect-error – generic helper, caller defines the shape
       return JSON.parse(trimmed);
     }
   } catch {
@@ -104,14 +103,13 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
   // If there is no body, attempt to infer created resource ID from Location header (e.g., /orders/:id)
   const location = res.headers.get('location');
   if (location) {
-    const m = location.match(/\/orders\/([^\/?#]+)/);
+    const m = location.match(/\/orders\/([^/?#]+)/);
     if (m && m[1]) {
       // Minimal object so callers that expect { id } (like checkout -> success redirect) keep working
       // @ts-expect-error – caller decides the exact type
       return { id: decodeURIComponent(m[1]) };
     }
   }
-  // @ts-expect-error – generic helper without explicit type here
   return undefined;
 }
 
