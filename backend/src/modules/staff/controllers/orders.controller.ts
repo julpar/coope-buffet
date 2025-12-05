@@ -9,8 +9,8 @@ export class StaffOrdersController {
   constructor(private readonly orders: OrdersService) {}
 
   @Get()
-  async list(@Query('state') state?: string) {
-    const s = (state as any) || 'paid';
+  async list(@Query('state') state?: 'pending_payment' | 'paid' | 'fulfilled' | 'all') {
+    const s: 'pending_payment' | 'paid' | 'fulfilled' | 'all' = state || 'paid';
     const list = s === 'all' ? await this.orders.listAll() : await this.orders.listByState(s as OrderState);
     this.logger.debug(`list orders state=${s} count=${list.length}`);
     return list;
@@ -32,8 +32,10 @@ export class StaffOrdersController {
       const o = await this.orders.markPaid(id, { externalId: body?.externalId ?? null });
       if (!o) throw new NotFoundException('order not found');
       return o;
-    } catch (e: any) {
-      if (e?.name === 'InsufficientStockError' && e?.shortages) {
+    } catch (e: unknown) {
+      const name = (e as { name?: unknown })?.name;
+      const shortages = (e as { shortages?: unknown })?.shortages;
+      if (name === 'InsufficientStockError' && shortages) {
         throw new BadRequestException({ code: 'INSUFFICIENT_STOCK', message: 'Not enough stock for some items', shortages: e.shortages });
       }
       throw e;
@@ -51,8 +53,10 @@ export class StaffOrdersController {
       const o = await this.orders.markPaid(o0.id, { externalId: body?.externalId ?? null });
       if (!o) throw new NotFoundException('order not found');
       return o;
-    } catch (e: any) {
-      if (e?.name === 'InsufficientStockError' && e?.shortages) {
+    } catch (e: unknown) {
+      const name = (e as { name?: unknown })?.name;
+      const shortages = (e as { shortages?: unknown })?.shortages;
+      if (name === 'InsufficientStockError' && shortages) {
         throw new BadRequestException({ code: 'INSUFFICIENT_STOCK', message: 'Not enough stock for some items', shortages: e.shortages });
       }
       throw e;
