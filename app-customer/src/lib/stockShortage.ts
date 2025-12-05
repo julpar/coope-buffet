@@ -48,7 +48,7 @@ export function handleInsufficientStock(e: any, router: { replace: (path: string
 
   const lines = buildLines(shortages);
   // Navigate back to the menu and open the cart for editing
-  try { router.replace('/'); } catch {}
+  try { router.replace('/'); } catch { void 0; }
   // Dispatch UI events after a small delay to ensure the route is settled
   setTimeout(() => {
     const shortageIds = shortages.map((s) => (s as any).id).filter(Boolean);

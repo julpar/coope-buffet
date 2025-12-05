@@ -21,7 +21,7 @@ export const platform = {
         platform.offlineUntil.value = data.offlineUntil ?? null;
         const pm = Array.isArray(data.paymentMethods) ? data.paymentMethods : ['online','cash'];
         platform.paymentMethods.value = pm.filter((m: any) => m === 'online' || m === 'cash');
-      } catch {}
+      } catch { void 0; }
     })().finally(() => {
       platform._inFlight = null;
     });

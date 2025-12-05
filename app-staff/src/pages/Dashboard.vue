@@ -412,18 +412,18 @@ try {
   collapsedFeedback.value = localStorage.getItem(LS_COLLAPSE_FB) === '1';
   collapsedStock.value = localStorage.getItem(LS_COLLAPSE_ST) === '1';
   collapsedOrders.value = localStorage.getItem(LS_COLLAPSE_ORD) === '1';
-} catch {}
+} catch { void 0; }
 function toggleFeedback() {
   collapsedFeedback.value = !collapsedFeedback.value;
-  try { localStorage.setItem(LS_COLLAPSE_FB, collapsedFeedback.value ? '1' : '0'); } catch {}
+  try { localStorage.setItem(LS_COLLAPSE_FB, collapsedFeedback.value ? '1' : '0'); } catch { void 0; }
 }
 function toggleStock() {
   collapsedStock.value = !collapsedStock.value;
-  try { localStorage.setItem(LS_COLLAPSE_ST, collapsedStock.value ? '1' : '0'); } catch {}
+  try { localStorage.setItem(LS_COLLAPSE_ST, collapsedStock.value ? '1' : '0'); } catch { void 0; }
 }
 function toggleOrders() {
   collapsedOrders.value = !collapsedOrders.value;
-  try { localStorage.setItem(LS_COLLAPSE_ORD, collapsedOrders.value ? '1' : '0'); } catch {}
+  try { localStorage.setItem(LS_COLLAPSE_ORD, collapsedOrders.value ? '1' : '0'); } catch { void 0; }
 }
 
 // Hide disabled items from stock alerts, regardless of their current stock
@@ -509,7 +509,7 @@ const includeDonation = ref<boolean>(false);
 try {
   const saved = localStorage.getItem(LS_TOGGLE_KEY);
   if (saved === '1') includeDonation.value = true;
-} catch {}
+} catch { void 0; }
 
 const outByCategory = computed<Group[]>(() => groupByCategory(outOfStock.value));
 const lowByCategory = computed<Group[]>(() => groupByCategory(lowStock.value));
@@ -536,7 +536,7 @@ function setDefaultExpanded() {
 
 // Persist toggle changes and adjust expanded groups to what's visible
 watch(includeDonation, (val) => {
-  try { localStorage.setItem(LS_TOGGLE_KEY, val ? '1' : '0'); } catch {}
+  try { localStorage.setItem(LS_TOGGLE_KEY, val ? '1' : '0'); } catch { void 0; }
   // Recalculate expanded to include/exclude donation categories according to visibility
   setDefaultExpanded();
 });

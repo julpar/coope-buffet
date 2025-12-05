@@ -556,7 +556,7 @@ async function onPickImage(e: Event) {
     message.error('No se pudo subir la imagen');
   } finally {
     uploadingImage.value = false;
-    try { el.value = ''; } catch {}
+    try { el.value = ''; } catch { void 0; }
   }
 }
 

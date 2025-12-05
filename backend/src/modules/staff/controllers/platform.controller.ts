@@ -27,7 +27,7 @@ export class StaffPlatformController {
           paymentMethods = parsed.filter((m) => m === 'online' || m === 'cash');
         }
       }
-    } catch {}
+    } catch { /* no-op */ void 0; }
     try {
       const rawTypes = await r.get('platform:mp_allowed_types');
       if (rawTypes) {
@@ -43,7 +43,7 @@ export class StaffPlatformController {
           }
         }
       }
-    } catch {}
+    } catch { /* no-op */ void 0; }
     return {
       status,
       message,
@@ -85,7 +85,7 @@ export class StaffPlatformController {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) paymentMethods = parsed.filter((m: any) => m === 'online' || m === 'cash');
         }
-      } catch {}
+      } catch { /* no-op */ void 0; }
     }
     if (!paymentMethods || paymentMethods.length === 0) {
       paymentMethods = ['online', 'cash'];
@@ -110,9 +110,9 @@ export class StaffPlatformController {
     await r.set('platform:offline_message', msg);
     if (until) await r.set('platform:offline_until', String(until));
     else await r.del('platform:offline_until');
-    try { await r.set('platform:payment_methods', JSON.stringify(paymentMethods)); } catch {}
+    try { await r.set('platform:payment_methods', JSON.stringify(paymentMethods)); } catch { /* no-op */ void 0; }
     if (mpAllowedPaymentTypes) {
-      try { await r.set('platform:mp_allowed_types', JSON.stringify(mpAllowedPaymentTypes)); } catch {}
+      try { await r.set('platform:mp_allowed_types', JSON.stringify(mpAllowedPaymentTypes)); } catch { /* no-op */ void 0; }
     }
 
     return { ok: true, status, message: msg, offlineUntil: until, paymentMethods, mpAllowedPaymentTypes: mpAllowedPaymentTypes ?? undefined };

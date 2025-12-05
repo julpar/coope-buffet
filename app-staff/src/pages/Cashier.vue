@@ -241,7 +241,7 @@ function parseCodeFromText(text: string): string | null {
     const u = new URL(text);
     const q = u.searchParams.get('code');
     if (q) return normalizeCode(q);
-  } catch {}
+  } catch { void 0; }
   // Fallback: find 6-10 alphanum block likely code
   const m = text.toUpperCase().match(/[A-Z0-9]{6,10}/);
   return m ? normalizeCode(m[0]) : null;
@@ -261,7 +261,7 @@ async function tick() {
         return;
       }
     }
-  } catch {}
+  } catch { void 0; }
   rafId = requestAnimationFrame(tick);
 }
 

@@ -405,7 +405,7 @@ async function onCancelClick() {
       const fresh = await customerApi.getOrder(currId);
       if (fresh) order.value = fresh as any;
     }
-  } catch {}
+  } catch { void 0; }
   const st = order.value?.status;
   const isPaid = st === 'paid';
   const confirmed = await confirmDialog({
@@ -464,7 +464,7 @@ function loadFbState(orderId: string): FbState | null {
   } catch { return null; }
 }
 function saveFbState(orderId: string, s: FbState) {
-  try { localStorage.setItem(fbKey(orderId), JSON.stringify(s)); } catch {}
+  try { localStorage.setItem(fbKey(orderId), JSON.stringify(s)); } catch { void 0; }
 }
 function setFbSubmitted(orderId: string) {
   saveFbState(orderId, {

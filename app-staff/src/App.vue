@@ -428,7 +428,7 @@ watch(() => router.currentRoute.value.fullPath, async () => {
 const cleanupFns: Array<() => void> = [];
 onBeforeUnmount(() => {
   cleanupFns.forEach((fn) => {
-    try { fn(); } catch {}
+    try { fn(); } catch { void 0; }
   });
 });
 
@@ -437,9 +437,9 @@ async function onLogout() {
   loggingOut.value = true;
   try {
     await authApi.logout();
-  } catch {}
+  } catch { void 0; }
   // Best-effort client cleanup as well
-  try { sessionStorage.removeItem('mock-mode'); } catch {}
+  try { sessionStorage.removeItem('mock-mode'); } catch { void 0; }
   // Force a full reload so the app re-checks auth status and shows the login screen
   location.reload();
 }

@@ -84,10 +84,6 @@ module.exports = [
   // Project-wide rules
   {
     rules: {
-      // keep console/debugger during development; CI enforces --max-warnings=0
-      'no-console': 'warn',
-      // Avoid failing on intentional empty blocks used as placeholders
-      'no-empty': ['warn', { allowEmptyCatch: true }],
       // Relax some strict rules to warnings for incremental cleanup
       'no-useless-escape': 'warn',
       'vue/multi-word-component-names': 'off',

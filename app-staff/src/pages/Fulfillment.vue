@@ -405,12 +405,13 @@ async function startScan() {
           updateLookupState();
           await lookup();
         }
-      } catch {}
+      } catch { void 0; }
       if (scanning.value) rafId = requestAnimationFrame(loop);
     };
     rafId = requestAnimationFrame(loop);
   } catch {
     // ignore; user may block camera
+    void 0;
   }
 }
 
@@ -479,7 +480,7 @@ function onItemClick(id: string | number, e: MouseEvent | PointerEvent, isCurren
   // Simple tap toggles
   toggleItemChecked(id, !(isCurrentlyChecked ?? isItemChecked(id)));
   // Gentle haptic if available
-  try { (navigator as any).vibrate?.(10); } catch {}
+  try { (navigator as any).vibrate?.(10); } catch { void 0; }
 }
 
 function onItemPointerDown(id: string | number, e: PointerEvent) {
@@ -493,7 +494,7 @@ function onItemPointerDown(id: string | number, e: PointerEvent) {
   dragDy.value = 0;
   dragActive.value = false;
   // capture pointer to keep receiving events even if cursor leaves element
-  try { (e.target as HTMLElement)?.setPointerCapture?.(e.pointerId); } catch {}
+  try { (e.target as HTMLElement)?.setPointerCapture?.(e.pointerId); } catch { void 0; }
 }
 
 function onItemPointerMove(id: string | number, e: PointerEvent) {
@@ -538,7 +539,7 @@ function onItemPointerUp(id: string | number) {
     setTimeout(() => {
       if (suppressNextClickForId.value === key) suppressNextClickForId.value = null;
     }, 200);
-    try { (navigator as any).vibrate?.(10); } catch {}
+    try { (navigator as any).vibrate?.(10); } catch { void 0; }
   }
   // Reset deltas after frame (let style transition back)
   requestAnimationFrame(() => { dragDx.value = 0; dragDy.value = 0; });

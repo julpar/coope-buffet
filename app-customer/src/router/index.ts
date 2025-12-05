@@ -17,7 +17,7 @@ const router = createRouter({
 router.beforeEach(async (to) => {
   try {
     await platform.fetch();
-  } catch {}
+  } catch { void 0; }
   if (to.path === '/checkout' && platform.status.value === 'soft-offline') {
     // Inform the user using the global notify mechanism handled by App.vue
     try {
@@ -27,7 +27,7 @@ router.beforeEach(async (to) => {
           detail: { type: 'warning', message: 'Estamos en pausa momentánea. Podrás finalizar tu pedido en unos minutos.' },
         }),
       );
-    } catch {}
+    } catch { void 0; }
     return { path: '/' };
   }
   return true;

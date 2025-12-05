@@ -38,7 +38,7 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
     // In that case, proactively refresh the public platform status so the UI can
     // switch to the full-screen offline overlay instead of showing raw HTML.
     if (res.status === 503) {
-      try { await platform.fetch(); } catch {}
+      try { await platform.fetch(); } catch { void 0; }
       const err: any = new Error('Servicio no disponible');
       err.status = 503;
       err.code = 'HARD_OFFLINE';
@@ -98,6 +98,7 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
     }
   } catch {
     // ignore and attempt other fallbacks
+    void 0;
   }
 
   // If there is no body, attempt to infer created resource ID from Location header (e.g., /orders/:id)
