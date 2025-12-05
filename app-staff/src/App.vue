@@ -212,7 +212,7 @@
 </template>
 
 <script setup lang="ts">
-import { h, ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
+import { h, ref, computed, onMounted, onBeforeUnmount, watch, type Component, type VNode } from 'vue';
 import { useRouter } from 'vue-router';
 import { NIcon, type GlobalThemeOverrides } from 'naive-ui';
 import {
@@ -233,14 +233,15 @@ const collapsed = ref(false);
 const drawerOpen = ref(false);
 const isMobile = ref(false);
 
-const renderIcon = (icon: any) => () => h(NIcon, null, { default: () => h(icon) });
+const renderIcon = (icon: Component): (() => VNode) => () => h(NIcon, null, { default: () => h(icon) });
 
-const menuOptions = computed(() => {
+type MenuEntry = { label: string; key: string; icon: () => VNode };
+const menuOptions = computed<MenuEntry[]>(() => {
   const roles = currentUser.value?.roles || [];
   const isAdmin = roles.includes('ADMIN');
 
   // Base: everyone sees Dashboard
-  const opts: any[] = [
+  const opts: MenuEntry[] = [
     { label: 'Dashboard', key: '/', icon: renderIcon(BarChartOutline) },
   ];
 
@@ -350,7 +351,7 @@ function stopPlatformPolling() {
 
 async function loadAuth(force = false) {
   try {
-    const st = await authApi.status(force ? { force: true } : undefined as any);
+    const st = await authApi.status(force ? { force: true } : undefined);
     adminExists.value = st.adminExists;
     currentUser.value = st.currentUser;
   } catch {
@@ -366,9 +367,9 @@ async function createAdmin() {
   try {
     await authApi.initAdmin(adminNickname.value, adminPassword.value);
     await loadAuth(true);
-  } catch (e) {
-     
-    alert('Error creando admin: ' + (e as any)?.message);
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    alert('Error creando admin: ' + msg);
   } finally {
     savingAdmin.value = false;
   }
@@ -412,10 +413,10 @@ onMounted(async () => {
   updateIsMobile();
   window.addEventListener('resize', updateIsMobile);
   // Store cleanup handler on instance via global to remove later
-  (cleanupFns as any).push(() => window.removeEventListener('resize', updateIsMobile));
+  cleanupFns.push(() => window.removeEventListener('resize', updateIsMobile));
   // Start platform status polling
   startPlatformPolling();
-  (cleanupFns as any).push(() => stopPlatformPolling());
+  cleanupFns.push(() => stopPlatformPolling());
 });
 
 // Refresh auth status on route changes so header/layout reacts after QR login
