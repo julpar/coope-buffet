@@ -45,7 +45,8 @@ export class UsersController {
         }
         const user = await this.users.createUser(nickname, roles);
 
-        const staffBase = (process.env.SERVICE_URL_WEB_STAFF || '').trim();
+        const g = globalThis as unknown as { process?: { env?: Record<string, string | undefined> } };
+        const staffBase = (g.process?.env?.SERVICE_URL_WEB_STAFF || '').trim();
         const permToken = user.token.startsWith('perm:') ? user.token.slice(5) : user.token;
         let permUrl: string;
 
@@ -89,8 +90,9 @@ export class UsersController {
         const user = await this.users.getUserById(id);
         if (!user) throw new NotFoundException('user not found');
         // Build URL same way as in create()
-        const staffBase = (process.env.SERVICE_URL_WEB_STAFF || '').trim();
-        const baseUrl = (process.env.BASE_URL || '').trim();
+        const g = globalThis as unknown as { process?: { env?: Record<string, string | undefined> } };
+        const staffBase = (g.process?.env?.SERVICE_URL_WEB_STAFF || '').trim();
+        const baseUrl = (g.process?.env?.BASE_URL || '').trim();
         const permToken = user.token.startsWith('perm:') ? user.token.slice(5) : user.token;
         let permUrl: string;
         if (staffBase) {
