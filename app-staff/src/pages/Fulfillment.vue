@@ -241,14 +241,16 @@ import { onBeforeUnmount, onMounted, ref, computed, watchEffect } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useMessage, NTag } from 'naive-ui';
 import { staffApi } from '../lib/api';
+import type { StaffOrder, OrderItemRef } from '../types';
 
-type Order = any;
+type FulfillmentItem = OrderItemRef & { name?: string };
+type FulfillmentOrder = StaffOrder & { shortCode?: string; customerName?: string; items?: FulfillmentItem[] };
 
 const msg = useMessage();
 const manualCode = ref('');
 const loading = ref(false);
 const marking = ref(false);
-const order = ref<Order | null>(null);
+const order = ref<FulfillmentOrder | null>(null);
 const route = useRoute();
 const router = useRouter();
 
@@ -256,7 +258,10 @@ const router = useRouter();
 const videoEl = ref<HTMLVideoElement | null>(null);
 const scanning = ref(false);
 const barcodeSupported = 'BarcodeDetector' in window;
-let bd: any = null;
+// Minimal local typing for BarcodeDetector to avoid `any`
+type BarcodeDetection = { rawValue?: string; raw?: string };
+type BarcodeDetectorT = { detect(video: HTMLVideoElement): Promise<BarcodeDetection[]> };
+let bd: BarcodeDetectorT | null = null;
 let rafId: number | null = null;
 let mediaStream: MediaStream | null = null;
 
@@ -293,8 +298,8 @@ async function lookup() {
 const isFulfillable = computed(() => !!order.value && order.value.status === 'paid');
 // True if any line item is flagged with a probable stock problem
 const hasStockWarnings = computed(() => {
-  const items = (order.value?.items ?? []) as Array<any>;
-  return items.some((it) => !!it?.stockWarning);
+  const items = (order.value?.items ?? []) as FulfillmentItem[];
+  return items.some((it) => !!it.stockWarning);
 });
 const statusLabel = computed(() => {
   const st = order.value?.status;
@@ -306,8 +311,8 @@ const statusLabel = computed(() => {
 
 // Total number of item units to hand to the customer
 const totalItems = computed(() => {
-  const items = (order.value?.items ?? []) as Array<{ qty?: number }>
-  return items.reduce((sum, it) => sum + (Number(it?.qty) || 0), 0)
+  const items = (order.value?.items ?? []) as FulfillmentItem[];
+  return items.reduce((sum, it) => sum + (Number(it.qty ?? 0) || 0), 0);
 });
 
 // Local aid: per-line "checked" state while fulfilling (ephemeral; not persisted)
@@ -329,12 +334,12 @@ function toggleItemChecked(id: string | number, checked: boolean) {
 }
 
 const pendingItems = computed(() => {
-  const items = (order.value?.items ?? []) as Array<any>;
+  const items = (order.value?.items ?? []) as FulfillmentItem[];
   return items.filter((it) => !isItemChecked(it.id));
 });
 
 const checkedItems = computed(() => {
-  const items = (order.value?.items ?? []) as Array<any>;
+  const items = (order.value?.items ?? []) as FulfillmentItem[];
   return items.filter((it) => isItemChecked(it.id));
 });
 
@@ -349,7 +354,7 @@ async function markFulfilled() {
     await staffApi.setOrderFulfillment(order.value.id, true);
     msg.success('Pedido marcado como COMPLETADO.');
     // Update local state for visual feedback
-    order.value = { ...(order.value as any), status: 'fulfilled' };
+    order.value = { ...(order.value as FulfillmentOrder), status: 'fulfilled' };
     // Auto-clear after a short delay to continue workflow
     setTimeout(() => clearOrder(), 400);
   } catch {
@@ -387,7 +392,8 @@ function stopScan() {
 async function startScan() {
   if (!barcodeSupported) return;
   try {
-    bd = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+    // @ts-expect-error BarcodeDetector may be behind a flag or missing types in some browsers
+    bd = new (window as unknown as { BarcodeDetector?: new (opts: { formats: string[] }) => BarcodeDetectorT }).BarcodeDetector!({ formats: ['qr_code'] });
   } catch {
     return;
   }
@@ -399,7 +405,7 @@ async function startScan() {
       if (!videoEl.value || !bd) return;
       try {
         const dets = await bd.detect(videoEl.value);
-        const raw = dets?.[0]?.rawValue as string | undefined;
+        const raw = (dets && dets.length ? (dets[0].rawValue || dets[0].raw) : '') as string | undefined;
         if (raw) {
           manualCode.value = normalizeCode(raw);
           updateLookupState();
@@ -445,7 +451,7 @@ watchEffect(updateLookupState);
 
 // Reset checks when a new order is loaded or the id changes
 watchEffect(() => {
-  const id = (order.value as any)?.id;
+  const id = order.value?.id;
   // whenever id changes (or order becomes null), reset
   void id; // reference to track dependency
   resetChecks();
@@ -480,7 +486,10 @@ function onItemClick(id: string | number, e: MouseEvent | PointerEvent, isCurren
   // Simple tap toggles
   toggleItemChecked(id, !(isCurrentlyChecked ?? isItemChecked(id)));
   // Gentle haptic if available
-  try { (navigator as any).vibrate?.(10); } catch { void 0; }
+  try {
+    // @ts-expect-error vibrate may not exist in some targets
+    navigator.vibrate?.(10);
+  } catch { void 0; }
 }
 
 function onItemPointerDown(id: string | number, e: PointerEvent) {
@@ -539,7 +548,10 @@ function onItemPointerUp(id: string | number) {
     setTimeout(() => {
       if (suppressNextClickForId.value === key) suppressNextClickForId.value = null;
     }, 200);
-    try { (navigator as any).vibrate?.(10); } catch { void 0; }
+    try {
+      // @ts-expect-error vibrate may not exist in some targets
+      navigator.vibrate?.(10);
+    } catch { void 0; }
   }
   // Reset deltas after frame (let style transition back)
   requestAnimationFrame(() => { dragDx.value = 0; dragDy.value = 0; });
